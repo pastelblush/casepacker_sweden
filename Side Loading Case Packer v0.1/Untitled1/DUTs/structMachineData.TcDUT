@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <DUT Name="structMachineData" Id="{3b712b9c-f41c-4015-a04e-66c31e1089cd}">
+    <Declaration><![CDATA[TYPE structMachineData :
+STRUCT
+	Cnt_TotalGood		:DWORD;
+	Cnt_TotalNG			:DWORD;
+	Cnt_TotalOutput		:DWORD;
+	Cnt_TotalYield		:REAL;
+	
+	CycleTimeSec		:REAL;	(*Machine cycle time in Seconds*)
+	IdleTimeSec			:REAL;	(*Machine idle time in Seconds - waiting for products*)
+	CycleTimeSecAvg		:REAL;	(*Machine average cycle time in Seconds*)
+	IdleTimeSecAvg		:REAL;	(*Machine average idle time in Seconds - waiting for products*)
+	
+	TotalRunCycles		:DWORD;	(*Machine Total Autorun Cycles*)
+	
+	TotalMajorDowntimeHour	:DWORD;	(*Machine down due to trouble*)
+	TotalMajorDowntimeMin	:INT;
+	TotalMajorDowntimeSec	:INT;
+
+	TotalMinorDowntimeHour	:DWORD;	(*Machine down due to minor error*)
+	TotalMinorDowntimeMin	:INT;
+	TotalMinorDowntimeSec	:INT;
+
+	TotalRuntimeHour		:DWORD;	(*Machine in normal running state*)
+	TotalRuntimeMin			:INT;
+	TotalRuntimeSec			:INT;
+
+	TotalIdletimeHour		:DWORD;	(*Machine in normal idle state*)
+	TotalIdletimeMin		:INT;
+	TotalIdletimeSec		:INT;
+	
+	Cnt_TotalCntRemoved		:INT;
+	CartonPerMinute			:INT;
+	BundlePerMinute			:INT;
+	
+	MTBF				:REAL;
+	MTBA				:REAL;
+
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

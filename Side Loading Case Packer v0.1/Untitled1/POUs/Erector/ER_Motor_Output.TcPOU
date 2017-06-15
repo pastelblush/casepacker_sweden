@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="ER_Motor_Output" Id="{ee9e35d4-a3b5-4d0b-b85e-fe2335bf23be}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM ER_Motor_Output
+VAR
+		bEnable:BOOL;
+		Reset:BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[bEnable := NOT MC.Trouble;
+
+ER_BufCvL_Mtr_Var.In_MoveXLock := NOT  ER_BufCvL_Ctn_TON.Q;
+	
+ER_BufCvL_Mtr(
+	IN_DevName:= 'CARTON BUFFER LEFT CV', 
+	In_Enable:= bEnable, 
+	In_Reset:= MC.ResetPressed, 
+	In_StarterOK:= I_CartonCV_M1M2_OK, 
+	Out_MotorOn=> O_ER_BufCv_Mtr1_On, 
+	MotorVar:= ER_BufCvL_Mtr_Var,
+	Station			:= SC[3]);
+
+ER_BufCvR_Mtr_Var.In_MoveXLock := NOT  ER_BufCvR_Ctn_TON.Q;
+	
+ER_BufCvR_Mtr(
+	IN_DevName:= 'CARTON BUFFER RIGHT CV', 
+	In_Enable:= bEnable, 
+	In_Reset:= MC.ResetPressed, 
+	In_StarterOK:= I_CartonCV_M1M2_OK, 
+	Out_MotorOn=> O_ER_BufCv_Mtr2_On, 
+	MotorVar:= ER_BufCvR_Mtr_Var,
+	Station			:= SC[3]);]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

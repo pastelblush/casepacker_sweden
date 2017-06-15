@@ -1,0 +1,298 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="EL_Origin" Id="{11d09730-8654-4f07-bf9d-9cc609a5a094}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM EL_Origin
+VAR_IN_OUT
+	Station		:structStationCtrl;
+END_VAR
+VAR
+	EL_WA_Origin: BOOL;
+	EL_ServoOrigin	:BOOL;	
+	pls_OriginSchRun: R_trig;
+	Timeout: Ton;
+	TimeoutTrigger:BOOL;
+	TimeoutSetting:TIME;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(**************************************************************************************************************)
+(* Station Width Adjust in Origin Condition *)
+(**************************************************************************************************************)
+EL_WA_Origin := 	TRUE ;
+
+(**************************************************************************************************************)
+(* Station Origin Condition *)
+(**************************************************************************************************************)
+EL_ServoOrigin	:= 	fcComparePos(CurrPos:= EL_Srv_Var.Out_CurrPos, TargetPos:= H_EL_Srv_CtnLoadPos) AND
+					EL_Srv_Var.Out_InPos AND
+					fcComparePos(CurrPos:= EL_Center_Srv_Var.Out_CurrPos, TargetPos:= EL_Center_Srv_Var.In_PosCmd) AND
+					EL_Center_Srv_Var.Out_InPos ;
+						
+Station.Origin 	:=	((EL_WA_Origin AND EL_ServoOrigin AND
+					(	(EL_Center_Vac_Var.S_Release AND EL_Ctn_TOFF.Q) OR
+						(EL_Center_Vac_Var.S_Vacuum AND EL_Ctn_TON.Q)) AND
+					EL_Tilt_Cyl_Var.S_HomePos  AND
+					(	EL_Tilt_Vac_Var.S_Release OR 
+						(EL_Tilt_Vac_Var.S_Vacuum AND I_EX_Cv_Ctn_PE))) AND
+					EL_PushRot_Cyl_Var.S_HomePos AND
+					EL_Pusher_Cyl_Var.S_HomePos AND
+					EL_TapeOpening_Var.S_HomePos  ) AND
+					EL_Tilt_Vac_Lift_var.S_HomePos OR
+					Station.Bypass
+					;
+					 		
+(**************************************************************************************************************)
+(* Individual Station Origin Run Trigger *)
+(**************************************************************************************************************)
+IF MC.ManualMode AND NOT Station.Origin AND NOT (Station.MajorFault OR Station.MinorFault OR MC.Trouble OR MC.StopPressed )  THEN
+	IF Station.T_OriginSearch THEN
+		Station.OriginSchRun  := TRUE;
+	END_IF;
+ELSE
+	Station.OriginSchRun := FALSE;
+END_IF;
+
+(**************************************************************************************************************)
+(* Station Origin Step *)
+(**************************************************************************************************************)
+
+Timeout(IN:=TimeoutTrigger, PT:=TimeoutSetting);
+IF Timeout.Q THEN
+	TimeoutTrigger := FALSE;
+END_IF
+
+pls_OriginSchRun(CLK:= (MC.OriginSchRun OR Station.OriginSchRun));
+
+IF (MC.OriginSchRun OR Station.OriginSchRun) AND NOT Station.Bypass  THEN
+	CASE Station.OriginRunStep OF
+
+	0 : 	(************* Ready To Run ****************)
+			IF NOT Station.Origin AND pls_OriginSchRun.Q THEN
+				Station.OriginRunStep := Station.OriginRunStep+10;	
+			END_IF
+
+	10 : 	(************* Tilt Vacuum Off and Check Sensors ****************)
+			Station.Status := 'Org10: Tilt Vacuum Off and Check Sensors';
+			
+			EL_Tilt_Vac_Var.In_OrgPurge 		:=TRUE;
+			EL_Tilt_Vac_Lift_Var.In_AutoWork	:=FALSE;
+			EL_Tilt_Vac_Lift_Var.In_AutoHome	:=TRUE;
+			
+			
+			IF EL_Tilt_Vac_Var.S_Release THEN
+				EL_Tilt_Vac_Var.In_OrgPurge := FALSE;
+				IF I_EX_TopCV_Ctn_PE THEN
+					Station.SeqFaultWord := 100;	
+					Station.SeqFaultString := 'Carton Stuck at Top Exit Conveyor. Remove Carton.'; 						
+				ELSIF I_EX_BotCV_Ctn_PE THEN
+					Station.SeqFaultWord := 101;	
+					Station.SeqFaultString := 'Carton Stuck at Bottom Exit Conveyor. Remove Carton.'; 	
+				ELSIF EL_Ctn_TON.Q AND NOT EL_Center_Vac_Var.S_Vacuum  THEN
+					Station.SeqFaultWord := 102;	
+					Station.SeqFaultString := 'Carton Detected on Elevator Platform. Remove Carton.';						
+				ELSIF I_EX_Cv_Ctn_PE AND I_EL_Tilt_fwd THEN
+					Station.SeqFaultWord := 103;	
+					Station.SeqFaultString := 'Carton Detected When Tilt is in Work Position. Remove Carton.';						
+				ELSE
+					Station.OriginRunStep := 20;
+					
+(*					IF EL_Ctn_TON.Q THEN
+						Station.OriginRunStep := 15;	
+					ELSIF NOT fcComparePos(CurrPos:= EL_Center_Srv_Var.Out_CurrPos, TargetPos:= H_EL_Center_Srv_HomePos) THEN
+ 						Station.OriginRunStep := 19;		
+					ELSE
+						Station.OriginRunStep := 20;										
+					END_IF
+*)					
+				END_IF
+			END_IF		
+
+
+	20: (************* Centering Servo Move Carton to Home  ****************)
+			Station.Status := 'Org20: Centering Servo Move Carton to Taping Centerline';	
+			
+			EL_Center_Srv_Var.In_PosCmd := H_EL_Center_Srv_HomePos;
+			EL_Center_Srv_Var.In_VelCmd := A_Srv_BeltOriginSpeed;
+			EL_Center_Srv_Var.In_MoveAbs := TRUE;
+			
+			IF fcComparePos(CurrPos:= EL_Center_Srv_Var.Out_CurrPos, TargetPos:= EL_Center_Srv_Var.In_PosCmd) AND	
+				EL_Center_Srv_Var.Out_InPos THEN	
+				EL_Center_Srv_Var.In_MoveAbs := FALSE;
+				Station.OriginRunStep := Station.OriginRunStep+1;
+			END_IF	
+			
+	21 : 	(************* Move Elevator Servo to Bottom Home Position ****************)
+			Station.Status := 'Org21: Move Elevator Servo to Bottom Home Position';
+			EL_TapeOpening_Var.In_OrgHome 	:= TRUE;	
+			EL_Srv_Var.In_PosCmd := H_EL_Srv_CtnLoadPos; 
+			EL_Srv_Var.In_VelCmd := A_Srv_ElevOriginSpeed;
+			
+			IF EL_Srv_Var.In_MoveXLock AND EL_TapeOpening_Var.S_HomePos THEN
+				EL_Srv_Var.In_MoveAbs := TRUE;
+			END_IF
+			
+			IF fcComparePos(CurrPos:= EL_Srv_Var.Out_CurrPos, TargetPos:= EL_Srv_Var.In_PosCmd) AND
+				EL_Srv_Var.Out_InPos THEN
+				EL_Srv_Var.In_MoveAbs := FALSE;
+				Station.OriginRunStep := Station.OriginRunStep + 1;	
+			END_IF	
+
+	22 : 	(************* Pusher and Pusher Rot Cylinder Bwd ****************)
+			Station.Status := 'Org22: Pusher and Rot Cylinder Bwd';
+			
+				
+				EL_Pusher_Cyl_Var.In_OrgHome 	:= TRUE;
+				EL_PushRot_Cyl_Var.In_OrgHome 	:= TRUE;
+				
+			IF	EL_PushRot_Cyl_Var.S_HomePos AND
+				EL_Pusher_Cyl_Var.S_HomePos THEN	
+					EL_Pusher_Cyl_Var.In_OrgHome 	:= FALSE;
+					EL_PushRot_Cyl_Var.In_OrgHome 	:= FALSE;
+					Station.OriginRunStep := 30;	
+			END_IF		
+
+	30 : 	(************* Check Carton  ****************)
+			Station.Status := 'Org30: Move Pusher Servo to Home Position';
+
+				IF EL_Ctn_TON.Q THEN
+					Station.OriginRunStep := 100;
+				ELSE
+					Station.OriginRunStep := 300;				
+				END_IF
+			
+
+	100 : 	(************* Move Elevator Servo to Correct Exit Position ****************)
+			Station.Status := 'Org100: Move Elevator Servo to Top Exit Position';
+
+			IF H_EL_CtnWeightOK OR (EL_Srv_Var.Out_CurrPos >= H_EL_Srv_CtnRejectExitPos + 10) THEN
+				Station.Status := 'Org100: Elevator Moves to Target Good Exit Position';	
+				EL_Srv_Var.In_PosCmd := H_EL_Srv_CtnGoodExitPos; 
+				EL_Srv_Var.In_VelCmd := A_Srv_ElevOriginSpeed;
+				EL_Srv_Var.In_MoveAbs := TRUE;
+			ELSE
+				Station.Status := 'Org100: Elevator Moves to Target Reject Exit Position';	
+				EL_Srv_Var.In_PosCmd := H_EL_Srv_CtnRejectExitPos; 
+				EL_Srv_Var.In_VelCmd := A_Srv_ElevOriginSpeed;
+				EL_Srv_Var.In_MoveAbs := TRUE;			
+			END_IF
+			
+			IF fcComparePos(CurrPos:= EL_Srv_Var.Out_CurrPos, TargetPos:= EL_Srv_Var.In_PosCmd) AND
+				EL_Srv_Var.Out_InPos THEN
+				EL_Srv_Var.In_MoveAbs := FALSE;
+				EL_FlapHoldL_Cyl_Var.In_OrgHome := FALSE;
+				Station.OriginRunStep := Station.OriginRunStep+10;	
+			END_IF
+		
+	110 : 	(************* Release Carton Centering Vacuum and Pusher Rotate Cylinder Up ****************)
+			Station.Status := 'Org110: Release Carton Centering Vacuum and Pusher Rotate Cylinder Up';
+			
+			EL_Center_Vac_Var.In_OrgPurge 	:= TRUE;
+			EL_Center_Vac_Var.In_OrgVacuum 	:= FALSE;
+			EL_PushRot_Cyl_Var.In_OrgWork 	:= TRUE;
+	
+			IF EL_Center_Vac_Var.S_Release AND
+				EL_PushRot_Cyl_Var.S_WorkPos  THEN
+				EL_Center_Vac_Var.In_OrgPurge := FALSE;
+				EL_PushRot_Cyl_Var.In_OrgWork := FALSE;
+				Station.OriginRunStep := Station.OriginRunStep+10;	
+			END_IF 
+			
+	120 : 	(************* Run Top Exit conveyor and Move Pusher Servo to Final Position ****************)
+			Station.Status := 'Org120: Pusher to Final Position';
+			
+			EL_Pusher_Cyl_Var.In_OrgWork	:= TRUE;
+			A_EL_LC_Muting 					:= TRUE;
+
+			TimeoutTrigger := TRUE;
+			TimeoutSetting := T#10S;
+			
+			IF EL_Pusher_Cyl_Var.S_WorkPos  THEN
+					EL_Pusher_Cyl_Var.In_OrgWork	:= FALSE;
+				IF EL_TopCv_Ctn_TOFF.Q AND EL_BotCv_Ctn_TOFF.Q THEN
+					TimeoutTrigger := FALSE;
+					Station.OriginRunStep := 300;	
+				ELSIF Timeout.Q THEN
+					IF NOT EL_TopCv_Ctn_TOFF.Q THEN
+						(* 100 - Carton Stuck at Top Exit Conveyor*)
+						Station.SeqFaultWord := 100;
+						Station.SeqFaultString := 'Carton Stuck at Top Exit Conveyor. Remove Carton.'; 
+					ELSE
+						(* 101 - Carton Stuck at Bottom Exit Conveyor*)
+						Station.SeqFaultWord := 101;
+						Station.SeqFaultString := 'Carton Stuck at Bottom Exit Conveyor. Remove Carton.'; 						
+					END_IF
+				END_IF					
+			END_IF		
+
+	300 : 	(************* Move Centering Servo to Home Position ****************)
+			Station.Status := 'Org300: Move Centering Servo to Home Position';
+			
+			EL_Center_Srv_Var.In_PosCmd := H_EL_Center_Srv_HomePos; 
+			EL_Center_Srv_Var.In_VelCmd := A_Srv_BeltOriginSpeed;
+			EL_Center_Srv_Var.In_MoveAbs:= TRUE;
+			A_EL_LC_Muting 				:= FALSE;
+			
+			IF fcComparePos(CurrPos:= EL_Center_Srv_Var.Out_CurrPos, TargetPos:= EL_Center_Srv_Var.In_PosCmd) AND	
+				EL_Center_Srv_Var.Out_InPos THEN	
+				EL_Center_Srv_Var.In_MoveAbs := FALSE;
+				Station.OriginRunStep := Station.OriginRunStep+10;
+			END_IF		
+
+	310 : 	(************* Move Pusher to Home Position ****************)
+			Station.Status := 'Org310: Move Pusher to Home Position';
+			
+			EL_Pusher_Cyl_Var.In_OrgHome 	:= TRUE;
+			EL_PushRot_Cyl_Var.In_OrgHome 	:= TRUE;
+
+
+			IF 	EL_PushRot_Cyl_Var.S_HomePos AND
+				EL_Pusher_Cyl_Var.S_HomePos THEN
+				
+					EL_Pusher_Cyl_Var.In_OrgHome 	:= FALSE;
+					EL_PushRot_Cyl_Var.In_OrgHome 	:= FALSE;
+					Station.OriginRunStep := Station.OriginRunStep + 10;	
+			END_IF
+		
+		
+	320 : 	(************* Move Elevator Servo to Bottom Home Position ****************)
+			Station.Status := 'Org320: Move Elevator Servo to Bottom Home Position';
+			
+			EL_Srv_Var.In_PosCmd := H_EL_Srv_CtnLoadPos; 
+			EL_Srv_Var.In_VelCmd := A_Srv_ElevOriginSpeed;
+			IF EL_Srv_Var.In_MoveXLock THEN
+				EL_Srv_Var.In_MoveAbs := TRUE;
+			END_IF
+			
+			IF fcComparePos(CurrPos:= EL_Srv_Var.Out_CurrPos, TargetPos:= EL_Srv_Var.In_PosCmd) AND
+				EL_Srv_Var.Out_InPos THEN
+				EL_Srv_Var.In_MoveAbs := FALSE;
+				Station.OriginRunStep := Station.OriginRunStep + 10;	
+			END_IF
+			
+	330:	(*************** Tape Opening and Tilt Home****************************)
+			Station.Status := 'Org330: Tape Opening and Tilt Home';
+			
+
+			EL_TapeOpening_Var.In_OrgHome 	:= TRUE;
+			EL_Tilt_Cyl_Var.In_OrgHome 		:= TRUE;
+			EL_Center_Vac_Var.In_OrgPurge 	:= FALSE;
+			EL_Center_Vac_Var.In_OrgVacuum 	:= FALSE;
+			
+			
+			IF EL_TapeOpening_Var.S_HomePos AND
+				EL_Tilt_Cyl_Var.S_HomePos THEN
+				EL_TapeOpening_Var.In_OrgHome 	:= FALSE;
+				EL_Tilt_Cyl_Var.In_OrgHome 		:= FALSE;
+				Station.OriginRunStep := 0;	
+			END_IF
+									
+	END_CASE
+
+ELSE
+
+	Station.OriginRunStep := 0;	
+	
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

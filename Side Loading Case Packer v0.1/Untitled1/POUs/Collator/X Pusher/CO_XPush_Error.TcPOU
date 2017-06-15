@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_XPush_Error" Id="{f128eb4a-4eae-4cca-8ab9-ef8b2115055d}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_XPush_Error
+VAR_IN_OUT
+	Station		:structStationCtrl;
+END_VAR
+
+VAR
+
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*
+
+IF MC.ResetPressed THEN
+	Station.SeqFaultWord := 0;
+END_IF
+
+(* 	Reserved Station.SeqFaultWord 
+	= 1~49 for Major Fault
+	= 100~149 for Origin Sequence Fault
+	= 150~199 for Origin Width Adjust Sequence Fault
+	= 200~299 for Auto Sequence Fault
+	= 300~399 for misc fault listed on this page*)
+
+						
+Station.MajorFault := (Station.SeqFaultWord > 0) AND (Station.SeqFaultWord < 50);
+Station.MinorFault := (Station.SeqFaultWord >= 100)  OR station.DeviceFault ;
+
+*)
+				
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

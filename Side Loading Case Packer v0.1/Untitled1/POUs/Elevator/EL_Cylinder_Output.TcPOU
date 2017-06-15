@@ -1,0 +1,205 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="EL_Cylinder_Output" Id="{f268bfba-cd51-4c49-84f5-5960cd9ed74c}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM EL_Cylinder_Output
+VAR
+	bEnable: BOOL;
+	Reset: BOOL;
+	
+	pls_ER_WA_ServoOn: R_trig;
+	pls_ER_WA_ServoOff: F_trig;
+	Locking_Cond : BOOL;
+	Dly_Locking	:TON;	
+
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[bEnable := NOT MC.Trouble ;
+
+
+EL_TapeOpening_Var.In_WorkXLock := TRUE;
+EL_TapeOpening_Var.In_HomeXLock := TRUE;
+
+EL_TapeOpening_Cyl(				
+	IN_CylName		:='4Y1 TAPE OPENING', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_EL_Tape_OpeningL_FWD	AND I_EL_Tape_OpeningR_FWD	, 	
+	In_HomeRS		:= I_EL_Tape_OpeningL_BWD	AND I_EL_Tape_OpeningR_BWD	, 	
+	In_WorkTON		:= T#100MS, 	
+	In_HomeTON		:= T#100MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_EL_TapeOpening_Fwd, 	
+	Out_HomeSV		=> O_EL_TapeOpening_Bwd, 	
+	CylVar			:= EL_TapeOpening_Var,
+	Station			:= SC[5]);
+
+EL_Tilt_Cyl_Var.In_HomeXLock := (NOT EL_SERVO_OUTPUT.bEL_NotSafePos OR I_EL_Tilt_Bwd) AND 
+								NOT (EL_SERVO_OUTPUT.bEL_NotSafePos AND I_EL_Ctn_PE AND NOT I_EL_Tilt_Bwd )	 ;
+EL_Tilt_Cyl_Var.In_WorkXLock := (NOT EL_SERVO_OUTPUT.bEL_NotSafePos OR I_EL_Tilt_Fwd) AND 
+								NOT (EL_SERVO_OUTPUT.bEL_NotSafePos AND I_EL_Ctn_PE AND NOT I_EL_Tilt_Fwd );
+				
+EL_Tilt_Cyl(				
+	IN_CylName		:='4Y2 TILT CYLINDER',
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_EL_Tilt_Fwd, 	
+	In_HomeRS		:= I_EL_Tilt_Bwd, 	
+	In_WorkTON		:= T#100MS, 	
+	In_HomeTON		:= T#100MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_EL_TiltLift_Fwd, 	
+	Out_HomeSV		=> O_EL_TiltLift_Bwd, 	
+	CylVar			:= EL_Tilt_Cyl_Var,
+	Station			:= SC[5]);
+
+
+EL_Tilt_Vac_Lift_Var.In_HomeXLock	:= TRUE;
+EL_Tilt_Vac_Lift_Var.In_workXLock	:= TRUE;
+		
+EL_Tilt_Vac_Lift_Cyl(				
+	IN_CylName		:='4Y4 TILT VAC LIFT',	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= O_EL_TiltVacLift_Up, 	
+	In_HomeRS		:= NOT O_EL_TiltVacLift_Up, 	
+	In_WorkTON		:= T#100MS, 	
+	In_HomeTON		:= T#100MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_EL_TiltVacLift_Up, 	
+	Out_HomeSV		=> O_EL_TiltVacLift_Dn, 	
+	CylVar			:= EL_Tilt_Vac_Lift_Var,
+	Station			:= SC[5]);
+
+
+EL_PushRot_Cyl_Var.In_HomeXLock := EL_Pusher_Cyl_var.S_HomePos;
+EL_PushRot_Cyl_Var.In_WorkXLock := TRUE; (*EL_Pusher_Cyl_var.S_HomePos*);
+
+EL_PushRot_Cyl(				
+	IN_CylName		:='5Y1 PUSHER ROTATE',	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_EL_PushRot_Up, 	
+	In_HomeRS		:= I_EL_PushRot_Dn, 	
+	In_WorkTON		:= T#100MS, 	
+	In_HomeTON		:= T#100MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_EL_PushRot_Up, 	
+	Out_HomeSV		=> O_EL_PushRot_Dn, 	
+	CylVar			:= EL_PushRot_Cyl_Var,
+	Station			:= SC[5]);
+				
+	
+EL_Pusher_Cyl_Var.In_HomeXLock := TRUE;
+EL_Pusher_Cyl_Var.In_WorkXLock := EL_PushRot_Cyl_Var.S_WorkPos;
+
+EL_Pusher_Cyl(				
+	IN_CylName		:='5Y2 PUSHER',	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_EL_Pusher_Fwd	, 	
+	In_HomeRS		:= I_EL_Pusher_Bwd	, 	
+	In_WorkTON		:= T#100MS, 	
+	In_HomeTON		:= T#100MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> Q_EL_Pusher_Fwd	, 	
+	Out_HomeSV		=> Q_EL_Pusher_Bwd	, 	
+	CylVar			:= EL_Pusher_Cyl_Var,
+	Station			:= SC[5]);	
+	
+EL_EL_TapeLock_Var.In_HomeXLock := TRUE;
+EL_EL_TapeLock_Var.In_WorkXLock := TRUE;;
+
+(*debug start*)
+pls_ER_WA_ServoOn(CLK:= ER_WA_Srv_Var.Out_Ready);
+pls_ER_WA_ServoOff(CLK:= ER_WA_Srv_Var.Out_Ready);
+
+(*Unlocking Condition*)
+IF ER_WA_Srv_Var.Out_Busy OR 
+	(O_EL_TapeChange_Fwd AND NOT I_EL_Tape_Change_FWD) OR 
+  	(O_EL_TapeChange_Bwd AND NOT I_EL_Tape_Change_BWD) THEN
+		EL_EL_TapeLock_Var.T_ManHome:= TRUE;
+		EL_EL_TapeLock_Var.T_ManWork:= FALSE;
+		EL_EL_TapeLock_Var.In_OrgHome:= TRUE;
+		EL_EL_TapeLock_Var.In_OrgWork:= FALSE;
+END_IF
+
+(*Locking Condition*)
+Locking_Cond:=	(NOT ER_WA_Srv_Var.Out_Busy) OR 
+				(O_EL_TapeChange_Fwd AND I_EL_Tape_Change_FWD) OR 
+  				(O_EL_TapeChange_Bwd AND I_EL_Tape_Change_BWD);
+Dly_Locking(IN:=Locking_Cond, PT:=T#1S);
+
+IF Dly_Locking.Q THEN
+		EL_EL_TapeLock_Var.T_ManHome:= FALSE;
+		EL_EL_TapeLock_Var.T_ManWork:= TRUE;
+		EL_EL_TapeLock_Var.In_OrgHome:= FALSE;
+		EL_EL_TapeLock_Var.In_OrgWork:= TRUE;
+END_IF
+(*debug end*)
+
+EL_EL_TapeLock_CYl(				
+	IN_CylName		:='TAPE LOCK',	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= O_EL_TapeLock_ON	, 	
+	In_HomeRS		:= NOT O_EL_TapeLock_ON	, 	
+	In_WorkTON		:= T#100MS, 	
+	In_HomeTON		:= T#100MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_EL_TapeLock_ON	, 	
+	Out_HomeSV		=> 	, 	
+	CylVar			:= EL_EL_TapeLock_Var,
+	Station			:= SC[5]);	
+	
+EL_TapeChange_Var.In_HomeXLock := TRUE;
+EL_TapeChange_Var.In_WorkXLock := TRUE;;
+
+EL_TapeChange_Cyl(				
+	IN_CylName		:='TAPE CHANGE',	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_EL_Tape_Change_FWD, 	
+	In_HomeRS		:= I_EL_Tape_Change_BWD, 	
+	In_WorkTON		:= T#100MS, 	
+	In_HomeTON		:= T#100MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_EL_TapeChange_Fwd	, 	
+	Out_HomeSV		=> O_EL_TapeChange_Bwd, 	
+	CylVar			:= EL_TapeChange_Var,
+	Station			:= SC[5]);	
+
+
+	
+
+EL_BrakeRel_Cyl_Var.In_HomeXLock := TRUE;
+EL_BrakeRel_Cyl_Var.In_WorkXLock := EL_Srv_Var.Out_Ready AND NOT mc.Trouble;
+
+EL_BrakeRel_Cyl_Var.T_ManWork 	:= bEnable AND EL_Srv_Var.Out_Ready;
+EL_BrakeRel_Cyl_Var.T_ManHome 	:= NOT EL_BrakeRel_Cyl_Var.T_ManWork;	
+EL_BrakeRel_Cyl_Var.In_OrgWork 	:= bEnable AND EL_Srv_Var.Out_Ready;
+EL_BrakeRel_Cyl_Var.In_OrgHome 	:= NOT EL_BrakeRel_Cyl_Var.In_OrgHome;
+EL_BrakeRel_Cyl_Var.In_AutoWork := bEnable AND EL_Srv_Var.Out_Ready;
+EL_BrakeRel_Cyl_Var.In_AutoHome := NOT EL_BrakeRel_Cyl_Var.In_OrgHome;
+
+
+EL_BrakeRel_Cyl(				
+	IN_CylName		:='9Y1 ELEV. BRAKE RELEASE',	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= O_EL_SafeLock_Rel, 	
+	In_HomeRS		:= NOT O_EL_SafeLock_Rel, 	
+	In_WorkTON		:= T#200MS, 	
+	In_HomeTON		:= T#200MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_EL_SafeLock_Rel, 	
+	Out_HomeSV		=> , 	
+	CylVar			:= EL_BrakeRel_Cyl_Var,
+	Station			:= SC[5]);
+
+
+	
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

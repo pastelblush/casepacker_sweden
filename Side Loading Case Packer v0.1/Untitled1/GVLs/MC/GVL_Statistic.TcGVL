@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <GVL Name="GVL_Statistic" Id="{a4f34856-da4d-4e43-bca5-69525b712a78}">
+    <Declaration><![CDATA[
+VAR_GLOBAL PERSISTENT
+MAX_StatisticAray				:UINT	:= 	32001;
+
+StatisticCase 					:ARRAY [0..32001] OF structStatisticReject;
+
+StatisticCase_StartDate_Day		:WORD;
+StatisticCase_StartDate_Month	:WORD;
+StatisticCase_StartDate_Year	:WORD;
+
+StatisticCase_StartTime_Hour	:WORD;
+StatisticCase_StartTime_Minute	:WORD;
+StatisticCase_StartTime_Second	:WORD;
+
+StatisticCase_EndDate_Day		:WORD;
+StatisticCase_EndDate_Month		:WORD;
+StatisticCase_EndDate_Year		:WORD;
+
+StatisticCase_EndTime_Hour		:WORD;
+StatisticCase_EndTime_Minute	:WORD;
+StatisticCase_EndTime_Second	:WORD;
+
+StatisticCase_Cnt_LeftTapFail	:INT;
+StatisticCase_Cnt_RightTapFail	:INT;
+StatisticCase_Cnt_UnderWeight	:INT;
+StatisticCase_Cnt_OverWeight	:INT;
+StatisticCase_Cnt_Good			:INT;
+StatisticCase_RejectCalStart	:BOOL;
+
+END_VAR
+
+VAR_GLOBAL
+	RegisterCaseStatistic		: fbStatistic_RegisterCase;
+	CalculationRejectStatistic	: fbStatistic_CalReject;
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

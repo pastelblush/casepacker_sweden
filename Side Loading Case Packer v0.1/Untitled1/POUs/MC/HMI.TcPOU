@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="HMI" Id="{8a9f5ecf-259f-4187-82e0-1499194e6491}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM HMI
+VAR
+	Station: INT;
+	RunStep: INT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+CASE T_DisplayWordSelect OF
+	0:
+	
+	1:
+	
+	2:
+	
+	3:
+	
+	4:
+	
+	5:
+	
+	
+END_CASE]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,81 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="EL_TestServo" Id="{5e0278e4-80b8-42f4-99f6-fbc3973c3710}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM EL_TestServo
+VAR
+	plsTestSequence: R_trig;
+	TestSequencePos1: REAL;
+	TestSequencePos2: REAL;
+	TestSequenceInPos: Ton;
+	TestSequenceStep: INT;
+
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*Test Servo Sequence*)
+IF MC.ManualMode AND NOT MC.Trouble AND EL_Srv_Var.In_MoveXLock AND Always_Off THEN
+	IF HMI.T_Start THEN
+		TestSequence := TRUE;
+		EL_Srv_Var.In_ServoOn := TRUE;
+		TestSequenceStep := 10;
+	END_IF
+	IF HMI.T_Stop THEN
+		TestSequence := FALSE;
+		TestSequenceStep := 0;
+	END_IF
+ELSE
+	TestSequence := FALSE;
+	TestSequenceStep := 0;
+END_IF
+
+plsTestSequence(CLK:=TestSequence);
+
+TestSequenceInPos (IN := EL_Srv_Var.Out_InPos, pt := T#2S);
+
+IF TestSequence THEN
+
+	EL_Srv_Var.In_VelCmd := 200000;
+	TestSequencePos1 := 200;
+	TestSequencePos2 := 3000;
+	
+	CASE TestSequenceStep OF
+		10:
+			IF EL_Srv_Var.Out_Ready THEN
+				EL_Srv_Var.In_PosCmd := TestSequencePos1;
+				EL_Srv_Var.In_MoveAbs := TRUE;				
+			END_IF
+
+			IF fcComparePos(CurrPos:= EL_Srv_Var.Out_CurrPos, TargetPos:= TestSequencePos1) THEN
+				EL_Srv_Var.In_MoveAbs := FALSE;
+				TestSequenceStep := TestSequenceStep + 10;
+			END_IF
+			
+		20:
+			IF TestSequenceInPos.Q THEN
+				TestSequenceStep := TestSequenceStep + 10;
+			END_IF
+			
+		30:
+			IF EL_Srv_Var.Out_Ready THEN
+				EL_Srv_Var.In_PosCmd := TestSequencePos2;
+				EL_Srv_Var.In_MoveAbs := TRUE;
+			END_IF
+				
+			IF fcComparePos(CurrPos:= EL_Srv_Var.Out_CurrPos, TargetPos:= TestSequencePos2) THEN
+				EL_Srv_Var.In_MoveAbs := FALSE;
+				TestSequenceStep := TestSequenceStep + 10;
+			END_IF
+
+		40:
+			IF TestSequenceInPos.Q THEN
+				TestSequenceStep := 10;
+			END_IF
+		
+	END_CASE
+ELSE
+	TestSequenceStep := 0;	
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

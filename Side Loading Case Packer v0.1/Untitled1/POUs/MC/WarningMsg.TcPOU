@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="WarningMsg" Id="{cb4c668e-4818-4166-bb8c-cc75d7e38265}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM WarningMsg
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*
+IF MC.AutoMode OR MC.ManualMode THEN
+	
+	IF W_ER_BufRefill THEN
+		HMI.T_StatusString 		:= 'Erector Carton Buffer Conveyor Almost Empty. Refill Carton.';
+		HMI.T_StatusStringInt	:= 20;			
+	ELSIF W_EX_TapeLRefill THEN
+		HMI.T_StatusString 		:= 'Left Tape Almost Empty. Refill Tape.';
+		HMI.T_StatusStringInt	:= 21;	
+	ELSIF W_EX_TapeRRefill THEN
+		HMI.T_StatusString 		:= 'Right Tape Almost Empty. Refill Tape.';
+		HMI.T_StatusStringInt	:= 22;	
+	ELSIF W_HOR_TapeLRefill THEN
+		HMI.T_StatusString 		:= 'Left Tape Almost Empty. Refill Tape.';
+		HMI.T_StatusStringInt	:= 23;	
+	ELSIF W_HOR_TapeRRefill THEN
+		HMI.T_StatusString 		:= 'Right Tape Almost Empty. Refill Tape.';
+		HMI.T_StatusStringInt	:= 24;			
+	END_IF
+END_IF
+*)]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

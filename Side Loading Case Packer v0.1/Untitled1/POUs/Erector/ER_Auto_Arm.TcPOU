@@ -1,0 +1,580 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="ER_Auto_Arm" Id="{0e95487e-144e-457f-86fe-2469fc870452}" SpecialFunc="None">
+    <Declaration><![CDATA[                                                                                                                                                                                                                                                                                                      PROGRAM ER_Auto_Arm
+VAR_IN_OUT
+	Station		:structStationCtrl;
+END_VAR
+VAR
+	tmrDelayBFlapUp:ton;
+	Timeout					:TON;	
+	StpCtnPE_TOFF			:Ton;
+	ManualInit_TOn			:Ton;
+	tmrDelayVacHold			:ton;
+	CaseSupply_L_Timeout	:TON;
+	CaseSupply_R_Timeout	:TON;
+	tmr_Case_Buffer			:ton;	
+	tmr_ArmTiltDly			:Ton;
+	ServoTargetPos			:REAL;
+	TimeoutTrigger			:BOOL;
+	TimeoutSetting			:TIME;
+	NoWPonErector			:BOOL;
+	NoWPonExit				:BOOL;
+	CartonPreAtStopper		:BOOL;
+	GlueStart1 				:BOOL;
+	GlueStart2 				:BOOL;
+	DistanceAdvanceForGlue	:REAL;
+	End_Production			:BOOL;	
+	Case_Not_Ready 			:BOOL;	
+	CaseSupply_L_TimeoutM	:BOOL;
+	CaseSupply_R_TimeoutM	:BOOL;
+			
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[NoWPonErector := 	NOT H_ER_CtnRdyForPushIn AND 
+					NOT I_ER_StpL_Ctn_PE AND
+					NOT I_ER_StpR_Ctn_PE;
+							
+NoWPonExit := 	NOT H_ER_CtnRdyForGlue AND
+				NOT H_ER_CtnGlueDone AND
+				NOT I_EX_Cv_Ctn_PE;
+
+tmr_Case_Buffer	(IN := NOT ER_BufCv_Ctn_TON.Q AND 
+					NOT (MC.DryRun  OR  End_Production ) AND
+					mc.AutoRunning, pt := T#3S);			
+Case_Not_Ready := 	(tmr_Case_Buffer.Q AND NOT mc.DryRun) OR 
+					(NOT I_Case_Infeed_Safety_Ok AND NOT mc.E_EmgStop AND NOT mc.E_SafetyDoorOpen);
+					
+					
+sc[3].Warning			:= Case_Not_Ready;
+				
+(**************************************************************************************************************)
+(*	Initial Device	*)
+(**************************************************************************************************************)
+ManualInit_TOn (in:= mc.ManualMode AND NOT mc.OriginSchRun, pt:= T#1S);
+
+IF mc.ManualMode AND NOT mc.OriginSchRun AND NOT ManualInit_TOn.Q THEN
+	ER_Arm_Srv_Var.In_MoveAbs 			:= FALSE;
+	ER_WA_Srv_Var.In_MoveAbs 			:= FALSE;	
+	EX_HeightL_WA_Srv_Var.In_MoveAbs	:= FALSE;
+	EX_HeightR_WA_Srv_Var.In_MoveAbs	:= FALSE;
+END_IF
+				
+(**************************************************************************************************************)
+(* GENERAL STATION MAPPING  *)
+(**************************************************************************************************************)
+Station.Name			:=	'CARTON ERECTOR & SIDE FLAP CLOSING';
+Station.Rdy 			:= 	Station.Origin AND ER_Origin.ER_WA_Origin;
+Station.AutoRun 		:=	(MC.AutoRunning OR Station.M_Step) AND 
+							NOT (Station.Bypass OR Station.MajorFault OR Station.MinorFault);
+Station.RunReq			:= 	(
+							((NOT I_EX_Cv_Ctn_PE OR NoWPonErector) AND NoWPonErector AND NOT End_Production ) OR
+							(H_ER_CtnSideFlapDone AND NoWPonExit)
+							) AND
+							(er_tIMERS.ER_Carton_TON.Q OR MC.DryRun OR 
+							(End_Production AND (I_ER_StpL_Ctn_PE OR I_ER_StpR_Ctn_PE)) 
+							);											
+Station.RunCond			:=	(NOT CO_YPush.Running OR CO_YPush.RunStep >= 200) AND	(*Y Pusher Not Running Forward*) 
+							( (I_Nord_Rdy and not W_Glue_is_Empty and not W_CaseBuffer_is_Empty)  OR NOT T_GlueEnable OR mc.DryRun) AND
+							((NOT EX.Running OR										(*Hot Glue and Weight Check Not Running*) 	
+							NoWPonErector)) AND
+							NOT Station.Running AND									(*Fixed Flap Closing Not Running*)
+							NOT (Station.Done OR MC.StopPressed);
+Station.Run_NextStepPls	:=	(Station.AutoRun AND NOT Station.M_Step) OR 
+							(Station.M_Step AND M_StepFwdPls) OR HMI.T_OneCycleRun;
+Station.Run_PrevStepPls	:=	(Station.M_Step AND M_StepBwdPls);
+
+(**************************************************************************************************************)
+(* Auto Sequance*)
+(**************************************************************************************************************)
+
+Timeout(IN:=TimeoutTrigger, PT:=TimeoutSetting);
+IF Timeout.Q THEN
+	TimeoutTrigger := FALSE;
+END_IF
+
+
+tmrDelayVacHold	(IN:=Station.RunStep=30, PT:=T#0S);
+tmr_ArmTiltDly	(IN:=Station.RunStep=20 AND ER_ArmTilt_Cyl_Var.S_HomePos, pt:= T#0.2S);
+ 
+(********************* Case Supply Sequence Start ********************************)
+	CaseSupply_L_Timeout	(IN:= ER_BufCvL_Mtr_Var.S_Running, PT:= T#60S);
+	CaseSupply_R_Timeout	(IN:= ER_BufCvR_Mtr_Var.S_Running, PT:= T#60S);
+	
+	IF CaseSupply_L_Timeout.q THEN
+		CaseSupply_L_TimeoutM	:= TRUE;
+	END_IF
+	IF CaseSupply_R_Timeout.q THEN
+		CaseSupply_R_TimeoutM	:= TRUE;
+	END_IF
+	IF I_ER_RefillL_PE OR NOT mc.AutoRunning THEN
+		CaseSupply_L_TimeoutM	:= FALSE;
+		CaseSupply_R_TimeoutM	:= FALSE;
+	END_IF
+		
+	ER_BufCvL_Mtr_Var.In_AutoON := NOT  ER_BufCvL_Ctn_TON.Q AND NOT CaseSupply_L_TimeoutM AND NOT(STation.RunStep >= 20 AND Station.RunStep <40)  ;
+	ER_BufCvR_Mtr_Var.In_AutoON := NOT  ER_BufCvR_Ctn_TON.Q AND	NOT CaseSupply_L_TimeoutM AND NOT(STation.RunStep >= 20 AND Station.RunStep <40)  ;	
+
+
+IF Station.AutoRun OR Station.M_Step THEN
+
+(**************************************************************************)
+	CASE Station.RunStep OF
+
+	0 : 	(************* Ready To Run ****************)
+			End_Production := hmi.T_EndProd;
+			
+			IF Station.RunCond AND Station.RunReq AND Station.Rdy  AND
+				(NOT H_ER_CtnPushInDone OR H_ER_CtnSideFlapDone)  THEN
+				Station.RunStep := Station.RunStep + 5;
+			ELSIF NOT Station.RunCond THEN
+				Station.Status 		:= '0: Station Waiting for Run Conditions';
+				Station.StatusInt	:= 1;
+			ELSIF NOT Station.RunReq THEN
+				Station.Status 		:= '0: Station Waiting for Run Request';
+				Station.StatusInt	:= 2;
+			ELSE
+				Station.Status 		:= '0: Station Not Ready';
+				Station.StatusInt	:= 3;
+			END_IF
+
+	5 : 	(************* Stopper Down ****************)
+			(************* Case Guide Down ****************)
+			Station.Status 		:= '5: Stopper & Case Guide Down';
+			Station.StatusInt	:= 251;
+			
+			ER_StpR_Cyl_Var.In_AutoWork 		:= FALSE;
+			ER_StpR_Cyl_Var.In_AutoHome 		:= TRUE;
+			ER_StpL_Cyl_Var.In_AutoWork 		:= FALSE;
+			ER_StpL_Cyl_Var.In_AutoHome 		:= TRUE;
+			ER_CaseGuideL_Cyl_Var.In_AutoWork 	:= FALSE;
+			ER_CaseGuideL_Cyl_Var.In_AutoHome 	:= TRUE;
+			ER_CaseGuideR_Cyl_Var.In_AutoWork 	:= FALSE;
+			ER_CaseGuideR_Cyl_Var.In_AutoHome 	:= TRUE;
+			
+
+			IF 	ER_StpR_Cyl_Var.S_HomePos AND 
+				ER_StpL_Cyl_Var.S_HomePos AND
+				ER_CaseGuideL_Cyl_Var.S_HomePos AND
+				ER_CaseGuideR_Cyl_Var.S_HomePos AND
+				Station.Run_NextStepPls THEN
+				ER_StpR_Cyl_Var.In_AutoWork := FALSE;
+				ER_StpL_Cyl_Var.In_AutoWork := FALSE;
+				H_ER_CtnErected				:= FALSE;
+				IF NOT End_Production THEN
+					Station.RunStep := Station.RunStep + 5;	
+				ELSE
+					Station.RunStep := 30;
+				END_IF
+			END_IF
+			
+	10 : 	(************* Erector Arm Servo Move forward while Vacuum ON ****************)
+			Station.Status 		:= '10: Erector Arm Servo Move Forward';
+			Station.StatusInt	:= 252;
+			
+			IF NOT MC.DryRun  THEN
+				ER_Arm_Vac_Var.In_AutoVacuum := TRUE;
+				ER_Arm_Vac_Var.In_AutoPurge := FALSE;
+			END_IF
+
+			ER_Arm_Srv_Var.In_PosCmd := H_ER_Arm_Srv_CtnVacuumPos + 45;
+			ER_Arm_Srv_Var.In_VelCmd := A_Srv_ErectorArmHiSpeed;
+			ER_Arm_Srv_Var.In_MoveAbs := TRUE;
+			
+			IF H_ER_CtnSideFlapDone THEN
+				ER_RFlapL_Cyl_Var.In_AutoWork := TRUE;
+				ER_RFlapR_Cyl_Var.In_AutoWork := TRUE;
+			END_IF
+			
+			IF fcComparePos(CurrPos:= ER_Arm_Srv_Var.Out_CurrPos, TargetPos:= ER_Arm_Srv_Var.In_PosCmd,5) AND
+				((ER_RFlapL_Cyl_Var.S_WorkPos AND ER_RFlapR_Cyl_Var.S_WorkPos) OR
+					NOT H_ER_CtnSideFlapDone) AND
+					(ER_Arm_Vac_Var.S_Vacuum OR MC.DryRun) AND
+				Station.Run_NextStepPls THEN				
+				ER_Arm_Srv_Var.In_MoveAbs := FALSE;
+				ER_Arm_Vac_Var.In_AutoVacuum := FALSE;
+				Station.RunStep := Station.RunStep + 10;	
+			END_IF
+	
+	20 : 	(************* Erector Arm Servo Move backwards to pull out carton at slower speed ****************)
+			(************* Rear Flap Close And Top Flap Close Home ****************)
+			Station.Status 		:= '20: Erector Arm Servo Move Backwards to Pull Out Carton';
+			Station.StatusInt	:= 253;
+	
+				ER_ArmTilt_Cyl_Var.In_AutoHome 	:= TRUE;
+				ER_ArmTilt_Cyl_Var.In_AutoWork 	:= FALSE;
+				
+				H_HOR_CtnWeightOK				:= FALSE;				
+
+				ServoTargetPos := H_ER_Arm_Srv_CtnVacuumPos - 100;
+				ER_Arm_Srv_Var.In_PosCmd := ServoTargetPos;
+				ER_Arm_Srv_Var.In_VelCmd := A_Srv_ErectorArmLoSpeed;
+			
+			IF ER_ArmTilt_Cyl_Var.S_HomePos AND tmr_ArmTiltDly.Q THEN
+				ER_Arm_Srv_Var.In_MoveAbs := TRUE;
+			END_IF
+				
+			IF ER_Arm_Srv_Var.Out_Busy THEN
+				ER_Arm_Srv_Var.In_MoveAbs := FALSE;
+			END_IF
+			
+			IF (ER_Arm_Srv_Var.Out_CurrPos <= ServoTargetPos + 5) THEN	
+				H_ER_CtnErected						:= TRUE;			
+				ER_Arm_Srv_Var.In_MoveAbs 			:= FALSE;
+				ER_RFlapL_Cyl_Var.In_AutoWork 		:= FALSE;
+				ER_RFlapL_Cyl_Var.In_AutoHome 		:= TRUE;
+				ER_RFlapR_Cyl_Var.In_AutoWork 		:= FALSE;
+				ER_RFlapR_Cyl_Var.In_AutoHome 		:= TRUE;				
+				Station.RunStep := Station.RunStep + 10;	
+			END_IF
+
+	30 : 	(************* Erector Arm Servo Move to Carton Erect Final Position and Cylinders Bwd ****************)
+			Station.Status 		:= '30: Erector Arm Servo Move to Carton Erect Final Position';
+			Station.StatusInt	:= 254;
+			
+			ER_Arm_Srv_Var.In_PosCmd := H_ER_Arm_Srv_CtnErectPos;
+			ER_Arm_Srv_Var.In_VelCmd := A_Srv_ErectorArmHiSpeed ;
+			ER_Arm_Srv_Var.In_MoveAbs := TRUE;
+						
+			StpCtnPE_TOFF(IN:= NOT (I_ER_StpL_Ctn_PE OR I_ER_StpR_Ctn_PE), PT:=T#0S);
+			
+			IF StpCtnPE_TOFF.Q AND 
+				ER_Arm_Srv_Var.Out_CurrPos <= (H_ER_Arm_Srv_CtnErectPos + 200) THEN
+				ER_ArmTilt_Cyl_Var.In_AutoHome 	:= TRUE;
+				ER_ArmTilt_Cyl_Var.In_AutoWork 	:= FALSE;
+			END_IF
+			
+			IF 	ER_Arm_Srv_Var.Out_CurrPos <= (H_ER_Arm_Srv_CtnErectPos + 200) AND
+				NOT End_Production THEN
+				ER_StpR_Cyl_Var.In_AutoWork 	:= TRUE;
+				ER_StpR_Cyl_Var.In_AutoHome 	:= FALSE;
+				ER_StpL_Cyl_Var.In_AutoWork 	:= TRUE;
+				ER_StpL_Cyl_Var.In_AutoHome 	:= FALSE;
+		
+	
+			END_IF			
+			
+			IF ER_Arm_Srv_Var.Out_CurrPos <= (H_ER_Arm_Srv_CtnVacuumPos - 300) THEN	
+				ER_TFlapClsL_Cyl_Var.In_AutoWork	:= FALSE;
+				ER_TFlapClsL_Cyl_Var.In_AutoHome	:= TRUE;
+				ER_TFlapClsR_Cyl_Var.In_AutoWork	:= FALSE;
+				ER_TFlapClsR_Cyl_Var.In_AutoHome	:= TRUE;	
+			END_IF
+			
+			IF NOT Station.M_Step AND H_ER_CtnSideFlapDone  THEN
+				H_ER_CtnRdyForGlue := TRUE;
+			END_IF
+			
+			IF ER_Arm_Srv_Var.Out_CurrPos <= (H_ER_Arm_Srv_CtnVacuumPos - 100) THEN
+				ER_RFlapL_Cyl_Var.In_AutoHome 		:= TRUE;
+				ER_RFlapL_Cyl_Var.In_AutoWork 		:= FALSE;
+				ER_RFlapR_Cyl_Var.In_AutoHome 		:= TRUE;
+				ER_RFlapR_Cyl_Var.In_AutoWork 		:= FALSE;
+				ER_BFlapCloseL_Cyl_Var.In_AutoHome 	:= TRUE;
+				ER_BFlapCloseL_Cyl_Var.In_AutoWork	:= FALSE;
+				ER_BFlapCloseR_Cyl_Var.In_AutoHome 	:= TRUE;
+				ER_BFlapCloseR_Cyl_Var.In_AutoWork 	:= FALSE;
+			END_IF
+			
+			IF fcComparePos(CurrPos:= ER_Arm_Srv_Var.Out_CurrPos, TargetPos:= ER_Arm_Srv_Var.In_PosCmd,3) THEN
+				IF H_ER_CtnSideFlapDone THEN
+					H_ER_CtnSideFlapDone 	:= FALSE;
+					H_ER_CtnPushInDone 		:= FALSE;					
+				END_IF
+			END_IF
+					
+			IF fcComparePos(CurrPos:= ER_Arm_Srv_Var.Out_CurrPos, TargetPos:= ER_Arm_Srv_Var.In_PosCmd,3) AND
+				ER_Arm_Srv_Var.Out_InPos AND
+				ER_ArmTilt_Cyl_Var.S_HomePos AND
+				ER_RFlapL_Cyl_Var.S_HomePos AND
+				ER_RFlapR_Cyl_Var.S_HomePos AND
+				tmrDelayVacHold.Q AND
+				Station.Run_NextStepPls THEN		
+				ER_StpR_Cyl_Var.In_AutoWork := FALSE;
+				ER_StpL_Cyl_Var.In_AutoWork := FALSE;		
+				ER_Arm_Srv_Var.In_MoveAbs := FALSE;
+				ER_Arm_Cyl_Var.In_AutoWork := FALSE;
+				ER_ArmTilt_Cyl_Var.In_AutoHome := FALSE;
+				ER_BFlapCloseL_Cyl_Var.In_AutoHome := FALSE;
+				ER_BFlapCloseR_Cyl_Var.In_AutoHome := FALSE;
+	
+				IF NOT (ER_StpR_Cyl_Var.S_WorkPos AND ER_StpL_Cyl_Var.S_WorkPos)AND 
+					ER_Arm_Vac_Var.S_Vacuum AND NOT End_Production AND
+					NOT MC.DryRun THEN
+					Station.SeqFaultWord 		:= 200;	
+					E_NoGapAtStoper				:= TRUE;		
+					Station.SeqFaultString 		:= 'Auto: Stopper Sensor Did not Detect Gap between Carton';	
+				ELSIF NOT (I_ER_StpL_Ctn_PE AND I_ER_StpR_Ctn_PE) AND
+					NOT (MC.DryRun OR End_Production)  THEN 	
+					Station.SeqFaultWord 		:= 104;
+					Station.SeqFaultString 		:= 'Auto: Carton Missing or Not Properly Erected. Check Carton.';
+					E_CaseNotDetected			:= TRUE;
+				ELSIF NOT I_ER_StpL_Ctn_PE AND
+					NOT (MC.DryRun OR End_Production)  THEN
+					Station.SeqFaultWord 		:= 201;	
+					E_LeftStopper_NotDetect		:= TRUE;
+					Station.SeqFaultString 		:= 'Auto: Carton Not Detected by Left Stopper Sensor';				
+				ELSIF NOT I_ER_StpR_Ctn_PE AND
+					NOT (MC.DryRun OR End_Production) THEN
+					Station.SeqFaultWord 		:= 202;
+					E_RightStopper_NotDetect	:= TRUE;			
+					Station.SeqFaultString 		:= 'Auto: Carton Not Detected by Right Stopper Sensor';			
+				ELSE
+					IF NOT End_Production  THEN
+						Station.RunStep := Station.RunStep + 10;	
+					ELSE
+						Station.RunStep := 100;
+					END_IF					
+				END_IF
+			END_IF
+	35:		(* Erector Empty Carton sensor Off detection *)	
+				IF I_ER_EmptyL_PE				THEN
+					E_ER_EmptyL_PE	:=TRUE;
+				ELSIF I_ER_BufferL_PE			THEN
+					E_ER_BufferL_PE	:= TRUE;
+				ELSIF I_ER_EmptyR_PE			THEN
+					E_ER_EmptyR_PE	:= TRUE;
+				ELSIF I_ER_BufferR_PE			THEN
+					E_ER_BufferR_PE	:=TRUE;
+				END_IF	
+					Station.RunStep := Station.RunStep + 5;	
+	
+	40 : 	(************* Bottom Flap Holder Cyl Up & Vacuum ON ****************)
+			(************* Case Guide Cyl Up  ****************)
+			(************* Top Cyl Open  ****************)
+			Station.Status 		:= '40: Bottom Flap Holder Cyl Up & Vacuum ON';
+			Station.StatusInt	:= 255;
+
+
+
+	
+						
+			IF	ER_CaseGuideL_Cyl_Var.S_WorkPos AND
+				ER_CaseGuideR_Cyl_Var.S_WorkPos THEN						
+				ER_BFlapL_Cyl_Var.In_AutoWork 		:= TRUE;
+				ER_BFlapL_Cyl_Var.In_AutoHome 		:= FALSE;
+				ER_BFlapR_Cyl_Var.In_AutoWork 		:= TRUE;
+				ER_BFlapR_Cyl_Var.In_AutoHome 		:= FALSE;
+			END_IF
+			ER_CaseGuideL_Cyl_Var.In_AutoWork	:= TRUE;
+			ER_CaseGuideL_Cyl_Var.In_AutoHome	:= FALSE;
+			ER_CaseGuideR_Cyl_Var.In_AutoWork	:= TRUE;
+			ER_CaseGuideR_Cyl_Var.In_AutoHome	:= FALSE;
+
+			
+			(*Wait for BFlap and Vacuum Switch to enable the CaseGuide*)
+			IF ER_BFlapR_Cyl_Var.S_WorkPos AND 
+				ER_BFlapL_Cyl_Var.S_WorkPos AND
+				(((*ER_BFlapR_Vac_Var.S_Vacuum AND *)ER_BFlapL_Vac_Var.S_Vacuum) OR MC.DryRun) THEN
+					ER_CaseGuideL_Cyl_Var.In_AutoWork	:= TRUE;
+					ER_CaseGuideL_Cyl_Var.In_AutoHome	:= FALSE;
+					ER_CaseGuideR_Cyl_Var.In_AutoWork	:= TRUE;
+					ER_CaseGuideR_Cyl_Var.In_AutoHome	:= FALSE;
+					ER_TFlapOpnL_Cyl_Var.In_AutoWork	:= TRUE;
+					ER_TFlapOpnL_Cyl_Var.In_AutoHome	:= FALSE;
+					ER_TFlapOpnR_Cyl_Var.In_AutoWork	:= TRUE;
+					ER_TFlapOpnR_Cyl_Var.In_AutoHome	:= FALSE;
+			END_IF
+	
+			IF NOT MC.DryRun THEN
+				ER_BFlapR_Vac_Var.In_AutoVacuum := TRUE;
+				ER_BFlapR_Vac_Var.In_AutoPurge := FALSE;
+				ER_BFlapL_Vac_Var.In_AutoVacuum := TRUE;
+				ER_BFlapL_Vac_Var.In_AutoPurge := FALSE;
+			END_IF
+			
+
+			
+			IF	ER_CaseGuideL_Cyl_Var.S_WorkPos AND
+				ER_CaseGuideR_Cyl_Var.S_WorkPos THEN	
+					ER_Arm_Vac_Var.In_AutoVacuum 	:= FALSE;
+					ER_Arm_Vac_Var.In_AutoPurge 	:= TRUE;		
+				
+				IF ER_BFlapL_Cyl_Var.S_WorkPos AND 
+					ER_BFlapR_Cyl_Var.S_WorkPos AND
+					ER_TFlapOpnL_Cyl_Var.S_WorkPos AND
+					ER_TFlapOpnR_Cyl_Var.S_WorkPos AND
+					((ER_BFlapR_Vac_Var.S_Vacuum AND ER_BFlapL_Vac_Var.S_Vacuum) OR
+					MC.DryRun)
+					AND Station.Run_NextStepPls THEN
+					ER_BFlapL_Cyl_Var.In_AutoWork := FALSE;
+					ER_BFlapR_Cyl_Var.In_AutoWork := FALSE;
+					ER_BFlapL_Vac_Var.In_AutoVacuum := FALSE;
+					CaseBufferEmptying_Counter	:= CaseBufferEmptying_Counter + 1;
+					GlueEmptying_Counter		:= GlueEmptying_Counter + 1;
+					Station.RunStep := Station.RunStep + 10;
+				END_IF
+			END_IF	
+	
+	50 : 	(************* Bottom Flap Holder Cyl Down ****************)
+			Station.Status 		:= '50: Bottom Flap Holder Cyl Down';
+			Station.StatusInt	:= 256;
+			ER_BFlapL_Cyl_Var.In_AutoWork := FALSE;
+			ER_BFlapL_Cyl_Var.In_AutoHome := TRUE;
+			ER_BFlapR_Cyl_Var.In_AutoWork := FALSE;
+			ER_BFlapR_Cyl_Var.In_AutoHome := TRUE;
+			
+			IF ER_BFlapL_Cyl_Var.S_HomePos  
+				AND ER_BFlapR_Cyl_Var.S_HomePos
+				AND Station.Run_NextStepPls THEN
+				ER_BFlapL_Cyl_Var.In_AutoHome := FALSE;
+				ER_BFlapR_Cyl_Var.In_AutoHome := FALSE;
+				Station.RunStep := Station.RunStep + 10;
+			END_IF
+
+	60 : 	(************* Rear and Front Side Moving Flap Close Cylinders Fwd ****************)
+			Station.Status 		:= '60: Rear and Front Side Moving Flap Close Cylinders Fwd';
+			Station.StatusInt	:= 257;
+			
+			IF Cfg_CollDircLtoR THEN
+				ER_FFlapR_Cyl_Var.In_AutoWork := TRUE;
+				ER_FFlapR_Cyl_Var.In_AutoHome := FALSE;
+				ER_RFlapR_Cyl_Var.In_AutoWork := TRUE;
+				ER_RFlapR_Cyl_Var.In_AutoHome := FALSE;			
+			ELSE
+				ER_FFlapL_Cyl_Var.In_AutoWork := TRUE;
+				ER_FFlapL_Cyl_Var.In_AutoHome := FALSE;
+				ER_RFlapL_Cyl_Var.In_AutoWork := TRUE;
+				ER_RFlapL_Cyl_Var.In_AutoHome := FALSE;							
+			END_IF
+			
+			IF (Cfg_CollDircLtoR AND 
+				(ER_FFlapR_Cyl_Var.S_WorkPos AND ER_RFlapR_Cyl_Var.S_WorkPos)) OR
+				(NOT Cfg_CollDircLtoR AND
+				((ER_FFlapL_Cyl_Var.S_WorkPos AND ER_RFlapL_Cyl_Var.S_WorkPos))
+				) AND Station.Run_NextStepPls THEN
+				ER_FFlapR_Cyl_Var.In_AutoWork := FALSE;
+				ER_RFlapR_Cyl_Var.In_AutoWork := FALSE;
+				ER_FFlapL_Cyl_Var.In_AutoWork := FALSE;
+				ER_RFlapL_Cyl_Var.In_AutoWork := FALSE;
+				(*IF CO_YPush.Bypass THEN
+					H_ER_CtnRdyForPushIn := FALSE;
+					H_ER_CtnPushInDone := TRUE;
+					H_ER_CtnSideFlapDone := FALSE;
+				ELSE		*)			
+					H_ER_CtnRdyForPushIn := TRUE;
+					H_ER_CtnPushInDone := FALSE;
+					H_ER_CtnSideFlapDone := FALSE;
+				(*END_IF*)
+				Station.RunStep := Station.RunStep + 10;
+			END_IF
+	
+	70 : 	(************* Erector Arm Vacuum OFF ****************)
+			Station.Status 		:= '70: Erector Arm Vacuum OFF';
+			Station.StatusInt	:= 258;
+			ER_Arm_Vac_Var.In_AutoVacuum := FALSE;
+			ER_Arm_Vac_Var.In_AutoPurge := TRUE;
+
+			(*IF ER_Arm_Vac_Var.S_Release THEN*)
+				ER_Arm_Srv_Var.In_PosCmd := H_ER_Arm_Srv_CtnErectPos - 10;
+				ER_Arm_Srv_Var.In_VelCmd := A_Srv_ErectorArmHiSpeed;
+				ER_Arm_Srv_Var.In_MoveAbs := TRUE;
+			(*END_IF*)
+			
+			IF ER_Arm_Vac_Var.S_Release AND 
+				fcComparePos(CurrPos:= ER_Arm_Srv_Var.Out_CurrPos, TargetPos:= ER_Arm_Srv_Var.In_PosCmd,0.5) AND
+				ER_Arm_Srv_Var.Out_InPos
+				AND Station.Run_NextStepPls THEN
+				ER_Arm_Vac_Var.In_AutoPurge := FALSE;
+				ER_Arm_Srv_Var.In_MoveAbs := FALSE;
+				Station.RunStep :=100;
+			END_IF
+
+	100 : 	(************* Erector Arm Cylinder Down ****************)
+			(************* Right Top Open Home and Top Close Fwd ****************)
+			Station.Status 		:= '75: Erector Arm Cylinder Down';
+			Station.StatusInt	:= 259;
+			ER_Arm_Cyl_Var.In_AutoHome 			:= FALSE;
+			ER_Arm_Cyl_Var.In_AutoWork 			:= TRUE;
+			
+			
+			IF NOT End_Production THEN
+				ER_TFlapOpnR_Cyl_Var.In_AutoWork	:= FALSE;
+			ER_TFlapOpnR_Cyl_Var.In_AutoHome	:= TRUE;
+			(*
+				ER_TFlapClsR_Cyl_Var.In_AutoWork	:= TRUE;
+				ER_TFlapClsR_Cyl_Var.In_AutoHome	:= FALSE;
+			*)
+			END_IF
+			
+			IF ER_Arm_Cyl_Var.S_WorkPos
+				AND Station.Run_NextStepPls THEN
+				ER_Arm_Cyl_Var.In_AutoWork := FALSE;
+				Station.RunStep := Station.RunStep + 10;
+			END_IF
+
+	110 : 	(************* Erector Arm Servo Move Back to Home Position ****************)
+			Station.Status 		:= '80: Erector Arm Servo Move Back to Home Position';
+			Station.StatusInt	:= 260;
+			
+			ER_Arm_Srv_Var.In_PosCmd := H_ER_Arm_Srv_CtnVacuumPos;
+			ER_Arm_Srv_Var.In_VelCmd := A_Srv_ErectorArmHiSpeed;
+			ER_Arm_Srv_Var.In_MoveAbs := TRUE;
+			
+			IF fcComparePos(CurrPos:= ER_Arm_Srv_Var.Out_CurrPos, TargetPos:= ER_Arm_Srv_Var.In_PosCmd,0.5) AND
+				ER_Arm_Srv_Var.Out_InPos 
+				AND Station.Run_NextStepPls THEN				
+				ER_Arm_Srv_Var.In_MoveAbs := FALSE;
+				Station.RunStep := Station.RunStep + 10;	
+			END_IF
+			
+	120 : 	(************* Erector Arm Cylinder Up Then Tilt Fwd ****************)
+			Station.Status 		:= '90: Erector Arm Cylinder Up and Tilt Fwd';
+			Station.StatusInt	:= 261;
+			
+			ER_Arm_Cyl_Var.In_AutoWork := FALSE;
+			ER_Arm_Cyl_Var.In_AutoHome := TRUE;
+			
+			IF ER_Arm_Cyl_Var.S_HomePos THEN
+				ER_ArmTilt_Cyl_Var.In_AutoHome := FALSE;
+				ER_ArmTilt_Cyl_Var.In_AutoWork := TRUE;
+			END_IF	
+
+			IF ER_Arm_Cyl_Var.S_HomePos AND ER_ArmTilt_Cyl_Var.S_WorkPos
+				AND Station.Run_NextStepPls THEN	
+				ER_Arm_Cyl_Var.In_AutoHome := FALSE;
+				ER_ArmTilt_Cyl_Var.In_AutoWork := FALSE;
+				Station.RunStep := 1000;						
+			END_IF
+		
+	1000 : 	(************* Process Done ****************)
+			Station.Status 		:= '1000: Process Done';
+			Station.StatusInt	:= 499;
+			
+			M_StepRun := FALSE;
+			Station.RunStep := 0;
+			
+
+	END_CASE
+
+
+ELSE
+	Station.RunStep := 0;
+	
+	IF Station.MajorFault OR Station.MinorFault THEN
+		Station.Status 		:= 'Station Error';
+		Station.StatusInt	:= 4;
+	ELSIF Station.Origin THEN
+		Station.Status 		:= 'Station In Origin';
+		Station.StatusInt	:= 5;
+	ELSIF NOT Station.OriginSchRun AND NOT MC.OriginSchRun THEN
+		Station.Status 		:= 'Station Not In Origin';
+		Station.StatusInt	:= 6;
+	END_IF
+END_IF
+
+(*Station.Running := (Station.RunStep>0);*)
+
+
+
+
+
+
+
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

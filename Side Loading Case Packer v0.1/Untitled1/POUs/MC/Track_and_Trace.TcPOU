@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="Track_and_Trace" Id="{7dbbb906-96f4-4f33-a38e-2cb5c343b311}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Track_and_Trace
+VAR
+tmr_TnT_CrossPushToCase		: Tof;
+tmr_TnT_CrossPushForward	: Tof;
+tmr_TnT_CaseIndex			: Tof;	
+tmr_TnT_GoodCaseDischarge	: Tof;
+
+
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* Case Format *)
+(* 2.2.1	Case format *)
+(* (for differentiation between 5000 and 10000 cases 0 for 5000 and 1 for 10000)*)
+IF CurrRecipe.iStackY = 2 THEN
+		O_TnT_CaseFormat	:= TRUE;
+	ELSE
+		O_TnT_CaseFormat	:= FALSE;	
+END_IF
+
+(* Cross push to case initiated *)
+(* 2.2.2	Cross push to case initiated (signal to go high as cross push starts) *)
+tmr_TnT_CrossPushToCase (IN:= SC[2].RunStep	= 10 , PT:= T#1S);
+O_TnT_CrossPushToCase	:= tmr_TnT_CrossPushToCase.Q;
+
+(* Cross Push Fully Forward *)
+(* 2.2.3	Cross push fully forward (Outers pushed into case- signal to go high)*)
+tmr_TnT_CrossPushForward (IN:= SC[2].RunStep	= 110 , PT:= T#1S);
+O_TnT_CrossPushForward	:= tmr_TnT_CrossPushForward.Q;
+
+(* Case Index *)
+(* 2.2.4	Case index (as machine indexes signal to go high at start of index)*)
+tmr_TnT_CaseIndex	(IN:= SC[3].RunStep	= 30 , PT:= T#1S);
+O_TnT_CaseIndex			:= tmr_TnT_CaseIndex.Q;
+
+(* Good Case Discharge *)
+(* 2.2.5	Good case discharged (i.e. signal high if case is not to be rejected – on as case exits machine)*)
+tmr_TnT_GoodCaseDischarge	(IN:= Exit_Case_Good , PT:= T#1S);
+O_TnT_GoodCaseDischarge		:= tmr_TnT_GoodCaseDischarge.Q;]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

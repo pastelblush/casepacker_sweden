@@ -1,0 +1,99 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="EL_Servo_Output" Id="{9cc967cd-a032-4235-b477-388f6aa6d37a}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM EL_Servo_Output
+VAR
+	Reset:BOOL;
+	EL_M2_Drive: INT;
+	bEnable: BOOL;
+	bEL_NotSafePos	:Bool;
+	plsStopMove: R_trig;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF (MC.AutoMode OR SC[5].M_Step) AND NOT EL.Bypass THEN
+	EL_Center_Srv_Var.In_ServoOn 	:= TRUE;
+	EL_Srv_Var.In_ServoOn 			:= TRUE;
+END_IF
+
+IF EL.OriginSchRun OR MC.OriginSchRun THEN
+	EL_Center_Srv_Var.In_ServoOn 	:= TRUE;
+	EL_Srv_Var.In_ServoOn 			:= TRUE;
+END_IF
+
+bEnable := NOT MC.Trouble AND EL_LC_Safety_TON.Q;
+
+(*plsStopMove(CLK:= NOT (SC[5].OriginSchRun OR MC.OriginSchRun OR SC[5].AutoRun OR TestSequence));
+IF plsStopMove.Q THEN
+	EL_Center_Srv_Var.In_StopMove := TRUE;
+	EL_Push_Srv_Var.In_StopMove := TRUE;
+	EL_Srv_Var.In_StopMove := TRUE;
+END_IF*)
+
+
+EL_Center_Srv_Var.In_MoveXLock := TRUE;
+
+(*EL_M2 Elevator Carton Centering Motor - 121M1*)
+EL_Center_Srv_Drive(
+	In_Enable:= bEnable, 
+	In_Reset := MC.ResetPressed,
+	In_AbsEncoder:= TRUE, 
+	In_DriveInput:= EL_Center_Srv_Input, 
+	In_CommState:= EL_Center_Srv_State, 
+	Out_DriveOutput=> EL_Center_Srv_Output, 
+	Out_DriveFeedRateOverride=> , 
+	DriveVar:= EL_Center_Srv_Var,
+	Station			:= SC[5]);
+
+IF mc.ManualMode THEN	
+	EL_Center_Srv_Feedrate := 40000;
+ELSE
+	EL_Center_Srv_Feedrate :=    INT_TO_UINT(hmi.V_MachineSpeed * 100);
+END_IF
+	
+(*EL_M1 Elevator Motor - 115M1*)
+
+	
+bEL_NotSafePos			:= 	(EL_Srv_Var.Out_CurrPos <= H_EL_Srv_CtnLoadPos+800) AND 
+							(EL_Srv_Var.Out_CurrPos >= H_EL_Srv_CtnLoadPos+1);
+EL_Srv_Var.In_MoveXLock := 	EL_TopCv_Ctn_TOFF.Q AND 
+							EL_BotCv_Ctn_TOFF.Q AND
+							(EL_BrakeRel_Cyl_Var.S_WorkPos OR
+							 NOT EL_Srv_var.Out_Ready)	 AND
+							NOT( 	NOT (EL_Tilt_Cyl_Var.S_HomePos OR EL_Tilt_Cyl_Var.S_WorkPos ) AND 
+									EL_Srv_var.Out_NegDirc AND 
+									bEL_NotSafePos AND
+									NOT SC[5].AutoRun )  AND
+							NOT((	EL_Tilt_Cyl_Var.In_AutoHome OR 
+									EL_Tilt_Cyl_Var.In_AutoWork OR
+									EL_Tilt_Cyl_Var.In_OrgHome OR 
+									EL_Tilt_Cyl_Var.In_OrgWork OR
+									EL_Tilt_Cyl_Var.T_ManHome OR 
+									EL_Tilt_Cyl_Var.T_ManWork) AND bEL_NotSafePos )	;
+
+
+EL_Srv_Drive(
+	In_Enable:=  bEnable, 
+	In_Reset := MC.ResetPressed,
+	In_AbsEncoder:= TRUE, 
+	In_DriveInput:= EL_Srv_Input, 
+	In_CommState:= EL_Srv_State, 
+	Out_DriveOutput=> EL_Srv_Output, 
+	Out_DriveFeedRateOverride=> , 
+	DriveVar:= EL_Srv_Var,
+	Station			:= SC[5]);
+
+
+IF SC[5].MinorFault OR SC[5].MajorFault THEN
+	EL_Srv_Var.In_StopMove	:= TRUE;
+END_IF
+	
+IF mc.ManualMode THEN	
+	EL_Srv_Feedrate := 40000;
+ELSE
+	EL_Srv_Feedrate :=    INT_TO_UINT(hmi.V_MachineSpeed * 100);
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

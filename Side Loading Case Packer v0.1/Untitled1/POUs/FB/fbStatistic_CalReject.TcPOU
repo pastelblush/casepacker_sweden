@@ -1,0 +1,98 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="fbStatistic_CalReject" Id="{1078259d-3b74-42fe-9f7e-82d7c0e409e7}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK fbStatistic_CalReject
+VAR_INPUT
+	StartCal	:BOOL;
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+	RunStep		:INT;
+	Loop		:INT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE RunStep OF
+0: (* waiting for StartCal *)
+
+	IF StartCal THEN
+		RunStep	:= RunStep + 10;
+	END_IF
+10: (* Initialise *)
+	StatisticCase_Cnt_LeftTapFail	:=0;
+	StatisticCase_Cnt_RightTapFail	:=0;
+	StatisticCase_Cnt_UnderWeight	:=0;
+	StatisticCase_Cnt_OverWeight	:=0;
+	StatisticCase_Cnt_Good			:=0;
+	RunStep	:= RunStep + 10;
+	
+20:	(* Compile Information *)
+	FOR loop := 0 TO 32001  BY 1 DO
+		IF  (	StatisticCase[loop].Date_Time_Year > StatisticCase_StartDate_Year 		OR
+			(	StatisticCase[loop].Date_Time_Year 	= StatisticCase_StartDate_Year AND 
+				StatisticCase[loop].Date_Time_Month > StatisticCase_StartDate_month) 	OR
+			(	StatisticCase[loop].Date_Time_Year 	= StatisticCase_StartDate_Year 	AND 
+				StatisticCase[loop].Date_Time_Month = StatisticCase_StartDate_month AND 
+				StatisticCase[loop].Date_Time_Day > StatisticCase_StartDate_day) 		OR
+			(	StatisticCase[loop].Date_Time_Year 	= StatisticCase_StartDate_Year 	AND 
+				StatisticCase[loop].Date_Time_Month = StatisticCase_StartDate_month AND 
+				StatisticCase[loop].Date_Time_Day = StatisticCase_StartDate_day		AND
+				StatisticCase[loop].Date_Time_Hour > StatisticCase_StartTime_Hour) 		OR	
+			(	StatisticCase[loop].Date_Time_Year 	= StatisticCase_StartDate_Year 	AND 
+				StatisticCase[loop].Date_Time_Month = StatisticCase_StartDate_month AND 
+				StatisticCase[loop].Date_Time_Day = StatisticCase_StartDate_day		AND
+				StatisticCase[loop].Date_Time_Hour = StatisticCase_StartTime_Hour 	AND
+				StatisticCase[loop].Date_Time_Minute > StatisticCase_StartTime_Minute) 	OR					
+			(	StatisticCase[loop].Date_Time_Year 	= StatisticCase_StartDate_Year 		AND 
+				StatisticCase[loop].Date_Time_Month = StatisticCase_StartDate_month 	AND 
+				StatisticCase[loop].Date_Time_Day = StatisticCase_StartDate_day			AND
+				StatisticCase[loop].Date_Time_Hour = StatisticCase_StartTime_Hour 		AND
+				StatisticCase[loop].Date_Time_Minute = StatisticCase_StartTime_Minute 	AND
+				StatisticCase[loop].Date_Time_Second >= StatisticCase_StartTime_Second))	
+				AND
+			(	StatisticCase[loop].Date_Time_Year < StatisticCase_EndDate_Year 	OR
+			(	StatisticCase[loop].Date_Time_Year 	= StatisticCase_EndDate_Year 	AND 
+				StatisticCase[loop].Date_Time_Month < StatisticCase_EndDate_month) 	OR
+			(	StatisticCase[loop].Date_Time_Year 	= StatisticCase_EndDate_Year 	AND 
+				StatisticCase[loop].Date_Time_Month = StatisticCase_EndDate_month AND 
+				StatisticCase[loop].Date_Time_Day < StatisticCase_EndDate_day) 		OR
+			(	StatisticCase[loop].Date_Time_Year 	= StatisticCase_EndDate_Year 	AND 
+				StatisticCase[loop].Date_Time_Month = StatisticCase_EndDate_month AND 
+				StatisticCase[loop].Date_Time_Day = StatisticCase_EndDate_day		AND
+				StatisticCase[loop].Date_Time_Hour < StatisticCase_EndTime_Hour) 		OR	
+			(	StatisticCase[loop].Date_Time_Year 	= StatisticCase_EndDate_Year 	AND 
+				StatisticCase[loop].Date_Time_Month = StatisticCase_EndDate_month AND 
+				StatisticCase[loop].Date_Time_Day = StatisticCase_EndDate_day		AND
+				StatisticCase[loop].Date_Time_Hour = StatisticCase_EndTime_Hour 	AND
+				StatisticCase[loop].Date_Time_Minute < StatisticCase_EndTime_Minute) 	OR					
+			(	StatisticCase[loop].Date_Time_Year 	= StatisticCase_EndDate_Year 		AND 
+				StatisticCase[loop].Date_Time_Month = StatisticCase_EndDate_month 	AND 
+				StatisticCase[loop].Date_Time_Day = StatisticCase_EndDate_day			AND
+				StatisticCase[loop].Date_Time_Hour = StatisticCase_EndTime_Hour 		AND
+				StatisticCase[loop].Date_Time_Minute = StatisticCase_EndTime_Minute 	AND
+				StatisticCase[loop].Date_Time_Second <= StatisticCase_EndTime_Second))					
+		THEN
+			IF StatisticCase[loop].RejectType	= 'Left Tape Fail' THEN
+				StatisticCase_Cnt_LeftTapFail	:= StatisticCase_Cnt_LeftTapFail + 1;
+			ELSIF StatisticCase[loop].RejectType= 'Right Tape Fail' THEN
+				StatisticCase_Cnt_RightTapFail	:= StatisticCase_Cnt_RightTapFail + 1;	
+			ELSIF StatisticCase[loop].RejectType= 'Over Weight' THEN
+				StatisticCase_Cnt_OverWeight	:= StatisticCase_Cnt_OverWeight + 1;	
+			ELSIF StatisticCase[loop].RejectType= 'Under Weight' THEN
+				StatisticCase_Cnt_UnderWeight	:= StatisticCase_Cnt_UnderWeight + 1;	
+			ELSIF StatisticCase[loop].RejectType= 'No Reject' THEN
+				StatisticCase_Cnt_Good			:= StatisticCase_Cnt_Good + 1;				
+			END_IF			
+		END_IF
+	END_FOR
+	RunStep	:= RunStep + 10;
+	
+30: (* Wait for StartCal Off *)
+	IF NOT StartCal THEN
+		RunStep	:= 0;
+	END_IF
+END_CASE]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

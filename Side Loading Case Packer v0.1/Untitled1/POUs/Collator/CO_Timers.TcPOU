@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_Timers" Id="{fa583055-14ea-429a-bd6a-f545d013efaf}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_Timers
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+CO_Stk_Up_TON (IN := I_CO_Stk_Mtr_UpPos, pt := T#0MS);
+
+CO_Stk_Dn_TON (IN := I_CO_Stk_Mtr_HomePos, pt := T#30MS);
+
+CO_Bdl_Reach_TON (IN := I_CO_Bdl_PE1, pt := T#100MS);	(*End of Stacking Conveyor*)
+
+CO_Bdl_Stack_TON (IN := I_CO_Bdl_Stack_PE, pt := T#100MS);
+
+CO_Stk_AtBuf_TON (IN := I_CO_YStk_AtBuf1_PE, pt := T#100MS);
+
+CO_Bdl_ZFull_TON (IN := I_CO_Bdl_ZFull_PE AND NOT I_CO_Bdl_ZLimit_PE, pt := T#1S);
+
+CO_Bdl_ZFull_TOFF (IN := NOT I_CO_Bdl_ZFull_PE AND NOT I_CO_Bdl_ZLimit_PE, pt := T#1S);
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

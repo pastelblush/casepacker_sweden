@@ -1,0 +1,122 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="Calc_McPerformance" Id="{d2e82e2d-d171-4b69-8b46-12b6d3866e9f}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Calc_McPerformance
+VAR
+	plsResetCycleTime:r_trig;
+	CycleTimeCalc:REAL;
+	IdleTimeCalc:real;
+	plsResetIdleTime: R_trig;
+	CalcRunTime:fbCalculateTotalTime;
+	CalcIdleTime:fbCalculateTotalTime;
+	CalcMajorDownTime:fbCalculateTotalTime;
+	CalcMinorDownTime:fbCalculateTotalTime;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(************************************************************)
+(* Calculate Machine Output									*)
+(************************************************************)
+
+IF H_EL_CtnWeightOK AND EL.RunStep=1000 THEN
+	McData.Cnt_TotalGood := McData.Cnt_TotalGood + 1;
+	McData.TotalRunCycles := McData.TotalRunCycles + 1;
+ELSIF NOT H_EL_CtnWeightOK AND EL.RunStep=1000 THEN
+	McData.Cnt_TotalNG := McData.Cnt_TotalNG + 1;
+	McData.TotalRunCycles := McData.TotalRunCycles + 1;
+END_IF
+
+McData.Cnt_TotalOutput := McData.Cnt_TotalGood + McData.Cnt_TotalNG;
+
+IF McData.Cnt_TotalOutput > 0 THEN
+	McData.Cnt_TotalYield := UDINT_TO_REAL(McData.Cnt_TotalGood/McData.Cnt_TotalOutput) * 100;
+ELSE
+	McData.Cnt_TotalYield := 0;
+END_IF
+
+IF HMI.T_ResetCounters THEN
+	McData.Cnt_TotalGood := 0;
+	McData.Cnt_TotalNG := 0;
+END_IF
+
+(************************************************************)
+(* Calculate Machine Cycle Time								*)
+(************************************************************)
+
+plsResetCycleTime(CLK:= MC.AutoRunning AND NOT MC.IdleState);
+plsResetIdleTime(CLK:= MC.AutoRunning AND MC.IdleState);
+
+IF plsResetCycleTime.Q THEN
+	McData.CycleTimeSec := CycleTimeCalc;
+	CycleTimeCalc := 0;
+ELSIF plsResetIdleTime.Q THEN
+	McData.IdleTimeSec := IdleTimeCalc;
+	IdleTimeCalc := 0;
+END_IF
+
+IF MC.AutoRunning AND Clock100msOnPls THEN
+	IF MC.IdleState THEN
+		IdleTimeCalc := IdleTimeCalc + 0.1;
+	ELSE
+		CycleTimeCalc := CycleTimeCalc + 0.1;		
+	END_IF
+END_IF
+
+IF McData.CycleTimeSecAvg <> 0 THEN
+	McData.CycleTimeSecAvg := (McData.CycleTimeSecAvg + McData.CycleTimeSec)/2;
+ELSE
+	McData.CycleTimeSecAvg := McData.CycleTimeSec;
+END_IF
+
+IF McData.IdleTimeSecAvg <> 0 THEN
+	McData.IdleTimeSecAvg := (McData.IdleTimeSecAvg + McData.IdleTimeSec)/2;
+ELSE
+	McData.IdleTimeSecAvg := McData.IdleTimeSec;
+END_IF
+
+(************************************************************)
+(* Calculate Machine Run Time								*)
+(************************************************************)
+
+IF Clock1sOnPls THEN
+	
+	CalcRunTime(
+		In_EnableCount:= MC.AutoRunning, 
+		TotalHour=> McData.TotalRuntimeHour, 
+		TotalMin=> McData.TotalRuntimeMin, 
+		TotalSec=> McData.TotalRuntimeSec);
+
+	CalcIdleTime(
+		In_EnableCount:= NOT (MC.Trouble OR MC.StationStopErr OR MC.AutoRunning), 
+		In_ResetCount := HMI.T_ResetTotalTime,
+		TotalHour=> McData.TotalIdletimeHour, 
+		TotalMin=> McData.TotalIdletimeMin, 
+		TotalSec=> McData.TotalIdletimeSec);
+
+	CalcMajorDownTime(
+		In_EnableCount:= MC.Trouble, 
+		In_ResetCount := HMI.T_ResetTotalTime,
+		TotalHour=> McData.TotalMajorDowntimeHour, 
+		TotalMin=> McData.TotalMajorDowntimeMin, 
+		TotalSec=> McData.TotalMajorDowntimeSec);
+
+	CalcMinorDownTime(
+		In_EnableCount:= MC.StationStopErr, 
+		In_ResetCount := HMI.T_ResetTotalTime,
+		TotalHour=> McData.TotalMinorDowntimeHour, 
+		TotalMin=> McData.TotalMinorDowntimeMin, 
+		TotalSec=> McData.TotalMinorDowntimeSec);
+		
+END_IF
+
+IF HMI.T_ResetTotalTime THEN
+	McData.CycleTimeSec := 0;
+	McData.CycleTimeSecAvg := 0;
+	McData.IdleTimeSec := 0;
+	McData.IdleTimeSecAvg := 0;
+	McData.MTBA := 0;
+	McData.MTBF := 0;
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

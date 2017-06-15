@@ -1,0 +1,69 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="ER_Vacuum_Output" Id="{a38a1f68-830d-456b-bb06-2116b1678ac8}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM ER_Vacuum_Output
+VAR
+	bEnable: BOOL;
+	Reset: BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[bEnable := TRUE;
+
+ER_BFlapL_Vac(
+	IN_Name:= 'ERE. LEFT FLAP VACUUM', 
+	In_Enable:= TRUE (*O_VacPump_On*), 
+	In_Reset:= MC.ResetPressed, 
+	In_Vacuum_Switch:= I_ER_BFlapL_VacSw, 
+	In_Drop_Monitor_Enable:= FALSE, 
+	In_VacuumTON:= T#200MS, 
+	In_Release_TON:= T#0MS, 
+	In_PurgeTON:= T#0MS, 
+	in_Timeout:= T#15S,	(*debug*) 
+	Out_VacuumSV=> o_ER_BFlapL_Vac_oN, 
+	Out_PurgeSV=> , 
+	VacVar:= ER_BFlapL_Vac_Var,
+	Station			:= SC[3]);
+
+ER_BFlapR_Vac_Var.In_AutoVacuum	:= 	ER_BFlapL_Vac_Var.In_AutoVacuum;
+ER_BFlapR_Vac_Var.In_AutoPurge	:= 	ER_BFlapL_Vac_Var.In_AutoPurge;
+ER_BFlapR_Vac_Var.In_OrgVacuum	:= 	ER_BFlapL_Vac_Var.In_OrgVacuum;
+ER_BFlapR_Vac_Var.In_OrgPurge	:= 	ER_BFlapL_Vac_Var.In_OrgPurge;
+ER_BFlapR_Vac_Var.T_ManVacuum	:= 	ER_BFlapL_Vac_Var.T_ManVacuum;
+ER_BFlapR_Vac_Var.T_ManPurge	:= 	ER_BFlapL_Vac_Var.T_ManPurge;
+	
+ER_BFlapR_Vac(
+	IN_Name:= 'ERE. RIGHT FLAP VACUUM', 
+	In_Enable:= TRUE, 
+	In_Reset:= MC.ResetPressed, 
+	In_Vacuum_Switch:= I_ER_BFlapR_VacSw, 
+	In_Drop_Monitor_Enable:= FALSE, 
+	In_VacuumTON:= ER_BFlapL_Vac.In_VacuumTON, 
+	In_Release_TON:= ER_BFlapL_Vac.In_Release_TON, 
+	In_PurgeTON:= ER_BFlapL_Vac.In_PurgeTON, 
+	in_Timeout:= ER_BFlapL_Vac.in_Timeout, 	
+	Out_VacuumSV=> , 
+	Out_PurgeSV=> , 
+	VacVar:= ER_BFlapR_Vac_Var,
+	Station			:= SC[3]);
+
+	
+ER_Arm_Vac(
+	IN_Name:= 'ERE. ARM VACUUM', 
+	In_Enable:= TRUE (*O_VacPump_On*), 
+	In_Reset:= MC.ResetPressed, 
+	In_Vacuum_Switch:= I_ER_Arm_VacSw, 
+	In_Drop_Monitor_Enable:= NOT (SC[3].RunStep  >= 20 AND SC[3].RunStep <= 30) , 
+	In_VacuumTON:= T#2S, 
+	In_Release_TON:= T#0MS, 
+	In_PurgeTON:= T#0MS, 
+	in_Timeout:= T#10S		(*debug*), 
+	Out_VacuumSV=> o_ER_Arm_Vac_oN, 
+	Out_PurgeSV=> , 
+	VacVar:= ER_Arm_Vac_Var,
+	Station			:= SC[3]);
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

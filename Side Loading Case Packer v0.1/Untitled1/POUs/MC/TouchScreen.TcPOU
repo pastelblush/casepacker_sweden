@@ -1,0 +1,231 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="TouchScreen" Id="{45d7c1d7-d2e1-4200-98d1-7271f4dff312}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM TouchScreen
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+CASE T_DisplayWordSelect OF
+
+	0:
+	T_MonitorWord  		:= IW_41DI1;
+	T_MonitorByte1Name	:= 'IX0.x';
+	T_MonitorByte2Name	:= 'IX1.x';
+	T_Monitor2Bytes		:= TRUE;
+
+	1:	
+	T_MonitorWord  		:= IW_41DI2;
+	T_MonitorByte1Name	:= 'IX2.x';
+	T_MonitorByte2Name	:= 'IX3.x';
+	T_Monitor2Bytes		:= TRUE;
+
+	10:
+	T_MonitorWord  		:= IW_60A1;
+	T_MonitorByte1Name	:= 'IX10.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+
+	11:
+	T_MonitorWord  		:= IW_61A1;
+	T_MonitorByte1Name	:= 'IX11.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+
+	12:
+	T_MonitorWord  		:= IW_62A1;
+	T_MonitorByte1Name	:= 'IX12.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+	
+	13:
+	T_MonitorWord  		:= IW_63A1;
+	T_MonitorByte1Name	:= 'IX13.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+
+	14:
+	T_MonitorWord  		:= IW_64A1;
+	T_MonitorByte1Name	:= 'IX14.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+
+	15:
+	T_MonitorWord  		:= IW_65A1;
+	T_MonitorByte1Name	:= 'IX15.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+	
+	16:
+	T_MonitorWord  		:= IW_66A1;
+	T_MonitorByte1Name	:= 'IX16.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+	
+	100:
+	T_MonitorWord  		:= IW_141DI1;
+	T_MonitorByte1Name	:= 'IX100.x';
+	T_MonitorByte2Name	:= 'IX101.x';
+	T_Monitor2Bytes		:= TRUE;
+
+	110:
+	T_MonitorWord  		:= IW_160A1;
+	T_MonitorByte1Name	:= 'IX110.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+
+	111:
+	T_MonitorWord  		:= IW_161A1;
+	T_MonitorByte1Name	:= 'IX111.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+
+	112:
+	T_MonitorWord  		:= IW_162A1;
+	T_MonitorByte1Name	:= 'IX112.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+	
+	113:
+	T_MonitorWord  		:= IW_163A1;
+	T_MonitorByte1Name	:= 'IX113.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+
+	200:
+	T_MonitorWord  		:= IW_241DI1;
+	T_MonitorByte1Name	:= 'IX200.x';
+	T_MonitorByte2Name	:= 'IX201.x';
+	T_Monitor2Bytes		:= TRUE;
+
+	210:
+	T_MonitorWord  		:= IW_260A1;
+	T_MonitorByte1Name	:= 'IX210.x';
+	T_MonitorByte2Name	:= 'IX211.x';
+	T_Monitor2Bytes		:= FALSE;
+
+(*		
+	310:
+	T_MonitorWord  		:= IW_260A1;
+	T_MonitorByte1Name	:= 'IX200.x';
+	T_MonitorByte2Name	:= 'IX201.x';
+	T_Monitor2Bytes		:= TRUE;
+
+	300:
+	T_MonitorWord  		:= IW_341DI1;
+	T_MonitorByte1Name	:= 'IX300.x';
+	T_MonitorByte2Name	:= 'IX301.x';
+	T_Monitor2Bytes		:= TRUE;
+
+	310:
+	T_MonitorWord  		:= IW_360A1;
+	T_MonitorByte1Name	:= 'IX310.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+
+	311:
+	T_MonitorWord  		:= IW_361A1	;
+	T_MonitorByte1Name	:= 'IX311.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+
+	312:
+	T_MonitorWord  		:= IW_362A1	;
+	T_MonitorByte1Name	:= 'IX312.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+
+	313:
+	T_MonitorWord  		:= QW_363A1	;
+	T_MonitorByte1Name	:= 'QX310.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+	
+	314:
+	T_MonitorWord  		:= IW_364A1	;
+	T_MonitorByte1Name	:= 'IX313.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+	
+	315:
+	T_MonitorWord  		:= QW_365A1	;
+	T_MonitorByte1Name	:= 'QX311.x';
+	T_MonitorByte2Name	:= '';
+	T_Monitor2Bytes		:= FALSE;
+*)
+	
+	1000:
+	T_MonitorWord  		:= QW_41DO1;
+	T_MonitorByte1Name	:= 'QX0.x';
+	T_MonitorByte2Name	:= 'QX1.x';
+	T_Monitor2Bytes		:= TRUE;
+
+	1001:	
+	T_MonitorWord  		:= QW_41DO2;
+	T_MonitorByte1Name	:= 'QX2.x';
+	T_MonitorByte2Name	:= 'QX3.x';
+	T_Monitor2Bytes		:= TRUE;
+
+	1050:
+	T_MonitorWord  		:= QW_70A1;
+	T_MonitorByte1Name	:= 'QX50.x';
+	T_MonitorByte2Name	:= 'QX51.x';
+	T_Monitor2Bytes		:= TRUE;
+	
+	1051:
+	T_MonitorWord  		:= QW_70A1_0;
+	T_MonitorByte1Name	:= 'QX52.x';
+	T_MonitorByte2Name	:= 'QX53.x';
+	T_Monitor2Bytes		:= FALSE;
+
+	1060:
+	T_MonitorWord  		:= QW_71A1;
+	T_MonitorByte1Name	:= 'QX60.x';
+	T_MonitorByte2Name	:= 'QX61.x';
+	T_Monitor2Bytes		:= TRUE;
+	
+	1100:
+	T_MonitorWord  		:= QW_141DO1;
+	T_MonitorByte1Name	:= 'QX100.x';
+	T_MonitorByte2Name	:= 'QX101.x';
+	T_Monitor2Bytes		:= TRUE;
+
+	1150:
+	T_MonitorWord  		:= QW_170A1;
+	T_MonitorByte1Name	:= 'QX150.x';
+	T_MonitorByte2Name	:= 'QX151.x';
+	T_Monitor2Bytes		:= TRUE;
+
+	1200:
+	T_MonitorWord  		:= QW_241DO1	;
+	T_MonitorByte1Name	:= 'QX200.x';
+	T_MonitorByte2Name	:= 'QX201.x';
+	T_Monitor2Bytes		:= TRUE;
+(*	
+	1300:
+	T_MonitorWord  		:= QW_341DO1;
+	T_MonitorByte1Name	:= 'QX300.x';
+	T_MonitorByte2Name	:= 'QX301.x';
+	T_Monitor2Bytes		:= TRUE;
+*)
+	1350:
+	T_MonitorWord  		:= QW_350A1;
+	T_MonitorByte1Name	:= 'QX350.x';
+	T_MonitorByte2Name	:= 'QX351.x';
+	T_Monitor2Bytes		:= TRUE;
+	
+	
+END_CASE
+
+
+(********************** Machine Speed Override *****************************)
+IF HMI.V_MachineSpeed <= 10 THEN 
+	HMI.V_MachineSpeed :=10;	
+END_IF
+
+	
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

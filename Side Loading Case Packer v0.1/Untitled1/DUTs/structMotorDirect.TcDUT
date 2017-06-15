@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <DUT Name="structMotorDirect" Id="{9ca4094d-cedc-48a0-9f94-4b2b46a25a18}">
+    <Declaration><![CDATA[TYPE structMotorDirect :
+STRUCT
+	
+	IN_DevName:STRING;
+
+	(* Trigger*)
+	T_ManOn:BOOL;
+	T_ManOff:BOOL;
+	In_AutoON:BOOL;
+	In_OrgOn:BOOL;
+
+	In_MoveXLock:BOOL;	(*Mechanical Interlock*)
+
+	E_OnErr:BOOL;
+	S_OnSig:BOOL;
+	S_Running:BOOL;
+
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,164 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <GVL Name="GVL_Holding" Id="{99f04be4-2348-4c2a-8635-1a06ea1ccda1}">
+    <Declaration><![CDATA[VAR_GLOBAL RETAIN PERSISTENT
+	
+	(* Process Memory*)
+	H_CO_StkRdyForXPush					:BOOL;	(*Stack Ready for X Pusher. Do not Stack up if ON*)
+	H_CO_StkRdyForYPush					:BOOL;	(*Stack Ready for Y Pusher. Do not activate X Pusher if ON*)
+	
+	H_ServiceStop_Pressed				:BOOL;	(* Service Stop Pressed *)
+	StackerFault_Triggered				:BOOL;
+	XPusherFault_Triggered				:BOOL;
+	YPusherFault_Triggered				:BOOL;
+	ErectorFault_Triggered				:BOOL;
+	ExitFault_Triggered					:BOOL;
+	HorizontalFault_Triggered			:BOOL;
+	MajorFault_Triggered				:BOOL;
+
+		
+	H_ER_CtnErected						:BOOL;	(*Carton Erected *)
+	H_ER_CtnRdyForPushIn				:BOOL;	(*Carton Erected and Moving Side Flaps Closed. Ready for Stack Push In*)
+	H_ER_CtnPushInDone					:BOOL;	(*Stack Pushed into Carton Done, Wait for Side Flap Close. Do not activate Push in if ON*)
+	H_ER_CtnSideFlapDone				:BOOL;	(*Carton Side Flap Closing Done. Ready for Glueing*)
+	H_ER_CtnRdyForGlue					:BOOL;	(*Carton Pushed into Exit Area Ready for Glueing.*)
+	H_ER_CtnGlueDone					:BOOL;	(*Carton Glueing Done. Ready for Exit Send Out*)
+	H_ER_CtnWeightOK					:BOOL;	(*Carton Weight Checking OK - At Glueing Area*)
+
+	H_EL_CtnTapeDone					:BOOL;	(*Carton Tape Sealing Done - If ON, send out to exit during origin*)	
+	H_EL_CtnWeightOK					:BOOL;	(*Carton Weight Checking OK - On Elevator*)
+	H_CartonWeight						:REAL;
+	
+	H_HOR_CtnTapeDone					:BOOL;	(*Carton Tape Sealing Done - If ON, send out to exit during origin*)	
+	H_HOR_CtnWeightOK					:BOOL;	(*Carton Weight Checking OK - On Elevator*)
+	
+	CaseBufferEmptying_Counter			:INT;
+	CaseBufferEmptying_Setting			:INT;
+	GlueEmptying_Counter				:INT;
+	GlueEmptying_Setting				:INT;
+	TapeLow_Setting						:INT;
+
+	
+	H_ER_WA_Srv_ZeroOffset				:REAL;	(*Set Zero Point for Case Min C = 180mm	*)
+	H_ER_BufCvL_WA_Srv_ZeroOffset		:REAL;	(*Set Zero Point for Case Min B+C = 330mm, where B=2xFlap Width	*)
+	H_ER_FlapL_WA_Srv_ZeroOffset		:REAL;	(*Set Zero Point for Case Min A = 200mm	*)
+	H_ER_BufCvR_WA_Srv_ZeroOffset		:REAL;	(*Set Zero Point for Case Min B+C = 330mm, where B=2xFlap Width	*)
+	H_ER_FlapR_WA_Srv_ZeroOffset		:REAL;	(*Set Zero Point for Case Min A = 200mm	*)
+	H_EX_HeightL_WA_Srv_ZeroOffset		:REAL;	(*set Zero Point for Case Min B = 150mm*)
+	H_EX_HeightR_WA_Srv_ZeroOffset		:REAL;	(*set Zero Point for Case Min B = 150mm*)
+	H_EX_WA_Srv_ZeroOffset				:REAL;	(*Set Zero Point for Case Min C = 180mm*)
+	H_CO_CV_WA_Srv_ZeroOffset			:REAL;	
+	H_CO_Stopper_WA_Srv_ZeroOffset		:REAL;	
+	H_EX_TopL_WA_Srv_ZeroOffset			:REAL;
+	H_EX_TopR_WA_Srv_ZeroOffset			:REAL;
+	H_CO_FFlapGuide_WA_Srv_ZeroOffset	:REAL;	(*Set Zero Point where Carton min A = 200mm*)
+
+	H_CO_XPush_Srv_EndDatumPos:REAL;		(*Teach End Datum Point at Final Pushing Position for Carton min A = 200mm*)
+
+	H_CO_YPush_Srv_BufFinalPos:REAL;		(*Teach Final Pushing Position to Push Stack onto Buffer Area Before Carton*)
+	H_CO_YPush_Srv_CtnFinalPos:REAL;		(*Teach Final Pushing Position to Push Stack into Carton*)	
+	H_CO_YPush_Srv_SafePosition:Real;	
+	
+	H_ER_Arm_Srv_CtnVacuumPos: REAL;		(*Teach Position for Erector cylinder to move up and ready for Vacuum*)
+	H_ER_Arm_Srv_CtnErectPos: REAL;			(*Teach Position for Erector Arm to move to final carton erecting position*)
+
+	H_EL_Srv_CtnLoadPos:REAL;				(*Teach Position for Elevator Carton Loading from Tilt Position*)
+	H_EL_Srv_CtnRejectExitPos:REAL;			(*Teach Position for Elevator Reject Carton Exit Conveyor Position*)
+	H_EL_Srv_CtnGoodExitPos:REAL;			(*Teach Position for Elevator Good Carton Exit Conveyor Position*)
+	H_EL_Srv_TapeStartPos:REAL;				(*Teach Position for Elevator Taping Start Position (bottom)*)
+	H_EL_Srv_TapeEndPos:REAL;				(*Teach Position for Elevator Taping End Position (Top)*)
+ 
+	H_EL_Push_Srv_HomePos:REAL;				(*Set at Zero Point before Carton is pushed but need to avoid taping unit*)
+	H_EL_Push_Srv_ExitfinalPos:REAL;		(*Teach Final Pushing Position to Push Carton onto Exit conveyors*)
+
+	H_EL_Center_Srv_HomePos:REAL;			(*Set at Zero Point before to avoid Carton during tilting*)
+	H_EL_Center_Srv_EndDatumPos:REAL;		(*Teach Position for Carton Centering to Tilt Vacuum ON for Carton min B=150mm*)
+	H_EL_Center_Srv_MidDatumPos:REAL;		(*Teach Position for Elevator Carton Centering for Taping for Carton min B=150mm*)
+	
+	
+	H_ER_Arm_Srv_HomePos: REAL;			
+	H_CO_XPush_Srv_HomePos:REAL;			(*Set at Zero Point out of Bundle Stack Area*)
+	H_CO_YPush_Srv_HomePos:REAL;			(*Set at Zero Point out of Bundle Buffer Area*)
+
+	H_CO_XPush_Srv_CurrStandbyPos:REAL;			(* Calculated based on bundle size*)
+	H_CO_YPush_Srv_CurrStandbyPos:REAL;			(* Calculated based on bundle size*)
+	
+	H_ER_WA_Srv_TargetPos				:REAL;
+	H_ER_BufCvL_WA_Srv_TargetPos		:REAL;
+	H_ER_FlapL_WA_Srv_TargetPos			:REAL;
+	H_ER_BufCvR_WA_Srv_TargetPos		:REAL;
+	H_ER_FlapR_WA_Srv_TargetPos			:REAL;
+	H_EX_HeightL_WA_Srv_TargetPos		:REAL;
+	H_EX_HeightR_WA_Srv_TargetPos		:REAL;
+	H_EX_WA_Srv_TargetPos				:REAL;
+	H_CO_CV_WA_Srv_TargetPos			:REAL;	
+	H_CO_Stopper_WA_Srv_TargetPos		:REAL;
+	H_EX_TopL_WA_Srv_TargetPos			:REAL;
+	H_EX_TopR_WA_Srv_TargetPos			:REAL;
+	H_CO_FFlapGuide_WA_Srv_TargetPos	:REAL;
+	
+	H_ER_ValveOffset					:REAL;	
+	H_ER_1St_GlueStartPos				:REAL;
+	H_ER_1St_GlueStopPos				:REAL;	
+	H_ER_2nd_GlueStartPos				:REAL;
+	H_ER_2nd_GlueStopPos				:REAL;		
+	ER_GlueHold_Time					:TIME;
+	
+	
+	H_CO_Bdl_StkX_Count:INT;	(*Current Stack X Count*)
+	H_CO_Bdl_StkY_Count:INT;	(*Current Stack Y Count*)
+	H_CO_Bdl_StkZ_Count:INT;	(*Current Stack Z Count*)
+
+	H_CO_Bdl_StkX_Full:BOOL;	(*Current Stack X Full*)
+	H_CO_Bdl_StkY_Full:BOOL;	(*Current Stack Y Full*)
+	H_CO_Bdl_StkZ_Full:BOOL;	(*Current Stack Z Full*)
+	
+	
+	
+	(***************************** Statistic Value ******************************************)
+	Statistic_Total_Runtime				:DINT;
+	Statistic_Total_UpTime				:DINT;
+	Statistic_Total_DownTime			:DINT;
+	Statistic_Total_CaseProduce			:DINT;
+	Statistic_Total_Good				:DINT;
+	Statistic_Total_NG					:DINT;					
+	
+	Statistic_Man_Total_Runtime			:DINT;
+	Statistic_Man_Total_UpTime			:DINT;
+	Statistic_Man_Total_DownTime		:DINT;
+	Statistic_Man_Total_CaseProduce		:DINT;
+	Statistic_Man_Total_Good			:DINT;
+	Statistic_Man_Total_NG				:DINT;
+	
+	Statistic_Shift_StartTimeH			:ARRAY [0..3] OF UINT;
+	Statistic_Shift_StartTimeM			:ARRAY [0..3] OF UINT;
+	Statistic_Shift_EndTimeH			:ARRAY [0..3] OF UINT;
+	Statistic_Shift_EndTimeM			:ARRAY [0..3] OF UINT;	
+	
+	Statistic_PreviousShift_Number		:UINT;	
+	Statistic_CurShift_Number			:UINT;	
+	Statistic_CurShift_StartTime		:STRING;
+	Statistic_CurShift_EndTime			:STRING;
+	Statistic_CurShift_StartDate		:STRING;
+	Statistic_CurShift_CaseProduce		:DINT;
+	Statistic_CurShift_Good				:DINT;
+	Statistic_CurShift_NG				:DINT;
+	Statistic_CurShift_UpTime			:DINT;
+	Statistic_CurShift_RunTime			:DINT;
+	Statistic_CurShift_DownTime			:DINT;
+	
+	Statistic_Current					:structStatistic;
+	Statistic_History					:structStatistic;
+	Statistic_Manual					:structStatistic;
+	Statistic_Total						:structStatistic;	
+	
+	Generate_Report						:BOOL;
+	
+(**************************************************************************************************************)
+(* Exit Case Result *)
+(**************************************************************************************************************)	
+	Exit_Case_Good	:BOOL;
+	Exit_Case_NG	:BOOL;	
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

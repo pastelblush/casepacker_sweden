@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_Servo_Output" Id="{ebecaae9-e162-49f8-9975-c10ef4fd4e1e}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_Servo_Output
+VAR
+	Reset:BOOL;
+	plsStopMove: R_trig;
+	bEnable: BOOL;
+	bEnable_Stack: BOOL;
+	bEnable_XPush: BOOL;
+	bEnable_YPush: BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF (MC.AutoMode OR SC[1].M_Step OR SC[2].M_Step) AND NOT CO.Bypass THEN
+	CO_YPush_Srv_Var.In_ServoOn := TRUE;
+END_IF
+
+IF CO.OriginSchRun OR MC.OriginSchRun or mc.AutoMode or (mc.ResetPressed AND NOT mc.Trouble) THEN
+	CO_YPush_Srv_Var.In_ServoOn := TRUE;
+END_IF
+
+ 
+bEnable_Stack := NOT (CO_Stack.MajorFault OR CO_Stack.MinorFault OR CO_Stack.DeviceFault OR MC.Trouble);
+bEnable_YPush := NOT (CO_YPush.MajorFault OR CO_YPush.MinorFault OR CO_YPush.DeviceFault OR MC.Trouble);
+
+
+(*CO_M5 Collator Y Pusher Motor - 111M1*)
+CO_YPush_Srv_Var.In_MoveXLock := 	((CO_FlapGuide_Cyl_Var.S_WorkPos AND
+										ER_FFlapL_Cyl_Var.S_HomePos AND
+										ER_RFlapL_Cyl_Var.S_HomePos) OR
+									(CO_YPush_Srv_Var.Out_CurrPos <= H_CO_YPush_Srv_CtnFinalPos+200)) ;
+
+CO_YPush_Srv_Drive(
+	In_Enable:= bEnable_YPush, 
+	In_Reset := MC.ResetPressed,
+	In_AbsEncoder:= TRUE, 
+	In_DriveInput:= CO_YPush_Srv_Input, 
+	In_CommState:= CO_YPush_Srv_State, 
+	Out_DriveOutput=> CO_YPush_Srv_Output, 
+	Out_DriveFeedRateOverride=> CO_YPush_Srv_Feedrate, 
+	DriveVar:= CO_YPush_Srv_Var,
+	Station			:= SC[2]);
+
+IF mc.ManualMode THEN	
+	CO_YPush_Srv_Feedrate := 10000;
+ELSE
+	CO_YPush_Srv_Feedrate :=    INT_TO_UINT(hmi.V_MachineSpeed * 100);
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

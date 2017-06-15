@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="Downstream_Conveyor" Id="{94721452-bd34-4922-899a-6294399e7a06}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Downstream_Conveyor
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+O_DnStream_ReqToStpNO	:= O_UpStream_ReqToStpNC;
+O_DnStream_ReqToStpNC	:= O_UpStream_ReqToStpNO;
+
+O_DnStream_Reject		:= Exit_Case_NG;
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

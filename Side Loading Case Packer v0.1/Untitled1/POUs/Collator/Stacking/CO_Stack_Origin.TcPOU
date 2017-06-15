@@ -1,0 +1,150 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_Stack_Origin" Id="{793e85cd-65cc-4af4-94dd-94118fa66327}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_Stack_Origin
+VAR_IN_OUT
+	Station		:structStationCtrl;
+END_VAR
+VAR
+	CO_Stack_WA_Origin: BOOL;
+	pls_OriginSchRun: R_trig;
+	Timeout:ton;
+	TimeoutTrigger:BOOL;
+	TimeoutSetting:TIME;
+
+	WidthAdjust_Tolerance: REAL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*
+(**************************************************************************************************************)
+(* Station Width Adjust in Origin Condition *)
+(**************************************************************************************************************)
+IF NOT MC_WA_Run THEN
+	WidthAdjust_Tolerance	:=	1;
+ELSE	
+	WidthAdjust_Tolerance	:= 	0.5;
+END_IF
+
+CO_Stack_WA_Origin := 	NOT Cfg_EnbAutoWA OR 
+						(
+						fcComparePos(CurrPos:= CO_Stopper_WA_Srv_Var.Out_CurrPos, TargetPos:= H_CO_Stopper_WA_Srv_TargetPos, Tolerance := WidthAdjust_Tolerance) AND
+						fcComparePos(CurrPos:= CO_CV_WA_Srv_Var.Out_CurrPos, TargetPos:= H_CO_CV_WA_Srv_TargetPos, Tolerance := WidthAdjust_Tolerance) AND
+						fcComparePos(CurrPos:= CO_FFlapGuide_WA_Srv_Var.Out_CurrPos, TargetPos:= H_CO_FFlapGuide_WA_Srv_TargetPos, Tolerance := WidthAdjust_Tolerance)
+						)
+						;
+
+(**********************************************************
+****************************************************)
+(* Station Origin Condition *)
+(**************************************************************************************************************)
+
+Station.Origin 	:= 	((CO_Stack_WA_Origin OR NOT MC_WA_Run   ) AND	
+					CO_Stk_Dn_TON.Q AND CO_Stk_Mtr_Var.S_InvRdy AND
+					NOT I_CO_Bdl_ZLimit_PE) OR		(*no product exceed z-axis limit sensor*)
+					Station.Bypass
+					;
+
+(**************************************************************************************************************)
+(* Station Origin Step *)
+(**************************************************************************************************************)
+
+pls_OriginSchRun(CLK:= MC.OriginSchRun OR Station.OriginSchRun);
+
+Timeout(IN:=TimeoutTrigger, PT:=TimeoutSetting);
+IF Timeout.Q THEN
+	TimeoutTrigger := FALSE;
+END_IF
+
+IF (MC.OriginSchRun OR Station.OriginSchRun) AND NOT Station.Bypass   THEN
+	CASE Station.OriginRunStep OF
+
+	0 : 	(************* Ready To Run ****************)
+			IF NOT Station.Origin AND pls_OriginSchRun.Q THEN
+				Station.OriginRunStep := Station.OriginRunStep+10;		
+			END_IF
+
+	10 : 	(************* Check Sensors Before Homing ****************)
+			Station.Status 		:= 'Org10: Check Sensors Before Homing';
+			Station.StatusInt	:= 120;
+	
+			(*IF I_CO_Bdl_StackRel_PE THEN
+				Station.SeqFaultWord := 100;		
+				Station.SeqFaultString := 'Origin: Bundle Stuck at Stack Release Sensor. Remove Bundle from Conveyor.';	
+			ELSIF I_CO_Bdl_XLimit_PE THEN
+				Station.SeqFaultWord := 101;		
+				Station.SeqFaultString := 'Origin: Bundle Detected at X-axis Limit Sensor. Remove Bundle from Conveyor.';*)	 	
+			IF I_CO_Bdl_ZLimit_PE THEN
+				Station.SeqFaultWord 	:= 102;	
+				E_Stack_Overflow		:= TRUE;	
+				Station.SeqFaultString 	:= 'Origin: Bundle Detected at Z-axis Limit Sensor. Remove Bundle from Conveyor.';	 
+			ELSIF (I_CO_Bdl_Stack_PE OR I_CO_Bdl_ZFull_PE OR I_CO_Bdl_ZLimit_PE) AND 
+					H_CO_Bdl_StkZ_Count = 0 THEN
+					Station.SeqFaultWord 	:= 104;	
+					E_BundleDetected			:= TRUE;	
+					Station.SeqFaultString 	:= 'Origin: Bundle Detected on Stacking but Count is Zero. Remove Bundle from Stacking.';				
+			ELSE
+				IF NOT CO_Stk_Dn_TON.Q THEN
+					CO_Stk_Mtr_Var.In_OrgOn := TRUE;
+				END_IF
+					Station.OriginRunStep := Station.OriginRunStep+10;	
+			END_IF
+
+	20 : 	(************* Stacking CAM Down ****************)
+			Station.Status 		:= 'Org20: Stacking CAM Down';
+			Station.StatusInt	:= 204;
+			
+
+				IF CO_Stk_Dn_TON.Q AND NOT CO_Stk_Mtr_Var.In_OrgOn THEN
+					Station.OriginRunStep := Station.OriginRunStep+10;
+				ELSIF I_CO_Bdl_PE1 OR I_CO_Bdl_PE2 OR I_CO_Bdl_PE3 OR I_CO_Bdl_PE4 OR I_CO_Bdl_PE5 OR I_CO_Bdl_PE6 OR I_CO_Bdl_PE7 OR I_CO_Bdl_PE8 THEN
+					Station.SeqFaultWord 	:= 105;	
+					E_BundleDetected		:= TRUE;	
+					Station.SeqFaultString 	:= 'Origin: Carton Stuck at Stack Release Sensor. Remove Bundle from Conveyor.';	
+				END_IF		
+			
+
+	30 : 	(************* Stopper Origin ****************)
+			
+				IF NOT MC_WA_Run THEN
+					Station.OriginRunStep := 0;	
+				ELSE
+					Station.OriginRunStep := 1000;	
+				END_IF
+
+
+	1000 : 	(************* Check Sensor Before Width Adjust ****************)
+			Station.Status := 'Org1000: Conveyor Run and Check Sensor Before Width Adjust';
+			
+				Station.OriginRunStep := Station.OriginRunStep+10;		
+
+	1010 : 	(************* Move Collator Conveyor WA to the right width ****************)
+			CO_CV_WA_Srv_Var.In_PosCmd 			:= H_CO_CV_WA_Srv_TargetPos; 
+			CO_CV_WA_Srv_Var.In_VelCmd 			:= A_Srv_WAOriginSpeed;
+			CO_FFlapGuide_WA_Srv_Var.In_PosCmd 	:= H_CO_FFlapGuide_WA_Srv_TargetPos;
+			CO_FFlapGuide_WA_Srv_Var.In_VelCmd 	:= A_Srv_WAOriginSpeed;
+			CO_Stopper_WA_Srv_Var.In_PosCmd		:= H_CO_Stopper_WA_Srv_TargetPos;
+			CO_Stopper_WA_Srv_Var.In_VelCmd		:= A_Srv_WAOriginSpeed;
+			
+			CO_FFlapGuide_WA_Srv_Var.In_MoveAbs := TRUE;			
+			CO_CV_WA_Srv_Var.In_MoveAbs 		:= TRUE;
+			CO_Stopper_WA_Srv_Var.In_MoveAbs	:= TRUE;
+			
+			IF CO_Stack_WA_Origin THEN
+				CO_CV_WA_Srv_Var.In_MoveAbs 		:= FALSE;
+				CO_FFlapGuide_WA_Srv_Var.In_MoveAbs	:= FALSE;
+				CO_Stopper_WA_Srv_Var.In_MoveAbs	:= FALSE;
+				Station.OriginRunStep := 0;
+			END_IF
+						
+	END_CASE
+
+ELSE
+
+	Station.OriginRunStep := 0;	
+	TimeoutTrigger := FALSE;
+	
+END_IF
+*)]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

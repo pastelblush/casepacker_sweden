@@ -1,0 +1,134 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <GVL Name="GVL_Cylinder" Id="{31dea8f7-8324-4ff0-aa96-ec0e8e891869}">
+    <Declaration><![CDATA[VAR_GLOBAL
+	
+ER_FFlapL_Cyl			:fbCylinderCtrl;	 (* 	1Y1 - ERECTOR FRONT FLAP CLOSING CYL SV (LEFT)	*)
+ER_FFlapL_Cyl_Var		:structCylinder;	 (* 	1Y1 - ERECTOR FRONT FLAP CLOSING CYL SV (LEFT)	*)
+ER_BFlapL_Cyl			:fbCylinderCtrl;	 (* 	1Y2 - ERECTOR BOTTOM FLAP HOLD SV (LEFT)	*)
+ER_BFlapL_Cyl_Var		:structCylinder;	 (* 	1Y2 - ERECTOR BOTTOM FLAP HOLD SV (LEFT)	*)
+ER_StpL_Cyl				:fbCylinderCtrl;	 (* 	1Y3 - ERECTOR STOPPER CYL SV (LEFT)	*)
+ER_StpL_Cyl_Var			:structCylinder;	 (* 	1Y3 - ERECTOR STOPPER CYL SV (LEFT)	*)
+ER_FFlapR_Cyl			:fbCylinderCtrl;	 (* 	1Y4 - ERECTOR FRONT FLAP CLOSING CYL SV (RIGHT)	*)
+ER_FFlapR_Cyl_Var		:structCylinder;	 (* 	1Y4 - ERECTOR FRONT FLAP CLOSING CYL SV (RIGHT)	*)
+ER_BFlapR_Cyl			:fbCylinderCtrl;	 (* 	1Y5 - ERECTOR BOTTOM FLAP HOLD SV (RIGHT)	*)
+ER_BFlapR_Cyl_Var		:structCylinder;	 (* 	1Y5 - ERECTOR BOTTOM FLAP HOLD SV (RIGHT)	*)
+ER_StpR_Cyl				:fbCylinderCtrl;	 (* 	1Y6 - ERECTOR STOPPER CYL SV (RIGHT)	*)
+ER_StpR_Cyl_Var			:structCylinder;	 (* 	1Y6 - ERECTOR STOPPER CYL SV (RIGHT)	*)
+ER_Arm_Cyl				:fbCylinderCtrl;	 (* 	1Y7 - ERECTOR ARM CYL SV	*)
+ER_Arm_Cyl_Var			:structCylinder;	 (* 	1Y7 - ERECTOR ARM CYL DOWN SV	*)
+ER_ArmTilt_Cyl			:fbCylinderCtrl;	 (* 	1Y8 - ERECTOR ARM TILT CYL SV	*)
+ER_ArmTilt_Cyl_Var		:structCylinder;	 (* 	1Y8 - ERECTOR ARM TILT CYL SV	*)
+ER_RFlapL_Cyl			:fbCylinderCtrl;	 (* 	3Y1 - ERECTOR REAR FLAP CLOSING CYL SV (LEFT)	*)
+ER_RFlapL_Cyl_Var		:structCylinder;	 (* 	3Y1 - ERECTOR REAR FLAP CLOSING CYL SV (LEFT)	*)
+ER_RFlapR_Cyl			:fbCylinderCtrl;	 (* 	3Y3 - ERECTOR REAR FLAP CLOSING CYL SV (RIGHT)	*)
+ER_RFlapR_Cyl_Var		:structCylinder;	 (* 	3Y3 - ERECTOR REAR FLAP CLOSING CYL SV (RIGHT)	*)
+ER_BFlapCloseL_Cyl		:fbCylinderCtrl;	 (* 	1Y1 - ERECTOR BOTTOM FLAP CLOSE SV (LEFT)	*)
+ER_BFlapCloseL_Cyl_Var	:structCylinder;	 (* 	1Y1 - ERECTOR BOTTOM FLAP CLOSE SV (LEFT)	*)
+ER_BFlapCloseR_Cyl		:fbCylinderCtrl;	 (* 	1Y9 - ERECTOR BOTTOM FLAP CLOSE SV (RIGHT)	*)
+ER_BFlapCloseR_Cyl_Var	:structCylinder;	 (* 	1Y9 - ERECTOR BOTTOM FLAP CLOSE SV (RIGHT)	*)
+EX_SquarenessCylL_Cyl	:fbCylinderCtrl;	 (* 	1Y11 - SQUARENESS CYLINDER BACKWARD (LEFT)	*)
+EX_SquarenessCylL_Var	:structCylinder;	 (* 	1Y11 - SQUARENESS CYLINDER BACKWARD (LEFT)	*)
+EX_SquarenessCylR_Cyl	:fbCylinderCtrl;	 (* 	2Y9 - SQUARENESS CYLINDER BACKWARD (RIGHT)	*)
+EX_SquarenessCylR_Var	:structCylinder;	 (* 	2Y9 - SQUARENESS CYLINDER BACKWARD (RIGHT)	*)
+EX_StpCylL_Cyl			:fbCylinderCtrl;	 (* 	2Y12 - EXIT CYLINDER DOWN (LEFT)	*)
+EX_StpCylL_Var			:structCylinder;	 (* 	2Y12 - EXIT CYLINDER DOWN (LEFT)	*)
+EX_StpCylR_Cyl			:fbCylinderCtrl;	 (* 	2Y10 - EXIT CYLINDER DOWN (RIGHT)	*)
+EX_StpCylR_Var			:structCylinder;	 (* 	2Y10 - EXIT CYLINDER DOWN (RIGHT)	*)
+
+
+
+ER_CaseGuideL_Cyl			:fbCylinderCtrl;	 (* 	1Y4 - ERECTOR CASE GUIDE SV (LEFT)	*)
+ER_CaseGuideL_Cyl_Var		:structCylinder;	 (* 	1Y4 - ERECTOR CASE GUIDE SV (LEFT)	*)
+ER_TFlapClsL_Cyl			:fbCylinderCtrl;	 (* 	1Y6 - ERECTOR TOP FLAP CLOSE SV (LEFT)	*)
+ER_TFlapClsL_Cyl_Var		:structCylinder;	 (* 	1Y6 - ERECTOR TOP FLAP CLOSE SV (LEFT)	*)
+ER_TFlapOpnL_Cyl			:fbCylinderCtrl;	 (* 	1Y7 - ERECTOR TOP FLAP OPEN SV (LEFT)	*)
+ER_TFlapOpnL_Cyl_Var		:structCylinder;	 (* 	1Y6 - ERECTOR TOP FLAP OPEN SV (LEFT)	*)
+ER_CaseGuideR_Cyl			:fbCylinderCtrl;	 (* 	1Y4 - ERECTOR CASE GUIDE SV (RIGHT)	*)
+ER_CaseGuideR_Cyl_Var		:structCylinder;	 (* 	1Y4 - ERECTOR CASE GUIDE SV (RIGHT)	*)
+ER_TFlapClsR_Cyl			:fbCylinderCtrl;	 (* 	2Y6 - ERECTOR TOP FLAP CLOSE SV (RIGHT)	*)
+ER_TFlapClsR_Cyl_Var		:structCylinder;	 (* 	1Y6 - ERECTOR TOP FLAP CLOSE SV (RIGHT)	*)
+ER_TFlapOpnR_Cyl			:fbCylinderCtrl;	 (* 	1Y6 - ERECTOR TOP FLAP OPEN SV (RIGHT)	*)
+ER_TFlapOpnR_Cyl_Var		:structCylinder;	 (* 	1Y6 - ERECTOR TOP FLAP OPEN SV (RIGHT)	*)
+
+ER_NordsonL_Cyl				:fbCylinderCtrl;	 (* 	 ERECTOR NORDSON SV (LEFT)	*)
+ER_NordsonL_Cyl_Var			:structCylinder;	 (* 	 ERECTOR NORDSON SV (LEFT)	*)
+ER_NordsonR_Cyl				:fbCylinderCtrl;	 (* 	 ERECTOR NORDSON SV (RIGHT)	*)
+ER_NordsonR_Cyl_Var			:structCylinder;	 (* 	 ERECTOR NORDSON SV (RIGHT)	*)
+				
+
+CO_StkRel_Cyl			:fbCylinderCtrl;	 (* 	2Y2 - COLLATOR STACK RELEASE CYLINDER FWD SV	*)
+CO_StkRel_Cyl_Var		:structCylinder;	 (* 	2Y2 - COLLATOR STACK RELEASE CYLINDER FWD SV	*)
+CO_Brdg_Cyl				:fbCylinderCtrl;	 (* 	2Y3 - COLLATOR PUSHER BRIDGE CYL SV	*)
+CO_Brdg_Cyl_Var			:structCylinder;	 (* 	2Y3 - COLLATOR PUSHER BRIDGE CYL SV	*)
+CO_FlapGuide_Cyl		:fbCylinderCtrl;	 (* 	2Y4 - COLLATOR PUSHER GUIDE FLAP CYL SV	*)
+CO_FlapGuide_Cyl_Var	:structCylinder;	 (* 	2Y4 - COLLATOR PUSHER GUIDE FLAP CYL SV	*)
+(*CO_RFlapGuide_Cyl	:fbCylinderCtrl;	 (* 	2Y3 - COLLATOR PUSHER REAR GUIDE FLAP CYL SV	*)
+CO_RFlapGuide_Cyl_Var	:structCylinder;	 (* 	2Y3 - COLLATOR PUSHER REAR GUIDE FLAP CYL SV	*)
+CO_FFlapGuide_Cyl	:fbCylinderCtrl;	 (* 	2Y4 - COLLATOR PUSHER FRONT GUIDE FLAP CYL SV	*)
+CO_FFlapGuide_Cyl_Var	:structCylinder;	 (* 	2Y4 - COLLATOR PUSHER FRONT GUIDE FLAP CYL SV	*)*)
+CO_FFlapBrdg_Cyl		:fbCylinderCtrl;	 (* 	2Y5 - COLLATOR PUSHER FRONT GUIDE FLAP BRIDGE CYL SV	*)
+CO_FFlapBrdg_Cyl_Var	:structCylinder;	 (* 	2Y5 - COLLATOR PUSHER FRONT GUIDE FLAP BRIDGE CYL SV	*)
+CO_YPush_Strk_Cyl		:fbCylinderCtrl;	 (* 	2Y7 - COLLATOR Y PUSHER STROKE CYL SV	*)
+CO_YPush_Strk_Cyl_Var	:structCylinder;	 (* 	2Y7 - COLLATOR Y PUSHER STROKE CYL SV	*)
+CO_YPush_Cyl			:fbCylinderCtrl;	 (* 	11Y1 - COLLATOR Y-PUSHER CYL SV	*)
+CO_YPush_Cyl_Var		:structCylinder;	 (* 	11Y1 - COLLATOR Y-PUSHER CYL SV	*)
+CO_PalletLoc_Cyl		:fbCylinderCtrl;	 (* 	11Y1 - COLLATOR Y-PUSHER CYL SV	*)
+CO_PalletLoc_Cyl_Var	:structCylinder;	 (* 	11Y1 - COLLATOR Y-PUSHER CYL SV	*)
+CO_Sing1_Cyl			:fbCylinderCtrl;	 (* 	11Y1 - COLLATOR Y-PUSHER CYL SV	*)
+CO_Sing1_Cyl_Var		:structCylinder;	 (* 	11Y1 - COLLATOR Y-PUSHER CYL SV	*)
+CO_Sing2_Cyl			:fbCylinderCtrl;	 (* 	11Y1 - COLLATOR Y-PUSHER CYL SV	*)
+CO_Sing2_Cyl_Var		:structCylinder;	 (* 	11Y1 - COLLATOR Y-PUSHER CYL SV	*)
+
+
+EL_TapeOpening_Var		:structCylinder;	 (* 	4Y1 - VERTICAL TAPE OPENING CYL FWD SV	*)
+EL_TapeOpening_Cyl		:fbCylinderCtrl;	 (* 	4Y1 - VERTICAL TAPE OPENING CYL FWD SV	*)
+EL_Tilt_Cyl_Var			:structCylinder;	 (* 	4Y2 - VERTICAL EXIT TILT CYL SV	*)
+EL_TiltLift_Cyl			:fbCylinderCtrl;	 (* 	4Y2 - VERTICAL EXIT TILT LIFT CYL SV	*)
+EL_EL_TapeLock_Var		:structCylinder;	 (* 	4Y3 - VERTICAL WA TAPE LOCK ACTIVE SV	*)
+EL_EL_TapeLock_Cyl		:fbCylinderCtrl;	 (* 	4Y3 - VERTICAL WA TAPE LOCK ACTIVE SV	*)
+EL_Tilt_Vac_Lift_Var	:structCylinder;	 (* 	4Y4 - VERTICAL EXIT TILT VAC CYL SV	*)
+EL_Tilt_Vac_Lift_Cyl	:fbCylinderCtrl;	 (* 	4Y4 - VERTICAL EXIT TILT VAC CYL SV	*)
+EL_TapeChange_Var		:structCylinder;	 (* 	4Y5 - VERTICAL EXIT TILT VAC CYL SV	*)
+EL_TapeChange_Cyl		:fbCylinderCtrl;	 (* 	4Y5 - VERTICAL EXIT TILT VAC CYL SV	*)
+
+
+EL_PushRot_Cyl			:fbCylinderCtrl;	 (* 	5Y1 - ELEVATOR PUSHER ROTATE CYL SV	*)
+EL_PushRot_Cyl_Var		:structCylinder;	 (* 	5Y1 - ELEVATOR PUSHER ROTATE CYL SV	*)
+EL_Pusher_Cyl			:fbCylinderCtrl;	 (* 	5Y2 - ELEVATOR PUSHER ROTATE CYL SV	*)
+EL_Pusher_Cyl_Var		:structCylinder;	 (* 	5Y2 - ELEVATOR PUSHER ROTATE CYL SV	*)
+
+
+
+
+
+
+
+				
+EX_FlapHoldL_Cyl		:fbCylinderCtrl_2Station;	 (* 	3Y2 - EXIT FLAP HOLDER LEFT CYL SV (FOR GLUE DISPENSING)	*)
+EX_FlapHoldL_Cyl_Var	:structCylinder;	 (* 	3Y2 - EXIT FLAP HOLDER LEFT CYL SV (FOR GLUE DISPENSING)	*)
+EX_FlapHoldR_Cyl		:fbCylinderCtrl_2Station;	 (* 	3Y4 - EXIT FLAP HOLDER RIGHT CYL SV (FOR GLUE DISPENSING)	*)
+EX_FlapHoldR_Cyl_Var	:structCylinder;	 (* 	3Y4 - EXIT FLAP HOLDER RIGHT CYL SV (FOR GLUE DISPENSING)	*)
+EL_TapeL_Cyl			:fbCylinderCtrl;	 (* 	3Y5 - EXIT TAPE EXCHANGE LEFT CYL SV	*)
+EL_TapeL_Cyl_Var		:structCylinder;	 (* 	3Y5 - EXIT TAPE EXCHANGE LEFT CYL SV	*)
+EL_TapeR_Cyl			:fbCylinderCtrl;	 (* 	3Y6 - EXIT TAPE EXCHANGE RIGHT CYL SV	*)
+EL_TapeR_Cyl_Var		:structCylinder;	 (* 	3Y6 - EXIT TAPE EXCHANGE RIGHT CYL SV	*)
+EL_Tilt_Cyl				:fbCylinderCtrl;	 (* 	3Y7 - VERTICAL EXIT TILT CYL SV	*)
+
+EL_TiltLift_Cyl_Var	:structCylinder;	 (* 	3Y8 - VERTICAL EXIT TILT LIFT CYL SV	*)
+
+EL_BrakeRel_Cyl	:fbCylinderCtrl;	 (* 	9Y1 - ELEVATOR PUSHER ROTATE CYL SV	*)
+EL_BrakeRel_Cyl_Var	:structCylinder;	 (* 	9Y1 - ELEVATOR PUSHER ROTATE CYL SV	*)
+
+EL_FlapHoldL_Cyl	:fbCylinderCtrl;	 (* 	3Y9 - ELEVATOR FLAP HOLDING CYLINDER LEFT SV	*)
+EL_FlapHoldL_Cyl_Var	:structCylinder;	  (* 	3Y9 - ELEVATOR FLAP HOLDING CYLINDER LEFT SV	*)
+EL_FlapHoldR_Cyl	:fbCylinderCtrl;	 (* 	3Y9 - ELEVATOR FLAP HOLDING CYLINDER RIGHT SV	*)
+EL_FlapHoldR_Cyl_Var	:structCylinder;	  (* 	3Y9 - ELEVATOR FLAP HOLDING CYLINDER RIGHT SV	*)
+
+				
+EX_90Deg_Cyl		:fbCylinderCtrl;	 (* 	CYL SV FOR 90Deg Conveyor Cylinder	*)
+EX_Deg_Cyl_Var		:structCylinder;
+
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

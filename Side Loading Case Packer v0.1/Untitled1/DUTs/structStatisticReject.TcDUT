@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <DUT Name="structStatisticReject" Id="{200e961b-6200-4fcc-8600-4f03af268f38}">
+    <Declaration><![CDATA[TYPE structStatisticReject :
+STRUCT
+	
+	Date_Time_Day	:	WORD;
+	Date_Time_Month	:	WORD;
+	Date_Time_Year	:	WORD;
+	Date_Time_Hour	:	WORD;
+	Date_Time_Minute:	WORD;
+	Date_Time_Second:	WORD;
+	RecipeName		:	STRING;
+	RejectType		:	STRING;
+	
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

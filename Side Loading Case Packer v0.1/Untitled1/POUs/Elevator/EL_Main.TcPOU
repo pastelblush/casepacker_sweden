@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="EL_Main" Id="{4fbf3fd9-7c7c-4eee-9997-e67d8d6125c1}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM EL_Main
+VAR
+	plsTestSequence: R_trig;
+	TestSequencePos1: REAL;
+	TestSequencePos2: REAL;
+	TestSequenceInPos: Ton;
+	TestSequenceStep: INT;
+	EL_LC_MuteTON: Ton;
+	testbit: BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF Cfg_BypassErector THEN
+	HMI.T_Station_BypassP[5] := TRUE;
+ELSE
+	HMI.T_Station_BypassP[5] := FALSE;  
+END_IF
+
+EL_Timers();
+
+//EL_Error	(Station:= SC[5]);
+EL_Auto		(Station:= SC[5]);
+EL_Origin	(Station:= SC[5]);
+
+	
+EL_Cylinder_Output();
+EL_Servo_Output();
+EL_Motor_Output();
+EL_Vacuum_Output();
+(*
+EL_LC_Muting 	:= A_EL_LC_Muting AND 	NOT EL_Srv_Var.Out_Busy;
+EL_LC_MuteTON 	(IN := O_EL_LC_Mute1, pt := T#100MS);
+O_EL_LC_Mute1 	:= EL_LC_Muting;
+O_EL_LC_Mute2 	:= EL_LC_MuteTON.Q;
+*)
+(*EL_TestServo();*)
+
+(* EL Structure is only for displaying on HMI*)
+SC[5].T_OriginSearch := EL.T_OriginSearch;
+EL := SC[5];
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

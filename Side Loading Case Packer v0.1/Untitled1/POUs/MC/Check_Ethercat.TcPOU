@@ -1,0 +1,60 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="Check_Ethercat" Id="{4e22eef7-36a4-407f-900b-dcdb99b9dda4}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Check_Ethercat
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+S_ECat_NOK := FALSE;
+
+
+IF NOT ER.Bypass THEN
+	S_ECat_NOK := 	 S_ECat_NOK 
+					 OR (I_ECat_41BC1<>8)
+					 OR (I_ECat_41DI1<>8)
+					 OR (I_ECat_41DI2<>8)
+					 OR (I_ECat_41DO1<>8)
+					 OR (I_ECat_41DO2<>8)
+					(* OR (I_ECat_41CO1<>8)	*)
+					 OR (I_ECat_41BC2<>8)
+					 OR (I_ECat_41BC3<>8)
+					 OR (I_ECat_70A1<>8)
+					 OR (I_ECat_71A1<>8)
+					 OR (I_ECat_60A1<>8)
+					 OR (I_ECat_61A1<>8)
+					 OR (I_ECat_62A1<>8)
+					 OR (I_ECat_63A1<>8)
+					 OR (I_ECat_64A1<>8)
+					 OR (I_ECat_65A1<>8)
+					 OR (I_ECat_66A1<>8);
+END_IF
+
+
+IF NOT CO.Bypass THEN
+	S_ECat_NOK := 		S_ECat_NOK 
+					OR (I_ECat_141BC1<>8)
+					OR (I_ECat_141DI1<>8)
+					OR (I_ECat_141DO1<>8)
+					OR (I_ECat_141BC2<>8)
+					OR (I_ECat_170A1<>8) 
+					OR (I_ECat_160A1<>8)
+					OR (I_ECat_161A1<>8)
+					OR (I_ECat_162A1<>8)
+					OR (I_ECat_162A1<>8);
+END_IF
+
+
+(*
+IF NOT HOR.Bypass THEN
+	S_ECat_NOK := S_ECat_NOK 
+					OR (I_ECat_241BC1<>8)
+					OR (I_ECat_241DI1<>8)
+					OR (I_ECat_241DO1<>8)
+					OR (I_ECat_260A1<>8);
+END_IF
+*)]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

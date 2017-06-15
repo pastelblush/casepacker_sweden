@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="EL_Error" Id="{0a270e41-6afa-4e07-8e41-995604451452}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM EL_Error
+VAR_IN_OUT
+	Station		:structStationCtrl;
+END_VAR
+
+VAR
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF MC.ResetPressed THEN
+	Station.SeqFaultWord := 0;
+END_IF
+
+(* 	Reserved Station.SeqFaultWord 
+	= 1~49 for Major Fault
+	= 100~149 for Origin Sequence Fault
+	= 150~199 for Origin Width Adjust Sequence Fault
+	= 200~299 for Auto Sequence Fault
+	= 300~399 for misc fault listed on this page*)
+
+IF mc.ResetPressed THEN
+	E_BeltTension_Right_NOK	:=FALSE;
+	E_BeltTension_Left_NOK	:=FALSE;
+	E_DriveBeltTension_NOK	:=FALSE;
+END_IF	
+
+(*	
+IF NOT 	I_EL_BeltTensionR_OK THEN
+	E_BeltTension_Right_NOK	:=TRUE;
+END_IF	
+IF NOT 	I_EL_BeltTensionL_OK THEN
+	E_BeltTension_Left_NOK	:=TRUE;
+END_IF	
+IF NOT 	I_EL_DriveBeltTension_OK THEN
+	E_DriveBeltTension_NOK	:=TRUE;
+END_IF	
+
+
+Station.MajorFault := ((Station.SeqFaultWord > 0) AND (Station.SeqFaultWord < 50)) OR E_BeltTension_Right_NOK OR E_BeltTension_Left_NOK ;
+Station.MinorFault := (Station.SeqFaultWord >= 100) OR Station.DeviceFault;
+
+
+IF NOT EL_LC_Muting AND 
+	(MC.AutoMode OR MC.OriginSchRun OR EL.M_Step OR EL.OriginSchRun OR EL_Srv_Var.Out_Busy) AND
+	NOT I_LC_SC_OK THEN
+	Station.SeqFaultWord := 300;
+	Station.SeqFaultString := 'Light Curtain Crossed.';
+END_IF
+
+*)]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

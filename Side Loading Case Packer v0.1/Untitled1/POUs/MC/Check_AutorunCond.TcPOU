@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="Check_AutorunCond" Id="{68e75083-adc5-4989-84a2-0934e91dae7c}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Check_AutorunCond
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+E_AutorunDataNG := '';
+
+	
+IF (CurrRecipe.rCaseA < Cfg_CaseA_Min) OR 
+	(CurrRecipe.rCaseA > Cfg_CaseA_Max) THEN
+	E_AutorunDataNG := 'Case Dimension A out of tolerance';
+	E_Recipe_A_OutOfTolerance	:= TRUE;
+ELSE
+	E_Recipe_A_OutOfTolerance	:= FALSE;
+END_IF
+	
+IF (CurrRecipe.rCaseB < Cfg_CaseB_Min) OR 
+	(CurrRecipe.rCaseB > Cfg_CaseB_Max) THEN
+	E_AutorunDataNG := 'Case Dimension B out of tolerance';
+	E_Recipe_B_OutOfTolerance	:= TRUE;
+ELSE
+	E_Recipe_B_OutOfTolerance	:= FALSE;
+END_IF
+	
+IF (CurrRecipe.rCaseC < Cfg_CaseC_Min) OR 
+	(CurrRecipe.rCaseC > Cfg_CaseC_Max) THEN
+	E_AutorunDataNG := 'Case Dimension C out of tolerance';
+	E_Recipe_C_OutOfTolerance	:= TRUE;
+ELSE
+	E_Recipe_C_OutOfTolerance	:= FALSE;
+END_IF
+		
+
+IF 	E_Recipe_A_OutOfTolerance	OR
+	E_Recipe_B_OutOfTolerance	OR
+	E_Recipe_C_OutOfTolerance	
+THEN	
+	A_AutorunDataOK := FALSE;
+ELSE
+	A_AutorunDataOK := TRUE;	
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

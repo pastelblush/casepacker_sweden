@@ -1,0 +1,94 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="HOR_Error" Id="{751d7dcb-f20a-41ce-a743-9326ad455b01}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM HOR_Error
+VAR_IN_OUT
+	Station		:structStationCtrl;
+END_VAR
+
+VAR
+	Right_Tape_Err_NoReset	:BOOL;
+	Left_Tape_Err_NoReset	:BOOL;	
+	tmrTopCvMtr	:ton;
+	tmrBtmCvMtr	:ton;
+
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF MC.ResetPressed THEN
+	Station.SeqFaultWord := 0;
+END_IF
+
+(* 	Reserved Station.SeqFaultWord 
+	= 1~49 for Major Fault
+	= 100~149 for Origin Sequence Fault
+	= 150~199 for Origin Width Adjust Sequence Fault
+	= 200~299 for Auto Sequence Fault
+	= 300~399 for misc fault listed on this page*)
+
+Station.MajorFault := ((Station.SeqFaultWord > 0) AND (Station.SeqFaultWord < 50));
+Station.MinorFault := (Station.SeqFaultWord >= 100) OR Station.DeviceFault
+													OR E_Top_Conv_Jam 
+													OR E_Bottom_Conv_Jam
+													OR E_Weight_CV_CartonNotDetect 
+													OR E_Hor_Entry_Sensor
+													OR E_Hor_Exit_Sensor
+													OR ((E_CartonTapingErrL 
+													OR E_CartonTapingErrR 
+													OR W_HOR_TapeLRefill 
+													OR W_HOR_TapeRRefill
+													OR E_Weigh_ConsecutiveErr) AND 
+													NOT station.Running) ;
+
+(* Tape Low Warning *)
+IF WORD_TO_INT(HOR_Auto.CntTapeReal_SlotL.CV) >= TapeLow_Setting THEN
+	W_Hor_TapeLowL	:= TRUE;
+END_IF													
+IF WORD_TO_INT(HOR_Auto.CntTapeReal_SlotR.CV) >= TapeLow_Setting THEN
+	W_Hor_TapeLowR	:= TRUE;
+END_IF	
+IF E_Horizontal_LeftDoor_Opn THEN
+	W_Hor_TapeLowL	:= FALSE;
+END_IF
+IF E_Horizontal_RightDoor_Opn THEN
+	W_Hor_TapeLowR	:= FALSE;
+END_IF
+
+
+(*Tape Refill Warning*)					
+W_HOR_TapeLRefill	:= MC.AutoMode AND NOT  Station.Bypass AND 
+						NOT I_HOR_TapeL_Present_PE;
+W_HOR_TapeRRefill	:= MC.AutoMode AND NOT  Station.Bypass AND 
+						NOT I_HOR_TapeR_Present_PE;
+
+(* Tape Error Reset *)						
+IF E_Horizontal_RightDoor_Opn THEN 
+	Right_Tape_Err_NoReset	:= TRUE;
+END_IF
+IF E_Horizontal_LeftDoor_Opn THEN 
+	Left_Tape_Err_NoReset	:= TRUE;
+END_IF
+
+IF Right_Tape_Err_NoReset AND MC.ResetPressed THEN
+	E_CartonTapingErrR		:=FALSE;
+	Right_Tape_Err_NoReset	:= FALSE;
+END_IF
+IF Left_Tape_Err_NoReset AND MC.ResetPressed THEN
+	E_CartonTapingErrL		:=FALSE;
+	Left_Tape_Err_NoReset	:=FALSE;
+END_IF
+
+(* Weighing Error *)
+IF Hor_Auto.Weight_Fail_Counter >= 3 and Cfg_EnbWeightCheck THEN
+	E_Weigh_ConsecutiveErr := TRUE;
+END_IF
+
+(* Conveyor Jam Error *)
+tmrTopCvMtr(In:= O_HOR_TopCv_Mtr_Run AND (I_HOR_Entry_Cv_Present OR I_EX_Cv_Ctn_PE), PT:=T#30S);
+E_Top_Conv_Jam := tmrTopCvMtr.Q;
+
+tmrBtmCvMtr(In:= O_HOR_BotCv_Mtr_Run AND (I_HOR_Entry_Cv_Present OR I_EX_Cv_Ctn_PE), PT:=T#30S);
+E_Bottom_Conv_Jam :=tmrBtmCvMtr.Q;
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

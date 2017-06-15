@@ -1,0 +1,326 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="ER_Cylinder_Output" Id="{3a80085b-0182-42da-b125-f09520df6b6b}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM ER_Cylinder_Output
+VAR
+	bEnable:BOOL;
+	Reset:BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[bEnable := NOT MC.Trouble;
+
+ER_FFlapL_Cyl_Var.In_HomeXLock := TRUE;
+ER_FFlapL_Cyl_Var.In_WorkXLock := (NOT ER_Arm_Srv_Var.Out_Busy OR NOT ER_Arm_Vac_Var.S_Vacuum) (*AND
+									(CO_YPush_Srv_Var.Out_CurrPos >= H_CO_YPush_Srv_CtnFinalPos+200)*);
+
+ER_FFlapL_Cyl(				
+	IN_CylName		:='FRONT FLAP CLOSE LEFT', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_ER_FFlapL_Fwd, 	
+	In_HomeRS		:= I_ER_FFlapL_Bwd, 	
+	In_WorkTON		:= T#100MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_FFlapL_Fwd, 	
+	Out_HomeSV		=> O_ER_FFlapL_Bwd, 	
+	CylVar			:= ER_FFlapL_Cyl_Var,
+	Station			:= SC[3]);
+
+ER_BFlapL_Cyl_Var.In_HomeXLock := TRUE;
+ER_BFlapL_Cyl_Var.In_WorkXLock := TRUE (*(NOT ER_Arm_Srv_Var.Out_Busy OR NOT ER_Arm_Vac_Var.S_Vacuum) AND
+									(CO_YPush_Srv_Var.Out_CurrPos >= H_CO_YPush_Srv_CtnFinalPos+200) AND
+									NOT CO_Brdg_Cyl_Var.S_WorkPos*) ;
+		
+ER_BFlapL_Cyl(				
+	IN_CylName		:='BTM FLAP HOLD LEFT', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_ER_BFlapL_Fwd, 	
+	In_HomeRS		:= I_ER_BFlapL_Bwd, 	
+	In_WorkTON		:= T#1000MS, 	
+	In_HomeTON		:= T#1000MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_BFlapL_Fwd, 	
+	Out_HomeSV		=> O_ER_BFlapL_Bwd, 	
+	CylVar			:= ER_BFlapL_Cyl_Var,
+	Station			:= SC[3]);
+
+ER_StpL_Cyl_Var.In_HomeXLock := TRUE;
+ER_StpL_Cyl_Var.In_WorkXLock := TRUE;
+				
+ER_StpL_Cyl(				
+	IN_CylName		:='STOPPER LEFT', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_ER_StpL_Up, 	
+	In_HomeRS		:= I_ER_StpL_Dn, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_StpL_Up, 	
+	Out_HomeSV		=> O_ER_StpL_Dn, 	
+	CylVar			:= ER_StpL_Cyl_Var,
+	Station			:= SC[3]);
+
+ER_FFlapR_Cyl_Var.In_HomeXLock := TRUE;
+ER_FFlapR_Cyl_Var.In_WorkXLock := (NOT ER_Arm_Srv_Var.Out_Busy OR NOT ER_Arm_Vac_Var.S_Vacuum);
+				
+ER_FFlapR_Cyl(				
+	IN_CylName		:='FRONT FLAP CLOSE RIGHT', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_ER_FFlapR_Fwd, 	
+	In_HomeRS		:= I_ER_FFlapR_Bwd, 	
+	In_WorkTON		:= T#100MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_FFlapR_Fwd, 	
+	Out_HomeSV		=> O_ER_FFlapR_Bwd, 	
+	CylVar			:= ER_FFlapR_Cyl_Var,
+	Station			:= SC[3]);
+
+ER_BFlapR_Cyl_Var.In_HomeXLock := TRUE;
+ER_BFlapR_Cyl_Var.In_WorkXLock := TRUE (* (NOT ER_Arm_Srv_Var.Out_Busy OR NOT ER_Arm_Vac_Var.S_Vacuum)*);
+				
+ER_BFlapR_Cyl(				
+	IN_CylName		:='BTM FLAP HOLD RIGHT', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_ER_BFlapR_Fwd, 	
+	In_HomeRS		:= I_ER_BFlapR_Bwd, 	
+	In_WorkTON		:= T#1000MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_BFlapR_Fwd, 	
+	Out_HomeSV		=> O_ER_BFlapR_Bwd, 	
+	CylVar			:= ER_BFlapR_Cyl_Var,
+	Station			:= SC[3]);
+
+ER_StpR_Cyl_Var.In_HomeXLock := TRUE;
+ER_StpR_Cyl_Var.In_WorkXLock := TRUE;
+				
+ER_StpR_Cyl(				
+	IN_CylName		:='STOPPER RIGHT', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_ER_StpR_Up, 	
+	In_HomeRS		:= I_ER_StpR_Dn, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_StpR_Up, 	
+	Out_HomeSV		=> O_ER_StpR_Dn, 	
+	CylVar			:= ER_StpR_Cyl_Var,
+	Station			:= SC[3]);
+
+ER_Arm_Cyl_Var.In_HomeXLock := TRUE;
+ER_Arm_Cyl_Var.In_WorkXLock := TRUE;
+				
+ER_Arm_Cyl(				
+	IN_CylName		:='ARM UP/DN', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_ER_Arm_Dn, 	
+	In_HomeRS		:= I_ER_Arm_Up, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_Arm_Dn, 	
+	Out_HomeSV		=> O_ER_Arm_Up, 	
+	CylVar			:= ER_Arm_Cyl_Var,
+	Station			:= SC[3]);
+
+ER_ArmTilt_Cyl_Var.In_HomeXLock := TRUE;
+ER_ArmTilt_Cyl_Var.In_WorkXLock := TRUE;
+				
+ER_ArmTilt_Cyl(				
+	IN_CylName		:='ARM TILT', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_ER_ArmTilt_Bwd, 	
+	In_HomeRS		:= I_ER_ArmTilt_Fwd, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_ArmTilt_Bwd, 	
+	Out_HomeSV		=> O_ER_ArmTilt_Fwd, 	
+	CylVar			:= ER_ArmTilt_Cyl_Var,
+	Station			:= SC[3]);
+
+ER_RFlapL_Cyl_Var.In_HomeXLock := TRUE;
+ER_RFlapL_Cyl_Var.In_WorkXLock := NOT CO_Brdg_Cyl_Var.S_WorkPos (*AND
+									(CO_YPush_Srv_Var.Out_CurrPos >= H_CO_YPush_Srv_CtnFinalPos+200)*);
+				
+ER_RFlapL_Cyl(				
+	IN_CylName		:='REAR FLAP CLOSE LEFT', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_ER_RFlapL_Fwd, 	
+	In_HomeRS		:= I_ER_RFlapL_Bwd, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_RFlapL_Fwd, 	
+	Out_HomeSV		=> O_ER_RFlapL_Bwd, 	
+	CylVar			:= ER_RFlapL_Cyl_Var,
+	Station			:= SC[3]);
+
+ER_RFlapR_Cyl_Var.In_HomeXLock := TRUE;
+ER_RFlapR_Cyl_Var.In_WorkXLock := TRUE;
+
+ER_RFlapR_Cyl(				
+	IN_CylName		:='REAR FLAP CLOSE RIGHT', 
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_ER_RFlapR_Fwd, 	
+	In_HomeRS		:= I_ER_RFlapR_Bwd, 	
+	In_WorkTON		:= T#100MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_RFlapR_Fwd, 	
+	Out_HomeSV		=> O_ER_RFlapR_Bwd, 	
+	CylVar			:= ER_RFlapR_Cyl_Var,
+	Station			:= SC[3]);
+
+ER_CaseGuideL_Cyl_Var.In_HomeXLock := TRUE;
+ER_CaseGuideL_Cyl_Var.In_WorkXLock := TRUE;
+
+ER_CaseGuideL_Cyl(				
+	IN_CylName		:='CASE GUIDE LEFT', 
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_ER_CaseGuideL_Fwd, 	
+	In_HomeRS		:= I_ER_CaseGuideL_Bwd, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_CaseGuideL_Fwd	, 	
+	Out_HomeSV		=> O_ER_CaseGuideL_Bwd	, 	
+	CylVar			:= ER_CaseGuideL_Cyl_Var,
+	Station			:= SC[3]);	
+	
+ER_CaseGuideR_Cyl_Var.In_HomeXLock := TRUE;
+ER_CaseGuideR_Cyl_Var.In_WorkXLock := TRUE;
+
+ER_CaseGuideR_Cyl(				
+	IN_CylName		:='CASE GUIDE RIGHT', 
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_ER_CaseGuideR_Fwd, 	
+	In_HomeRS		:= I_ER_CaseGuideR_Bwd, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_CaseGuideR_Fwd	, 	
+	Out_HomeSV		=> O_ER_CaseGuideR_Bwd	, 	
+	CylVar			:= ER_CaseGuideR_Cyl_Var,
+	Station			:= SC[3]);		
+	
+
+ER_TFlapOpnL_Cyl_Var.In_HomeXLock := TRUE;
+ER_TFlapOpnL_Cyl_Var.In_WorkXLock := ER_TFlapClsL_Cyl_Var.S_HomePos;
+
+ER_TFlapOpnL_Cyl(				
+	IN_CylName		:='TOP FLAP OPN LEFT', 
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_ER_TFlapOpnL_Fwd, 	
+	In_HomeRS		:= I_ER_TFlapOpnL_Bwd, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_TFlapOpnL_Fwd, 	
+	Out_HomeSV		=> O_ER_TFlapOpnL_Bwd, 	
+	CylVar			:= ER_TFlapOpnL_Cyl_Var,
+	Station			:= SC[3]);	
+				
+ER_TFlapClsL_Cyl_Var.In_HomeXLock := TRUE;
+ER_TFlapClsL_Cyl_Var.In_WorkXLock := ER_TFlapOpnL_Cyl_Var.S_HomePos;
+
+ER_TFlapClsL_Cyl(				
+	IN_CylName		:='TOP FLAP CLS LEFT', 
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_ER_TFlapClsL_Fwd, 	
+	In_HomeRS		:= I_ER_TFlapClsL_Bwd, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_TFlapClsL_Fwd, 	
+	Out_HomeSV		=> O_ER_TFlapClsL_Bwd, 	
+	CylVar			:= ER_TFlapClsL_Cyl_Var,
+	Station			:= SC[3]);
+	
+ER_TFlapOpnR_Cyl_Var.In_HomeXLock := TRUE;
+ER_TFlapOpnR_Cyl_Var.In_WorkXLock := ER_TFlapClsR_Cyl_Var.S_HomePos;
+
+ER_TFlapOpnR_Cyl(				
+	IN_CylName		:='TOP FLAP OPN RIGHT', 
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_ER_TFlapOpnR_Fwd, 	
+	In_HomeRS		:= I_ER_TFlapOpnR_Bwd, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_TFlapOpnR_Fwd, 	
+	Out_HomeSV		=> O_ER_TFlapOpnR_Bwd, 	
+	CylVar			:= ER_TFlapOpnR_Cyl_Var,
+	Station			:= SC[3]);	
+				
+ER_TFlapClsR_Cyl_Var.In_HomeXLock := TRUE;
+ER_TFlapClsR_Cyl_Var.In_WorkXLock := ER_TFlapOpnR_Cyl_Var.S_HomePos;
+
+ER_TFlapClsR_Cyl(				
+	IN_CylName		:='TOP FLAP CLS RIGHT', 
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_ER_TFlapClsR_Fwd, 	
+	In_HomeRS		:= I_ER_TFlapClsR_Bwd, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_TFlapClsR_Fwd, 	
+	Out_HomeSV		=> O_ER_TFlapClsR_Bwd, 	
+	CylVar			:= ER_TFlapClsR_Cyl_Var,
+	Station			:= SC[3]);
+	
+ER_NordsonL_Cyl_Var.In_HomeXLock := TRUE;
+ER_NordsonL_Cyl_Var.In_WorkXLock := TRUE;
+
+ER_NordsonL_Cyl(				
+	IN_CylName		:='NORDSON LEFT VALVE', 
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= ER_NordsonL_Cyl.Out_WorkSV, 	
+	In_HomeRS		:= ER_NordsonL_Cyl.Out_HomeSV, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_Nord_ValveL_On, 	
+	Out_HomeSV		=> , 	
+	CylVar			:= ER_NordsonL_Cyl_Var,
+	Station			:= SC[3]);	
+	
+ER_NordsonR_Cyl_Var.In_HomeXLock := TRUE;
+ER_NordsonR_Cyl_Var.In_WorkXLock := TRUE;
+
+ER_NordsonR_Cyl(				
+	IN_CylName		:='NORDSON RIGHT VALVE', 
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= ER_NordsonR_Cyl.Out_WorkSV, 	
+	In_HomeRS		:= ER_NordsonR_Cyl.Out_HomeSV, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_Nord_ValveR_On, 	
+	Out_HomeSV		=> , 	
+	CylVar			:= ER_NordsonR_Cyl_Var,
+	Station			:= SC[3]);		
+	]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

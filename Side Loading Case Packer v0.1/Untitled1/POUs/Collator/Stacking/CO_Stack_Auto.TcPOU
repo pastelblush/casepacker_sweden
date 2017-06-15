@@ -1,0 +1,271 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_Stack_Auto" Id="{159b6743-8360-4829-abf6-1b69c52f4e32}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_Stack_Auto
+VAR_IN_OUT
+	Station		:structStationCtrl;
+END_VAR
+VAR
+
+	Timeout				:ton;
+	StackerRun_TON		:Ton;
+	StackOverflow_TON	:ton;
+	StackOverflow_TOFF	:ton;
+	StackerWaiting_TON	:ton;
+	TimeoutTrigger		:BOOL;
+	TimeoutSetting		:TIME;
+	
+	BundleFull		:BOOL;
+	NoBundle		:BOOL;
+	StackerRunning	:BOOL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*CASE CurrRecipe.iStackX OF
+	1:
+		BundleFull := I_CO_Bdl_PE1;
+	2:
+		BundleFull := I_CO_Bdl_PE1 AND I_CO_Bdl_PE2;
+	3:
+		BundleFull := I_CO_Bdl_PE1 AND I_CO_Bdl_PE2 AND I_CO_Bdl_PE3;
+	4:
+		BundleFull := I_CO_Bdl_PE1 AND I_CO_Bdl_PE2 AND I_CO_Bdl_PE3 AND I_CO_Bdl_PE4;
+	5:
+		BundleFull := I_CO_Bdl_PE1 AND I_CO_Bdl_PE2 AND I_CO_Bdl_PE3 AND I_CO_Bdl_PE4 AND I_CO_Bdl_PE5;
+	6:
+		BundleFull := I_CO_Bdl_PE1 AND I_CO_Bdl_PE2 AND I_CO_Bdl_PE3 AND I_CO_Bdl_PE4 AND I_CO_Bdl_PE5 AND I_CO_Bdl_PE6;
+	7:
+		BundleFull := I_CO_Bdl_PE1 AND I_CO_Bdl_PE2 AND I_CO_Bdl_PE3 AND I_CO_Bdl_PE4 AND I_CO_Bdl_PE5 AND I_CO_Bdl_PE6 AND I_CO_Bdl_PE7;
+	8:
+		BundleFull := I_CO_Bdl_PE1 AND I_CO_Bdl_PE2 AND I_CO_Bdl_PE3 AND I_CO_Bdl_PE4 AND I_CO_Bdl_PE5 AND I_CO_Bdl_PE6 AND I_CO_Bdl_PE7 AND I_CO_Bdl_PE8;
+		
+	ELSE
+		BundleFull := FALSE;												
+END_CASE
+
+
+NoBundle := NOT (  I_CO_Bdl_PE1 OR I_CO_Bdl_PE2 OR I_CO_Bdl_PE3 OR I_CO_Bdl_PE4 OR I_CO_Bdl_PE5 OR I_CO_Bdl_PE6 OR I_CO_Bdl_PE7 OR I_CO_Bdl_PE8);
+
+
+(**************************************************************************************************************)
+(* GENERAL STATION MAPPING  *)
+(**************************************************************************************************************)
+Station.Name			:=	'COLLATOR CONVEYOR STACKING';
+Station.Rdy 			:= 	Station.Origin;
+Station.AutoRun 		:=	(MC.AutoRunning OR Station.M_Step) AND 
+							NOT (Station.Bypass OR Station.MajorFault OR Station.MinorFault);
+Station.RunReq			:= 	((BundleFull OR MC.DryRun) AND
+							NOT I_CO_Bdl_ZFull_PE AND
+							NOT H_CO_StkRdyForXPush AND
+							CO_Bdl_ZFull_TOFF.Q);
+Station.RunCond			:=	(NOT CO_XPush.Running OR CO_XPush.RunStep >= 15) AND	(*X Pusher Not Pushing Forward*) 
+							NOT (Station.Done OR MC.StopPressed);
+Station.Run_NextStepPls	:=	(Station.AutoRun AND NOT Station.M_Step) OR 
+							(Station.M_Step AND M_StepFwdPls) OR HMI.T_OneCycleRun;
+Station.Run_PrevStepPls	:=	(Station.M_Step AND M_StepBwdPls);
+
+(**************************************************************************************************************)
+(* Auto Sequance*)
+(**************************************************************************************************************)
+
+Timeout(IN:=TimeoutTrigger, PT:=TimeoutSetting);
+IF Timeout.Q THEN
+	TimeoutTrigger := FALSE;
+END_IF
+
+StackerRun_TON	(IN:= StackerRunning AND NOT CO_Stk_Mtr_Var.In_AutoON, PT:=T#10S);
+StackerWaiting_TON (IN:= (Station.AutoRun AND Station.RunStep = 0), PT:= T#10S);
+
+IF CO_Stk_Mtr_Var.In_AutoON AND Station.AutoRun THEN
+	StackerRunning	:= TRUE;
+ELSIF NOT Station.AutoRun OR StackerRun_TON.Q THEN
+	StackerRunning	:= FALSE;	
+END_IF
+
+(*     Stacker Overflow Monitor Timer	*)
+StackOverflow_TON	( in:=I_CO_Bdl_ZLimit_PE , pt:= T#100MS);
+StackOverflow_TOFF	( in:=NOT I_CO_Bdl_ZLimit_PE , pt:= T#500MS);
+
+
+IF Station.AutoRun OR Station.M_Step THEN
+	
+	CO_CV_Mtr_Var.In_AutoON := TRUE; 
+
+	CASE Station.RunStep OF
+
+	0 : 	(************* Ready To Run ****************)
+			IF 	Station.RunCond AND Station.RunReq AND
+				Station.Rdy 			AND 
+				NOT I_CO_Bdl_ZFull_PE 	AND 
+				NOT I_CO_Bdl_ZLimit_PE 	AND
+				StackOverflow_TOFF.Q	AND
+				I_CO_Bdl_DoorSwitch 	AND
+				H_CO_Bdl_StkZ_Count < CurrRecipe.iStackZ THEN
+				Station.RunStep := Station.RunStep + 10;
+				
+			ELSIF NOT Station.RunCond THEN
+				Station.Status 		:= '0: Station Waiting for Run Conditions';
+				Station.StatusInt	:= 1;
+			ELSIF NOT Station.RunReq THEN
+				Station.Status 		:= '0: Station Waiting for Run Request';
+				Station.StatusInt	:= 2;
+			ELSIF StackOverflow_TON.Q AND NOT mc.DryRun THEN
+						Station.SeqFaultWord 	:= 210;
+						E_Stack_Overflow		:= TRUE;
+						Station.SeqFaultString 	:= 'Auto: Z-Axis Stack Overflow Sensor Detected Bundle.';
+			ELSIF H_CO_Bdl_StkZ_Count = CurrRecipe.iStackZ AND
+				NOT CO_Bdl_ZFull_TON.Q AND NOT mc.DryRun THEN
+						Station.SeqFaultWord 	:= 209;
+						E_Stack_Full			:= TRUE;
+						Station.SeqFaultString 	:= 'Auto: Z-Axis Full Sensor Failed to Detect Bundle.';	
+			ELSIF NOT I_CO_Bdl_DoorSwitch  THEN
+						Station.SeqFaultWord 	:= 211;
+						E_Door_Open				:= TRUE;
+						Station.SeqFaultString 	:= 'Auto: Stacker Door Not Closed.';			
+			ELSE
+				Station.Status := '0: Station Not Ready';				
+			END_IF
+	
+	10 : 	(************* Make Sure Bundle Reach End Conveyor ****************)
+			(************* Make Sure X Pusher Up or X Pusher Home ****************)
+			Station.Status 		:= '10: Wait Bundle Reach End Conveyor';
+			Station.StatusInt	:= 201;
+	
+			TimeoutSetting := T#15S;
+			TimeoutTrigger := TRUE;
+					
+			IF 	(CO_Bdl_Reach_TON.Q OR
+				mc.DryRun) AND 
+				(	CO_XPush_Cyl_Var.S_WorkPos OR 
+					fcComparePos(CurrPos:= CO_XPush_Srv_Var.Out_CurrPos, TargetPos:= H_CO_XPush_Srv_CurrStandbyPos, Tolerance := 0.5) OR
+					(CO_XPush_Srv_Var.Out_CurrPos >= 900)
+				) THEN
+				TimeoutTrigger := FALSE;
+				Station.RunStep := Station.RunStep + 10;
+			ELSIF Timeout.Q THEN
+				Station.SeqFaultWord 		:= 201;
+				E_Bundle_Stuck_on_Infeed	:= TRUE;
+				Station.SeqFaultString 		:= 'Auto: Bundle Stuck on Infeed Conveyor.';
+			END_IF
+
+	20 : 	(************* Make Sure Bundle Reach Full Sensor ****************)
+			Station.Status 		:= '20: Wait Bundle Reach Full Sensor';
+			Station.StatusInt	:= 202;
+	
+			TimeoutSetting := T#15S;
+			TimeoutTrigger := TRUE;
+					
+			IF (CO_Bdl_XFull_TON.Q OR 
+				mc.DryRun) AND  
+				Station.Run_NextStepPls THEN
+				TimeoutTrigger := FALSE;
+				CO_Stk_Mtr_Var.In_AutoON := TRUE;	(*Trigger Motor Earlier*)
+				Station.RunStep := Station.RunStep + 10;
+			ELSIF Timeout.Q THEN
+				IF NoBundle THEN
+					Station.SeqFaultWord 	:= 203;
+					E_Bundle_Full			:= TRUE;
+					Station.SeqFaultString 	:= 'Auto: X-Axis Full Sensor Failed to Detect Bundle.';					
+				END_IF
+			END_IF
+
+	30 : 	(************* Stacking CAM Turn Up ****************)
+			Station.Status 		:= '30: Stacking CAM Turn Up';
+			Station.StatusInt	:= 203;
+			
+			TimeoutSetting := T#10S;
+			TimeoutTrigger := TRUE;
+			
+			IF NOT CO_Stk_Mtr_Var.In_AutoON  THEN
+				TimeoutTrigger := FALSE;
+				Station.RunStep := Station.RunStep + 10;		
+			ELSIF Timeout.Q THEN
+				Station.SeqFaultWord 	:= 205;		
+				E_CAM_Up_Timeout		:= TRUE;	
+				Station.SeqFaultString 	:= 'Auto: Stacking CAM Move Up Timeout Error.';	
+			END_IF
+
+	40 : 	(************* Wait Stacking CAM Return to Down Position****************)
+			Station.Status 		:= '40: Wait Stacking CAM Return to Down Position';
+			Station.StatusInt	:= 204;
+			
+			TimeoutSetting := T#10S;
+			TimeoutTrigger := TRUE;
+			
+			IF CO_Stk_Dn_TON.Q  THEN
+				TimeoutTrigger := FALSE;
+					IF I_CO_Bdl_PE1 AND NOT mc.DryRun THEN			(*Make sure no bundles left on conveyor*)
+						Station.SeqFaultWord 	:= 206;			
+						E_BundleJam_AfterStack	:= TRUE;		
+						Station.SeqFaultString 	:= 'Auto: Bundle Stuck On Conveyor After Stacking Error.';									
+					ELSIF NOT I_CO_Bdl_Stack_PE AND NOT mc.DryRun THEN		(*Make sure no bundles stuck between conveyor and stacking*)
+						Station.SeqFaultWord 	:= 208;	
+						E_BundleJam_atRelease	:= TRUE;					
+						Station.SeqFaultString 	:= 'Auto: Bundle Stuck at Stack Release.';	
+					ELSIF H_CO_Bdl_StkZ_Count = CurrRecipe.iStackZ AND
+						NOT CO_Bdl_ZFull_TON.Q AND NOT mc.DryRun THEN
+						Station.SeqFaultWord 	:= 209;
+						E_Stack_Full			:= TRUE;
+						Station.SeqFaultString 	:= 'Auto: Z-Axis Full Sensor Failed to Detect Bundle.';		
+					ELSIF StackOverflow_TON.Q AND NOT mc.DryRun THEN
+						Station.SeqFaultWord 	:= 210;
+						E_Stack_Overflow		:= TRUE;
+						Station.SeqFaultString 	:= 'Auto: Z-Axis Stack Overflow Sensor Detected Bundle.';		
+					ELSE
+						H_CO_Bdl_StkZ_Count := H_CO_Bdl_StkZ_Count + 1;		
+						Station.RunStep := Station.RunStep + 10;					
+					END_IF
+			ELSIF Timeout.Q THEN
+				Station.SeqFaultWord 	:= 213;
+				E_CAM_Down_Timeout		:= TRUE;			
+				Station.SeqFaultString 	:= 'Auto: Stacking CAM Move Down Timeout Error.';			
+			END_IF
+
+	50 : 	(************* Stopper Down ****************)
+
+				Station.RunStep := 1000;
+
+
+	1000 : 	(************* Process Done ****************)
+			Station.Status 		:= '1000: Process Done';
+			Station.StatusInt	:= 499;
+			
+			IF H_CO_Bdl_StkZ_Count >= CurrRecipe.iStackZ THEN
+				M_StepRun := FALSE; 
+			END_IF
+			Station.RunStep := 0;
+
+	END_CASE
+
+
+ELSE
+	Station.RunStep := 0;
+	TimeoutTrigger := FALSE;
+	
+	IF Station.MajorFault OR Station.MinorFault THEN
+		Station.Status 		:= 'Station Error';
+		Station.StatusInt	:= 4;
+	ELSIF Station.Origin THEN
+		Station.Status 		:= 'Station In Origin';
+		Station.StatusInt	:= 5;
+	ELSIF NOT Station.OriginSchRun AND NOT MC.OriginSchRun THEN
+		Station.Status 		:= 'Station Not In Origin';
+		Station.StatusInt	:= 6;
+	END_IF
+END_IF
+
+(*
+Station.Running := 	((Station.RunStep>0) AND NOT mc.StopPressed) OR
+					( NOT ((Station.RunStep>=10) AND (Station.RunStep<=20)) AND mc.StopPressed )  ;
+*)
+Station.Running := 	(Station.RunStep>20) OR ((Station.RunStep<=20 and Station.RunStep>0 ) AND NOT mc.StopPressed) ;
+
+
+*)
+
+
+
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,100 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="Memory_Handling" Id="{8d188f7d-8445-4303-8bbb-479aaeb73ea6}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Memory_Handling
+VAR
+	plsMemoryReset: R_trig;
+	plsPurgeErectorCaseOff: R_trig;
+	T_ManPurge: INT;
+	tmrPurgeErectorCase:tof;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[plsMemoryReset(CLK:=MC.DryRun);
+
+IF plsMemoryReset.Q OR HMI.T_ClearAllMem OR MC_WA_Run THEN
+	H_CO_StkRdyForXPush:=FALSE;
+	H_CO_StkRdyForYPush:=FALSE;	
+	H_ER_CtnRdyForPushIn:=FALSE;
+	H_ER_CtnPushInDone:=FALSE;
+	H_ER_CtnSideFlapDone:=FALSE;
+	H_ER_CtnRdyForGlue:=FALSE;
+	H_ER_CtnGlueDone:=FALSE;
+	H_ER_CtnWeightOK:=FALSE;
+	H_EL_CtnTapeDone:=FALSE;
+	H_EL_CtnWeightOK:=FALSE;
+	H_CO_Bdl_StkY_Count := 0;
+	H_CO_Bdl_StkZ_Count := 0;
+END_IF
+
+IF HMI.T_ClearCollatorMem THEN
+	H_CO_StkRdyForXPush:=FALSE;
+	H_CO_Bdl_StkZ_Count := 0;	
+END_IF
+
+IF HMI.T_ClearBufferMem THEN
+	H_CO_StkRdyForYPush:=FALSE;	
+	H_CO_Bdl_StkY_Count := 0;
+END_IF
+
+IF HMI.T_ClearErectorMem THEN
+	H_ER_CtnRdyForPushIn:=FALSE;
+	H_ER_CtnPushInDone:=FALSE;
+	H_ER_CtnSideFlapDone:=FALSE;
+END_IF
+
+IF HMI.T_ClearExitMem THEN
+	H_ER_CtnRdyForGlue:=FALSE;
+	H_ER_CtnGlueDone:=FALSE;
+	H_ER_CtnWeightOK:=FALSE;	
+END_IF
+
+IF HMI.T_ClearElevatorMem THEN
+	H_EL_CtnTapeDone:=FALSE;
+	H_EL_CtnWeightOK:=FALSE;
+	H_HOR_CtnWeightOK:=FALSE;	
+END_IF
+
+
+tmrPurgeErectorCase ( IN:= HMI.T_PurgeErectorCase, pt:=T#1S);
+plsPurgeErectorCaseOff(CLK:= NOT tmrPurgeErectorCase.q);
+
+IF tmrPurgeErectorCase.Q THEN
+	ER_BFlapL_Vac_Var.T_ManPurge 	:= TRUE;
+	(*ER_BFlapR_Vac_Var.T_ManPurge 	:= TRUE;*)
+	ER_Arm_Vac_Var.T_ManPurge 		:= TRUE;
+	ER_FFlapR_Cyl_Var.T_ManHome 	:= TRUE;
+	ER_RFlapR_Cyl_Var.T_ManHome 	:= TRUE;
+	(*ER_BFlapR_Vac_Var.T_ManPurge 	:= TRUE;*)
+	ER_BFlapL_Vac_Var.T_ManPurge 	:= TRUE;
+	ER_TFlapOpnL_Cyl_var.T_ManHome	:= TRUE;
+	ER_TFlapClsL_Cyl_var.T_ManHome	:= TRUE;
+	ER_TFlapOpnR_Cyl_var.T_ManHome	:= TRUE;
+	ER_TFlapClsR_Cyl_var.T_ManHome	:= TRUE;
+	ER_CaseGuideL_Cyl_Var.T_ManHome	:= TRUE;
+	ER_CaseGuideR_Cyl_Var.T_ManHome	:= TRUE;
+	H_ER_CtnRdyForPushIn			:=FALSE;
+	H_ER_CtnPushInDone				:=FALSE;
+	H_ER_CtnSideFlapDone			:=FALSE;
+	
+	IF H_ER_CtnErected	THEN
+		Statistic_Current.RejectCaseRemoved	:= Statistic_Current.RejectCaseRemoved + 1;
+		Statistic_Manual.RejectCaseRemoved	:= Statistic_Manual.RejectCaseRemoved + 1;
+		Statistic_Total.RejectCaseRemoved	:= Statistic_Total.RejectCaseRemoved + 1;
+	END_IF
+	H_ER_CtnErected							:= FALSE;	
+	
+ELSIF plsPurgeErectorCaseOff.Q THEN
+	ER_BFlapL_Vac_Var.T_ManPurge 	:= FALSE;
+	(*ER_BFlapR_Vac_Var.T_ManPurge 	:= FALSE;*)
+	ER_Arm_Vac_Var.T_ManPurge 		:= FALSE;
+	ER_FFlapR_Cyl_Var.T_ManHome 	:= FALSE;
+	H_ER_CtnRdyForPushIn			:=FALSE;
+	H_ER_CtnPushInDone				:=FALSE;
+	H_ER_CtnSideFlapDone			:=FALSE;	
+END_IF
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

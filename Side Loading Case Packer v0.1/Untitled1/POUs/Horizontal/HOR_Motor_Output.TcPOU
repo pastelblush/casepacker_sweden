@@ -1,0 +1,123 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="HOR_Motor_Output" Id="{274c4d59-14c2-4f67-91a2-0073d2058320}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM HOR_Motor_Output
+VAR
+	Reset:BOOL;
+	bEnable: BOOL;
+	bManualReject	:BOOL;
+	tmrManualReject	:Ton;
+	bManualRejectNeg	:R_trig;
+	
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(******************** Error Stop ***********************)
+IF E_Top_Conv_Jam or E_Bottom_Conv_Jam  THEN
+	HOR_BotCv_Mtr_Var.E_OnErr	:= TRUE;
+	HOR_TopCv_Mtr_Var.E_OnErr	:= TRUE;
+END_IF
+(********************************************************)
+
+bEnable := NOT MC.Trouble AND Cfg_HorizontalExit;
+HOR_BotCv_Mtr_Var.In_SpeedSel :=3;
+HOR_BotCv_Mtr_Var.In_MoveXLock := TRUE;
+
+HOR_BotCv_Mtr(
+	IN_DevName:= 'HORIZON. BOTTOM CV', 
+	In_Enable:= bEnable, 
+	In_Reset:= MC.ResetPressed, 
+	In_InvRdy := I_HOR_BotCv_InvRdy, 
+	Out_InvRun => O_HOR_BotCv_Mtr_Run, 
+	Out_InvDirc => O_HOR_BotCv_Mtr_Dirc, 
+	Out_InvSpdBit0 => O_HOR_BotCv_Mtr_Spd1, 
+	Out_InvSpdBit1 => O_HOR_BotCv_Mtr_Spd2,
+	MotorVar:= HOR_BotCv_Mtr_Var,
+	Station			:= SC[6]);
+
+
+HOR_TopCv_Mtr_Var.In_MoveXLock := TRUE;
+HOR_TopCv_Mtr_Var.In_SpeedSel :=3;
+HOR_TopCv_Mtr(
+	IN_DevName:= 'HORIZON. TOP CV', 
+	In_Enable:= bEnable, 
+	In_Reset:= MC.ResetPressed, 
+	In_InvRdy := I_HOR_TopCv_InvRdy, 
+	Out_InvRun => O_HOR_TopCv_Mtr_Run, 
+	Out_InvDirc => O_HOR_TopCv_Mtr_Dirc, 
+	Out_InvSpdBit0 => O_HOR_TopCv_Mtr_Spd1, 
+	Out_InvSpdBit1 => O_HOR_TopCv_Mtr_Spd2,
+	MotorVar:= HOR_TopCv_Mtr_Var,
+	Station			:= SC[6]);
+
+
+(* Reject Carton Manually *)	
+tmrManualReject		(in:= bManualReject, pt:= T#10S);
+bManualRejectNeg	( CLK := tmrManualReject.Q);
+
+IF NOT tmrManualReject.Q AND bManualReject THEN
+	HOR_TopCv_Mtr_Var.T_ManOn	:= TRUE;
+	HOR_TopCv_Mtr_Var.T_ManOff	:= FALSE;
+	WT_Mtr_Var.T_ManOn			:= TRUE;
+	WT_Mtr_Var.T_ManOff			:= FALSE;
+	HOR_BotCv_Mtr_Var.T_ManOn	:= TRUE;
+	HOR_BotCv_Mtr_Var.T_ManOff	:= FALSE;	
+	EX_FlapHoldL_Cyl_Var.T_ManHome	:= TRUE;
+	EX_FlapHoldL_Cyl_Var.T_ManWork	:= FALSE;
+	EX_FlapHoldR_Cyl_Var.T_ManHome	:= TRUE;
+	EX_FlapHoldR_Cyl_Var.T_ManWork	:= FALSE;	
+	Ex_SquarenessCylL_Var.T_ManHome	:= TRUE;
+	Ex_SquarenessCylL_Var.T_ManWork	:= FALSE;
+	Ex_SquarenessCylR_Var.T_ManHome	:= TRUE;
+	Ex_SquarenessCylR_Var.T_ManWork	:= FALSE;	
+	EX_StpCylL_Var.T_ManHome		:= TRUE;
+	EX_StpCylL_Var.T_ManWork		:= FALSE;
+	EX_StpCylR_Var.T_ManHome		:= TRUE;
+	EX_StpCylR_Var.T_ManWork		:= FALSE;	
+	
+	IF 	H_ER_CtnRdyForGlue OR H_ER_CtnGlueDone OR H_ER_CtnWeightOK THEN
+		Statistic_Current.RejectCaseRemoved	:= Statistic_Current.RejectCaseRemoved + 1;
+		Statistic_Manual.RejectCaseRemoved	:= Statistic_Manual.RejectCaseRemoved + 1;
+		Statistic_Total.RejectCaseRemoved	:= Statistic_Total.RejectCaseRemoved + 1;
+	END_IF
+	
+	HMI.T_ClearExitMem			:= TRUE;	
+END_IF
+
+IF bManualRejectNeg.Q  THEN
+	HOR_TopCv_Mtr_Var.T_ManOn	:= FALSE;
+	WT_Mtr_Var.T_ManOn			:= FALSE;
+	HOR_BotCv_Mtr_Var.T_ManOn	:= FALSE;
+	bManualReject				:= FALSE;
+	HOR_TopCv_Mtr_Var.T_ManOff	:= TRUE;
+	WT_Mtr_Var.T_ManOff			:= TRUE;
+	HOR_BotCv_Mtr_Var.T_ManOff	:= TRUE;	
+	HMI.T_ClearExitMem			:= FALSE;		
+END_IF
+(* Tilt In Conveyor *)
+HOR_Tilt_In_Mtr_Var.In_MoveXLock := TRUE;
+	
+HOR_Tilt_In_Mtr(
+	IN_DevName:= 'Tilt In CV', 
+	In_Enable:= bEnable, 
+	In_Reset:= MC.ResetPressed, 
+	In_StarterOK:= TRUE, 
+	Out_MotorOn=> O_HOR_TiltCV1_On, 
+	MotorVar:= HOR_Tilt_In_Mtr_Var,
+	Station			:= SC[6]);
+
+(* Tilt Out Conveyor *)
+HOR_Tilt_Out_Mtr_Var.In_MoveXLock := TRUE;
+	
+HOR_Tilt_Out_Mtr(
+	IN_DevName:= 'Tilt Out CV', 
+	In_Enable:= bEnable, 
+	In_Reset:= MC.ResetPressed, 
+	In_StarterOK:= TRUE, 
+	Out_MotorOn=> O_HOR_TiltCV2_On, 
+	MotorVar:= HOR_Tilt_Out_Mtr_Var,
+	Station			:= SC[6]);]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

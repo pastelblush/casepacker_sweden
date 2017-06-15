@@ -1,0 +1,137 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_Stack_Error" Id="{60a37d44-850b-4d4e-a868-0b40b319064e}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_Stack_Error
+VAR_IN_OUT
+	Station			:structStationCtrl;
+END_VAR
+
+VAR
+	tmrStackZLimit				:TON;
+	tmrErrTriggerDly1			:ton;
+	tmrStackStatusDly			:ton;
+	tmr_BundleDetect_Sensor1	:TON;
+	tmr_BundleDetect_Sensor2	:TON;
+	tmr_BundleDetect_Sensor3	:TON;
+	tmr_BundleDetect_Sensor4	:TON;
+	tmr_BundleDetect_Sensor5	:TON;
+	tmr_BundleDetect_Sensor6	:TON;
+	tmr_BundleDetect_Sensor7	:TON;
+	tmr_BundleDetect_Sensor8	:TON;
+	Stack_Err_NoReset			:BOOL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*
+
+IF MC.ResetPressed THEN
+	Station.SeqFaultWord := 0;
+END_IF
+
+(* 	Reserved Station.SeqFaultWord 
+	= 1~49 for Major Fault
+	= 100~149 for Origin Sequence Fault
+	= 150~199 for Origin Width Adjust Sequence Fault
+	= 200~299 for Auto Sequence Fault
+	= 300~399 for misc fault listed on this page*)
+
+Station.MajorFault := (Station.SeqFaultWord > 0) AND (Station.SeqFaultWord < 50);
+Station.MinorFault := (Station.SeqFaultWord >= 100) OR Station.DeviceFault 
+													OR E_Stack_Overflow
+													OR E_BundleDetect_Sensor1	
+													OR E_BundleDetect_Sensor2	
+													OR E_BundleDetect_Sensor3	
+													OR E_BundleDetect_Sensor4	
+													OR E_BundleDetect_Sensor5	
+													OR E_BundleDetect_Sensor6	
+													OR E_BundleDetect_Sensor7	
+													OR E_BundleDetect_Sensor8;
+
+tmrStackZLimit		(IN:= I_CO_Bdl_ZLimit_PE, PT:= T#1S);
+tmrErrTriggerDly1	(PT:=T#1.5S);
+	
+
+					
+(* Error: Stack Upper Limit Sensor Should be Off During Origin and auto Sequence*)
+IF Station.AutoRun AND NOT Station.Running AND tmrStackZLimit.Q THEN
+	Station.SeqFaultWord 	:= 301;
+	Station.SeqFaultString 	:= 'Auto: Z-Axis Stack Overflow Sensor Detected Bundle.';
+	E_Stack_Overflow 		:= TRUE;
+END_IF   
+
+(* Error: Stack Full Triggered When counter is not full*)
+IF 	Station.AutoRun AND 
+	NOT Station.Running AND 
+	NOT (H_CO_Bdl_StkZ_Count >= CurrRecipe.iStackZ) THEN
+		tmrErrTriggerDly1.IN		:=TRUE;
+		IF  CO_Bdl_ZFull_TON.Q AND tmrErrTriggerDly1.Q THEN
+			Station.SeqFaultWord 	:= 302;
+			Station.SeqFaultString 	:= 'Auto: Z-Axis Stack Overflow Sensor Detected Bundle.';
+			E_Stack_Full_ON			:= TRUE;	
+		END_IF  
+	ELSE
+		tmrErrTriggerDly1.IN		:=FALSE;	
+	END_IF
+
+(* Stack Error Which Require Door Open *)    
+IF E_Horizontal_LeftDoor_Opn THEN 
+	Stack_Err_NoReset	:= TRUE;
+END_IF
+
+IF E_Collator_FrontDoor_Opn AND MC.ResetPressed THEN
+	E_Stack_Overflow		:= FALSE;
+	Stack_Err_NoReset		:= FALSE;
+END_IF
+
+(* Error when memory and actual stack sensor is differ *)
+tmrStackStatusDly 		(	PT:= T#3S	);
+tmrStackStatusDly.IN	:= ((I_CO_Bdl_Stack_PE AND H_CO_Bdl_StkZ_Count = 0) OR (NOT I_CO_Bdl_Stack_PE AND H_CO_Bdl_StkZ_Count > 0)) and not mc.DryRun ;
+E_Bundle_Stack_Sensor	:= tmrStackStatusDly.Q;
+
+(* Stack Sensor Error	*)
+E_BundleDetect_Sensor1	:= tmr_BundleDetect_Sensor1.Q;
+tmr_BundleDetect_Sensor1	(IN:= NOT I_CO_Bdl_PE1 AND O_CO_CV_Mtr_Run AND ( 	I_CO_Bdl_PE2 OR
+																				I_CO_Bdl_PE3 OR
+																				I_CO_Bdl_PE4 OR
+																				I_CO_Bdl_PE5 OR
+																				I_CO_Bdl_PE6 OR
+																				I_CO_Bdl_PE7 OR
+																				I_CO_Bdl_PE8	) , pt:= T#10S);
+
+E_BundleDetect_Sensor2	:= tmr_BundleDetect_Sensor2.Q;
+tmr_BundleDetect_Sensor2	(IN:= NOT I_CO_Bdl_PE2 AND O_CO_CV_Mtr_Run AND ( 	I_CO_Bdl_PE3 OR
+																				I_CO_Bdl_PE4 OR
+																				I_CO_Bdl_PE5 OR
+																				I_CO_Bdl_PE6 OR
+																				I_CO_Bdl_PE7 OR
+																				I_CO_Bdl_PE8	) , pt:= T#10S);															
+
+E_BundleDetect_Sensor3	:= tmr_BundleDetect_Sensor3.Q;
+tmr_BundleDetect_Sensor3	(IN:= NOT I_CO_Bdl_PE3 AND O_CO_CV_Mtr_Run AND ( 	I_CO_Bdl_PE4 OR
+																				I_CO_Bdl_PE5 OR
+																				I_CO_Bdl_PE6 OR
+																				I_CO_Bdl_PE7 OR
+																				I_CO_Bdl_PE8	) , pt:= T#10S);	
+
+E_BundleDetect_Sensor4	:= tmr_BundleDetect_Sensor4.Q;
+tmr_BundleDetect_Sensor4	(IN:= NOT I_CO_Bdl_PE4 AND O_CO_CV_Mtr_Run AND ( 	I_CO_Bdl_PE5 OR
+																				I_CO_Bdl_PE6 OR
+																				I_CO_Bdl_PE7 OR
+																				I_CO_Bdl_PE8	) , pt:= T#10S);
+															
+E_BundleDetect_Sensor5	:= tmr_BundleDetect_Sensor5.Q;
+tmr_BundleDetect_Sensor5	(IN:= NOT I_CO_Bdl_PE5 AND O_CO_CV_Mtr_Run AND ( 	I_CO_Bdl_PE6 OR
+																				I_CO_Bdl_PE7 OR
+																				I_CO_Bdl_PE8	) , pt:= T#10S);	
+
+E_BundleDetect_Sensor6	:= tmr_BundleDetect_Sensor6.Q;
+tmr_BundleDetect_Sensor6	(IN:= NOT I_CO_Bdl_PE6 AND O_CO_CV_Mtr_Run AND ( 	I_CO_Bdl_PE7 OR
+																				I_CO_Bdl_PE8	) , pt:= T#10S);	
+
+E_BundleDetect_Sensor7	:= tmr_BundleDetect_Sensor7.Q;
+tmr_BundleDetect_Sensor7	(IN:= NOT I_CO_Bdl_PE7 AND O_CO_CV_Mtr_Run AND ( 	I_CO_Bdl_PE8	) , pt:= T#10S);																
+*)
+														
+															]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

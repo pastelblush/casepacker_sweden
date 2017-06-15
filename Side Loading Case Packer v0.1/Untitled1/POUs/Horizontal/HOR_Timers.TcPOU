@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="HOR_Timers" Id="{c9a9d2ea-220e-4bf0-8227-c1535213c942}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM HOR_Timers
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[HOR_Ctn_TON (IN := I_HOR_Entry_Cv_Present, pt := T#500MS);
+
+HOR_Ctn_TOFF (IN := NOT I_HOR_Entry_Cv_Present , pt := T#500MS);
+
+HOR_DnStream_TOFF (IN := NOT I_HOR_DnStream_Cv_Full, pt := T#500MS);
+
+
+(*
+HOR_TopCv_Ctn_TON (IN := I_EX_TopCV_Ctn_PE, pt := T#500MS);
+
+HOR_TopCv_Ctn_TOFF (IN := NOT I_EX_TopCV_Ctn_PE, pt := T#1S);
+
+HOR_BotCv_Ctn_TON (IN := I_EX_BotCV_Ctn_PE, pt := T#500MS);
+
+HOR_BotCv_Ctn_TOFF (IN := NOT I_EX_BotCV_Ctn_PE, pt := T#3S);
+*)
+
+HOR_LC_Safety_TON (IN:= I_HLC_SC_OK, pt := T#100MS);
+
+
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

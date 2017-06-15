@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <DUT Name="structIndradrive" Id="{0c59c045-de8d-4312-b69c-71b4ec6501ef}">
+    <Declaration><![CDATA[TYPE structIndradrive :
+STRUCT
+	In_ServoOn:BOOL;
+	In_JogFwd:BOOL;
+	In_JogBwd:BOOL;
+	In_MoveHome:BOOL;
+	In_SetAbsRef:BOOL;
+	In_MoveAbs:BOOL;
+	In_MoveRel:BOOL;
+	In_StopMove:BOOL;
+	In_VelCmd:REAL;
+	In_PosCmd:REAL;
+	In_MoveXLock:BOOL;	(*Mechanical Interlock*)
+	Out_Ready:BOOL;
+	Out_Busy:BOOL;
+	Out_InPos:BOOL;
+	Out_Referenced:BOOL;
+	Out_PosLimit:BOOL;	(*1=OK*)
+	Out_NegLimit:BOOL;	(*1=OK*)
+	Out_Error:BOOL;
+	Out_Warning:BOOL;
+	Out_ErrorWord:WORD;
+	Out_CurrPos:REAL;
+	Out_CurrVel:REAL;
+	Out_PosDirc:BOOL;	(*Moving in Positive Direction*)
+	Out_NegDirc:BOOL;	(*Moving in Negative Direction*)
+
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

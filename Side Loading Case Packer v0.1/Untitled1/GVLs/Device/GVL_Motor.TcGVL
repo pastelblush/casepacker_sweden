@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <GVL Name="GVL_Motor" Id="{89c4bfc8-281b-421b-ac14-e4bbda974aa5}">
+    <Declaration><![CDATA[VAR_GLOBAL
+	
+ER_VacPump_Mtr		:fbVacuumPumpCtrl;	 (* 	VACUUM PUMP DIRECT ONLINE CONTROL WITH STARTER	*)
+ER_VacPump_Mtr_Var	:structMotorDirect;	 (* 	VACUUM PUMP DIRECT ONLINE CONTROL WITH STARTER	*)
+
+ER_BufCvL_Mtr		:fbMotorDirectCtrl;	 (* 	ERECTOR CARTON BUFFER CONVEYOR 	*)
+ER_BufCvL_Mtr_Var	:structMotorDirect;	 (* 	ERECTOR CARTON BUFFER CONVEYOR	*)
+
+ER_BufCvR_Mtr		:fbMotorDirectCtrl;	 (* 	ERECTOR CARTON BUFFER CONVEYOR 	*)
+ER_BufCvR_Mtr_Var	:structMotorDirect;	 (* 	ERECTOR CARTON BUFFER CONVEYOR	*)
+
+CO_Brake_Clutch		:fbVacuumPumpCtrl;	 (* 	COLLACTOR BRAKE & CLUTCH	*)
+CO_Brake_Clutch_Var	:structMotorDirect;	 (* 	COLLACTOR BRAKE & CLUTCH	*)
+
+
+
+WT_Mtr	:fbMotorDirectCtrl;	 (* 	WEIGHT CHECKING CONVEYOR 	*)
+WT_Mtr_Var	:structMotorDirect;	 (* 	WEIGHT CHECKING CONVEYOR	*)
+
+EL_BotCv_Mtr	:fbMotorDirectCtrl;	 (* 	ELEVATOR BOTTOM EXIT CONVEYOR 	*)
+EL_BotCv_Mtr_Var	:structMotorDirect;	 (* 	ELEVATOR BOTTOM EXIT CONVEYOR	*)
+
+EL_TopCv_Mtr	:fbMotorDirectCtrl;	 (* 	ELEVATOR TOP EXIT CONVEYOR 	*)
+EL_TopCv_Mtr_Var	:structMotorDirect;	 (* 	ELEVATOR TOP EXIT CONVEYOR	*)
+
+EX_BotCv_Mtr	:fbMotorDirectCtrl;	 (* 	HORIZONTAL BOTTOM EXIT LEFT CONVEYOR  	*)
+EX_BotCv_Mtr_Var	:structMotorDirect;	 (* 	HORIZONTAL BOTTOM EXIT LEFT CONVEYOR	*)
+
+EX_TopCv_Mtr	:fbMotorDirectCtrl;	 (* 	HORIZONTAL TOP EXIT LEFT CONVEYOR 	*)
+EX_TopCv_Mtr_Var	:structMotorDirect;	 (* 	HORIZONTAL TOP EXIT LEFT CONVEYOR	*)
+
+CO_CV_Mtr	:fbMotorInverterCtrl;	 (* 	COLLATOR INFEED CONVEYOR 	*)
+CO_CV_Mtr_Var	:structMotorInverter;	 (* 	COLLATOR INFEED  CONVEYOR	*)
+
+CO_Stk_Mtr	:fbMotorInverterCtrl;	 (* 	COLLATOR STACKING CONVEYOR 	*)
+CO_Stk_Mtr_Var	:structMotorInverter;	 (* 	COLLATOR STACKING  CONVEYOR	*)
+
+HOR_BotCv_Mtr	:fbMotorInverterCtrl;	 (* 	HORIZONTAL BOTTOM EXIT CONVEYOR 	*)
+HOR_BotCv_Mtr_Var	:structMotorInverter;	 (* 	HORIZONTAL BOTTOM EXIT CONVEYOR	*)
+
+HOR_TopCv_Mtr	:fbMotorInverterCtrl;	 (* 	HORIZONTAL TOP EXIT CONVEYOR 	*)
+HOR_TopCv_Mtr_Var	:structMotorInverter;	 (* 	HORIZONTAL TOP EXIT CONVEYOR	*)
+
+HOR_Tilt_In_Mtr	:fbMotorDirectCtrl;	 (* 	Tilt In CONVEYOR 	*)
+HOR_Tilt_In_Mtr_Var	:structMotorDirect;	 (* 	Tilt In CONVEYOR	*)
+
+HOR_Tilt_Out_Mtr	:fbMotorDirectCtrl;	 (* 	Tilt Out CONVEYOR 	*)
+HOR_Tilt_Out_Mtr_Var	:structMotorDirect;	 (* 	Tilt Out CONVEYOR	*)
+
+CO_UpStreamCv_Mtr		:fbMotorInverterCtrl;	 (* 	COLLATOR UPSTREAM CONVEYOR 	*)
+CO_UpStreamCv_Mtr_Var	:structMotorInverter;	 (* 	COLLATOR UPSTREAM  CONVEYOR	*)
+
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

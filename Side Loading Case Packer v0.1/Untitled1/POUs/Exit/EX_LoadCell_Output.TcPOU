@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="EX_LoadCell_Output" Id="{b52a7a2c-9265-4b50-8e45-30677e09bfba}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM EX_LoadCell_Output
+VAR
+
+	plsInitVar: R_trig;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*(*
+	The SerialLineControl function block is supposed to be called in every PLC cycle.
+	It communicates with the serial line hardware device and transmits or receives data.
+	The SerialLineControl can be called in the standard task or in a separate fast task as well.
+	A fast separate task will be necessary at high baud rates or 
+	with KL6001 terminals which have a small process image (3 or 5 data bytes only)
+*)
+
+(*plsInitVar(CLK:=MC_Ctrl.In_EmgOK);*)
+(*EX_LoadCellVar.In_Init := plsInitVar.Q;**)
+
+EX_LoadCell(
+	In_Enable:= Cfg_EnbWeightCheck, 
+	In_Reset:= MC.ResetPressed, 
+	Out_Trigger=> O_EX_HBM_Trigger, 
+	TxBuffer:= TxBufferEL, 
+	RxBuffer:= RxBufferEL, 
+	HBM_Var:= EX_LoadCellVar,
+	Station:=SC[4]);
+
+*)
+
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

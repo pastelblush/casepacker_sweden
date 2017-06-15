@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <GVL Name="GVL_Configuration" Id="{d1d942bb-a5ee-4ca2-9b5c-3b191f0d076d}">
+    <Declaration><![CDATA[VAR_GLOBAL  RETAIN PERSISTENT
+	A_Srv_XPusherHiSpeed	:REAL;
+	A_Srv_XPusherLoSpeed	:REAL;
+	A_Srv_YPusherHiSpeed	:REAL;
+	A_Srv_YPusherLoSpeed	:REAL;	
+
+	A_Srv_ErectorArmHiSpeed:REAL;
+	A_Srv_ErectorArmLoSpeed:REAL;
+	
+	A_Srv_ElevAutoHiSpeed:REAL;
+	A_Srv_ElevAutoLoSpeed:REAL;
+	A_Srv_ElevAutoMidSpeed:REAL:=60000;
+	
+	
+	A_Srv_BeltOriginSpeed:REAL:=10000;
+	A_Srv_ElevOriginSpeed:REAL:=1000;
+	A_Srv_WAOriginSpeed:REAL:=1000;
+	
+	A_Srv_BeltAutoHiSpeed:REAL:=50000;	(*200000*)
+	A_Srv_BeltAutoLoSpeed:REAL:=30000;	
+
+	A_Srv_Default_Acc:REAL:=1000;
+	A_Srv_Default_Dec:REAL:=1000;
+
+	(* 	1 = Operator
+		2 = Maintenance
+		3 = Supervisor
+		4 = Flexlink 
+	*)
+
+	Cfg_UserLvl_Operation	:INT	:=1;		
+	Cfg_UserLvl_Manual		:INT	:=2;
+	Cfg_UserLvl_Recipe		:INT	:=3;
+	Cfg_UserLvl_Setting		:INT	:=3;
+	Cfg_UserLvl_Config		:INT	:=4;
+	
+
+	Cfg_EnbAutoWA			:BOOL	:=TRUE;		(*1=Enable Auto Width Adjust*)
+	Cfg_VerticalExit		:BOOL	:=FALSE;	(*1=Enable Vertical Exit with elevator*)
+	Cfg_CollDircLtoR		:BOOL	:=TRUE;		(*1=Collator Push In Direction from Left to Right, 0 = Right to Left*)
+	Cfg_EnbNordson			:BOOL	:=FALSE;	(*1=Enable Nordson Glueing*)
+	Cfg_EnbWeightCheck		:BOOL	:=TRUE;		(*1=Enable Weight Checking*)
+	Cfg_HorizontalExit		:BOOL	:=TRUE;		(*1=Enable Horizontal Exit*)
+	Cfg_Exit90DegConv		:BOOL	:= TRUE;	(* 1=Enable Exit 90 Deg Conveyor	*)
+	Cfg_Upstream_Conveyor	:BOOL	:= TRUE;	(* Upstream conveyor is connected	*)
+	Cfg_prodSpeed_perHour	:INT	:= 120;		(* Number of carton produce per minute *)
+	
+	
+	Cfg_BypassCollator:BOOL	:= FALSE;	(*1=Bypass Collator to run Erector and Elevator only*)
+	Cfg_BypassErector:BOOL	:= FALSE;	(*1=Bypass Erector to run Collator only*)
+	Cfg_BypassHorizontal:BOOL:= FALSE;	(*1=Bypass Horizontal to run Collator only*)
+	
+	Cfg_CaseA_Min	:REAL	:= 200;	
+	Cfg_CaseB_Min	:REAL	:= 150;	
+	Cfg_CaseC_Min	:REAL	:= 180;	
+	Cfg_BundleW_Min	:REAL	:= 20;	
+	Cfg_BundleL_Min	:REAL	:= 70;	
+	Cfg_BundleH_Min	:REAL	:= 15;
+
+	Cfg_CaseA_Max	:REAL	:= 640;	
+	Cfg_CaseB_Max	:REAL	:= 500;
+	Cfg_CaseC_Max	:REAL	:= 640;	
+	Cfg_BundleW_Max	:REAL	:= 300;	
+	Cfg_BundleL_Max	:REAL	:= 320;	
+	Cfg_BundleH_Max	:REAL	:= 150;	
+	
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

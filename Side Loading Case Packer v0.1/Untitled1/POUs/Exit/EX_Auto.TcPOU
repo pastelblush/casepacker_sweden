@@ -1,0 +1,229 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="EX_Auto" Id="{f6e195b8-7648-40e8-9302-66af19195981}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM EX_Auto
+VAR_IN_OUT
+	Station		:structStationCtrl;
+END_VAR
+VAR
+	Timeout	:TON;	
+	WT_Cv_CtnPE_TON: Ton;
+	WT_Cv_DryRun: Ton;
+	WT_Cyl_Hold: Ton;
+	TimeoutTrigger: BOOL;
+	TimeoutSetting: TIME;
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(**************************************************************************************************************)
+(* GENERAL STATION MAPPING  *)
+(**************************************************************************************************************)
+Station.Name			:=	'ERECTOR EXIT';
+Station.Rdy 			:= 	Station.Origin;
+Station.AutoRun 		:=	(MC.AutoRunning OR Station.M_Step OR (SC[5].M_Step AND SC[5].AutoRun)) AND 
+							NOT (Station.Bypass OR Station.MajorFault OR Station.MinorFault);
+Station.RunReq			:= 	((H_ER_CtnRdyForGlue OR I_EX_Cv_Ctn_PE) AND NOT H_ER_CtnGlueDone)
+							OR (Station.M_Step AND NOT SC[5].M_Step);
+Station.RunCond			:=	(NOT SC[3].Running OR SC[3].RunStep >= 40) AND	(*Erector Arm Not Running or finished pushing*)
+							(NOT SC[5].Running OR SC[5].RunStep >= 70) AND	(*Elevator Not Running or Tilt Cylinders Back*)
+							NOT (Station.Done OR (MC.StopPressed AND NOT (H_ER_CtnRdyForGlue AND NOT H_ER_CtnGlueDone))) AND
+							NOT ((SC[5].M_Step AND SC[5].AutoRun));
+Station.Run_NextStepPls	:=	(Station.AutoRun AND NOT Station.M_Step) OR 
+							(Station.M_Step AND M_StepFwdPls) OR HMI.T_OneCycleRun;
+Station.Run_PrevStepPls	:=	(Station.M_Step AND M_StepBwdPls);
+
+(**************************************************************************************************************)
+(* Auto Sequance*)
+(**************************************************************************************************************)
+
+Timeout(IN:=TimeoutTrigger, PT:=TimeoutSetting);
+IF Timeout.Q THEN
+	TimeoutTrigger := FALSE;
+END_IF
+WT_Cv_CtnPE_TON	(IN:= I_EX_Cv_Ctn_PE, PT:=T#0.1S);
+WT_Cyl_Hold		(IN:= (EX_FlapHoldL_Cyl_Var.S_WorkPos AND EX_FlapHoldR_Cyl_Var.S_WorkPos), PT:=ER_GlueHold_Time * 1000);
+WT_Cv_CtnPE_TON	(IN:= I_EX_Cv_Ctn_PE, PT:=T#100MS);
+WT_Cv_DryRun	(IN:= WT_Mtr_Var.In_AutoON AND MC.DryRun, PT:=T#2S);
+			
+IF Station.AutoRun OR Station.M_Step THEN
+	
+	CASE Station.RunStep OF
+
+	0 : 	(************* Ready To Run ****************)
+			IF Station.RunCond AND Station.RunReq AND Station.Rdy THEN
+				H_ER_CtnWeightOK 	:= FALSE;
+				Station.RunStep 	:= Station.RunStep + 10;
+			ELSIF NOT Station.RunCond THEN
+				Station.Status 		:= '0: Station Waiting for Run Conditions';
+				Station.StatusInt	:= 1;
+			ELSIF NOT Station.RunReq THEN
+				Station.Status 		:= '0: Station Waiting for Run Request';
+				Station.StatusInt	:= 2;
+			ELSE
+				Station.Status 		:= '0: Station Not Ready';	
+				Station.StatusInt	:= 3;			
+			END_IF
+			
+		
+	10 : 	(************* Run Conveyor Till Sensor Detects  ****************)
+			Station.Status 		:= '10: Run Conveyor Till Sensor Detects Carton';
+			Station.StatusInt	:= 301;
+			Ex_SquarenessCylL_Var.In_AutoWork	:= FALSE;
+			Ex_SquarenessCylL_Var.In_AutoHome 	:= TRUE;			
+		
+			IF T_GlueEnable THEN
+				EX_StpCylL_Var.In_AutoHome	:=FALSE;
+				EX_StpCylL_Var.In_Autowork	:=TRUE;
+				EX_StpCylR_Var.In_AutoHome	:=FALSE;
+				EX_StpCylR_Var.In_Autowork	:=TRUE;
+			ELSE
+				EX_StpCylL_Var.In_AutoHome	:=TRUE;
+				EX_StpCylL_Var.In_Autowork	:=FALSE;
+				EX_StpCylR_Var.In_AutoHome	:=TRUE;
+				EX_StpCylR_Var.In_Autowork	:=false;	
+			END_IF	
+			
+			WT_Mtr_Var.In_AutoON := TRUE;
+			TimeoutTrigger := TRUE;
+			TimeoutSetting := T#30S;
+			
+			
+			
+			WT_Cv_DryRun(IN:= WT_Mtr_Var.In_AutoON AND MC.DryRun, PT:=T#2S);
+			
+			IF WT_Cv_CtnPE_TON.Q  OR WT_Cv_DryRun.Q THEN
+				TimeoutTrigger := FALSE;
+				
+				Station.RunStep := Station.RunStep + 10;
+			ELSIF Timeout.Q THEN
+				Station.SeqFaultWord 		:= 200;
+				E_Weight_CV_CartonNotDetect	:= TRUE;
+				Station.SeqFaultString 		:= 'Auto: Weight Conveyor Sensor Failed to detect Carton.';
+			END_IF
+			
+
+	20 : 	(************* Flap Hold Cylinders Fwd  ****************)
+			Station.Status 		:= '20: Flap Hold Cylinders Fwd';
+			Station.StatusInt	:= 302;
+			
+			IF NOT T_GlueEnable THEN
+				EX_StpCylL_Var.In_AutoHome	:=TRUE;
+				EX_StpCylL_Var.In_Autowork	:=FALSE;
+				EX_StpCylR_Var.In_AutoHome	:=TRUE;
+				EX_StpCylR_Var.In_Autowork	:=FALSE;
+				WT_Mtr_Var.In_AutoON 		:= TRUE;
+				Station.RunStep := Station.RunStep + 10;
+				
+			ELSE
+				
+					Ex_SquarenessCylL_Var.In_AutoWork	:= TRUE;
+					Ex_SquarenessCylL_Var.In_AutoHome 	:= FALSE;	
+					Ex_SquarenessCylR_Var.In_AutoWork	:= TRUE;
+					Ex_SquarenessCylR_Var.In_AutoHome 	:= FALSE;	
+	
+					IF 	Ex_SquarenessCylL_Var.S_WorkPos AND 
+						Ex_SquarenessCylL_Var.S_WorkPos  THEN
+						EX_FlapHoldL_Cyl_Var.In_AutoWork 	:= TRUE;
+						EX_FlapHoldL_Cyl_Var.In_AutoHome 	:= FALSE;
+						EX_FlapHoldR_Cyl_Var.In_AutoWork 	:= TRUE;
+						EX_FlapHoldR_Cyl_Var.In_AutoHome 	:= FALSE;
+						WT_Mtr_Var.In_AutoON 				:= FALSE;
+					END_IF
+				
+				
+				IF ((WT_Cyl_Hold.Q AND
+					EX_FlapHoldL_Cyl_Var.S_WorkPos AND
+					EX_FlapHoldR_Cyl_Var.S_WorkPos AND
+					Ex_SquarenessCylL_Var.S_WorkPos AND
+					Ex_SquarenessCylR_Var.S_WorkPos ) OR
+					NOT T_GlueEnable)	 AND
+					Station.Run_NextStepPls THEN
+					EX_FlapHoldL_Cyl_Var.In_AutoWork := FALSE;
+					EX_FlapHoldR_Cyl_Var.In_AutoWork := FALSE;
+					EX_StpCylL_Var.In_AutoHome	:=TRUE;
+					EX_StpCylL_Var.In_Autowork	:=FALSE;
+					EX_StpCylR_Var.In_AutoHome	:=TRUE;
+					EX_StpCylR_Var.In_Autowork	:=FALSE;	
+					Station.RunStep := Station.RunStep + 10;
+				END_IF
+			END_IF
+	30 : 	(************* Flap Hold Cylinders Bwd ****************)
+			Station.Status 		:= '30: Flap Hold Cylinders Bwd';
+			Station.StatusInt	:= 303;
+	
+
+			EX_FlapHoldL_Cyl_Var.In_AutoWork 	:= FALSE;
+			EX_FlapHoldL_Cyl_Var.In_AutoHome 	:= TRUE;
+			EX_FlapHoldR_Cyl_Var.In_AutoWork 	:= FALSE;
+			EX_FlapHoldR_Cyl_Var.In_AutoHome 	:= TRUE;
+			
+			
+			
+			Ex_SquarenessCylL_Var.In_AutoWork	:= FALSE;
+			Ex_SquarenessCylL_Var.In_AutoHome 	:= TRUE;
+			Ex_SquarenessCylR_Var.In_AutoWork	:= FALSE;
+			Ex_SquarenessCylR_Var.In_AutoHome 	:= TRUE;
+		
+			EX_StpCylL_Var.In_AutoHome			:=TRUE;
+			EX_StpCylL_Var.In_Autowork			:=FALSE;
+			EX_StpCylR_Var.In_AutoHome			:=TRUE;
+			EX_StpCylR_Var.In_Autowork			:=FALSE;
+			WT_Mtr_Var.In_AutoON 				:= FALSE;
+			H_ER_CtnGlueDone					:= true;
+			
+			IF 	EX_FlapHoldL_Cyl_Var.S_HomePos	AND
+				EX_FlapHoldr_Cyl_Var.S_HomePos	AND
+				Ex_SquarenessCylL_Var.S_HomePos AND
+				Ex_SquarenessCylR_Var.S_HomePos AND
+				EX_StpCylL_Var.S_HomePos AND
+				EX_StpCylR_Var.S_HomePos AND
+				Station.Run_NextStepPls THEN
+					H_ER_CtnGlueDone 					:= TRUE;
+					H_ER_CtnRdyForGlue 					:= FALSE;			
+					EX_FlapHoldL_Cyl_Var.In_AutoHome 	:= FALSE;
+					EX_FlapHoldR_Cyl_Var.In_AutoHome	:= FALSE;
+					IF HOR.RunReq	AND (HOR.RunCond OR SC[6].Running)	 THEN
+						Station.RunStep := 1000;
+					END_IF	
+			END_IF
+	
+	1000 : 	(************* Process Done ****************)
+			Station.Status 		:= '1000: Process Done';
+			Station.StatusInt	:= 499;
+			
+			M_StepRun := FALSE;
+			Station.RunStep := 0;
+			
+
+	END_CASE
+
+
+ELSE
+	Station.RunStep := 0;
+	
+	IF Station.MajorFault OR Station.MinorFault THEN
+		Station.Status 		:= 'Station Error';
+		Station.StatusInt	:= 4;
+	ELSIF Station.Origin THEN
+		Station.Status 		:= 'Station In Origin';
+		Station.StatusInt	:= 5;
+	ELSIF NOT Station.OriginSchRun AND NOT MC.OriginSchRun THEN
+		Station.Status 		:= 'Station Not In Origin';
+		Station.StatusInt	:= 6;
+	END_IF
+END_IF
+
+(*Station.Running := ((Station.RunStep>0) (*AND not (Station.RunStep =30 AND station.Origin *))  OR sc[6].Running;*)
+Station.Running := Station.RunStep>0 OR (sc[6].RunStep>0 and sc[6].RunStep<20);
+
+
+
+
+
+
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

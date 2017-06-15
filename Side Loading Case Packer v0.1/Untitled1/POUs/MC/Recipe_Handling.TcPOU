@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="Recipe_Handling" Id="{ba7425ea-887e-4e75-a5aa-668b0ba32082}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Recipe_Handling
+VAR
+	plsLoadNewRecipe: R_trig;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+plsLoadNewRecipe(CLK:=HMI.T_LoadNewRecipe);
+
+IF plsLoadNewRecipe.Q AND NOT MC.AutoMode THEN
+	
+	(*CurrRecipe := NewRecipe;*)
+	
+	(* All Gear Ratio to be Set inside Indradrive. Positions are all in mm here*)
+	
+	H_CO_CV_WA_Srv_TargetPos 		:= 	H_CO_CV_WA_Srv_ZeroOffset - CurrRecipe.rBundleL - 5;
+	H_CO_Stopper_WA_Srv_TargetPos 	:= 	H_CO_Stopper_WA_Srv_ZeroOffset - (CurrRecipe.rBundleW * CurrRecipe.iStackX) - 5 ;
+	H_CO_FFlapGuide_WA_Srv_TargetPos := H_CO_FFlapGuide_WA_Srv_ZeroOffset -((CurrRecipe.rBundleW + 1) * CurrRecipe.iStackX)  ;
+	
+	H_ER_FlapL_WA_Srv_TargetPos 	:= H_ER_FlapL_WA_Srv_ZeroOffset - CurrRecipe.rCaseA ;
+	H_ER_FlapR_WA_Srv_TargetPos 	:= H_ER_FlapR_WA_Srv_ZeroOffset - CurrRecipe.rCaseA ;	
+	
+	H_ER_BufCvL_WA_Srv_TargetPos 	:= H_ER_BufCvL_WA_Srv_ZeroOffset -(CurrRecipe.rCaseB/2)-5;
+	H_ER_BufCvR_WA_Srv_TargetPos 	:= H_ER_BufCvR_WA_Srv_ZeroOffset -(CurrRecipe.rCaseB/2)-5;
+	
+	H_ER_WA_Srv_TargetPos 			:= H_ER_WA_Srv_ZeroOffset - CurrRecipe.rCaseC  + 10; (* minus 10mm to over hang the box for 5mm each side*)
+	H_EX_HeightL_WA_Srv_TargetPos 	:= H_EX_HeightL_WA_Srv_ZeroOffset - CurrRecipe.rCaseB - 3;
+	H_EX_HeightR_WA_Srv_TargetPos 	:= H_EX_HeightR_WA_Srv_ZeroOffset - CurrRecipe.rCaseB - 3;
+
+	
+	HMI.T_LoadNewRecipe:=FALSE;
+	
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

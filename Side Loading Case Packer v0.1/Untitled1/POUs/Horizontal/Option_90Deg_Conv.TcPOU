@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="Option_90Deg_Conv" Id="{cde62cdb-1512-4bcb-bb9a-175cbaf54bae}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Option_90Deg_Conv
+VAR
+	bEnable			:BOOL;
+	Full_Timer_ON	: TON;
+	Clear_Timer_ON	: tOF;
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[bEnable := NOT MC.Trouble;
+Full_Timer_ON	(IN:= I_HOR_DnStream_Cv_Full , PT:= T#2S);
+Clear_Timer_ON	(IN:= I_HOR_90Deg_Full_PE, PT:= T#3S);
+
+EX_Deg_Cyl_Var.In_HomeXLock := TRUE;
+EX_Deg_Cyl_Var.In_WorkXLock := TRUE;
+
+EX_90Deg_Cyl(				
+	IN_CylName		:='TILT CV CYLINDER', 	
+	In_Enable		:= Cfg_Exit90DegConv, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_HOR_90Deg_Tilt_Cly_Up, 	
+	In_HomeRS		:= I_HOR_90Deg_Tilt_Cly_Dn, 	
+	In_WorkTON		:= T#100MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= T#5S, 	
+	Out_WorkSV		=> O_HOR_90Deg_Cyl_Up, 	
+	Out_HomeSV		=> O_HOR_90Deg_Cyl_Dn, 	
+	CylVar			:= EX_Deg_Cyl_Var,
+	Station			:= SC[6]);
+	
+(*	Control Condition	*)
+IF 	SC[6].AutoRun			AND
+	Full_Timer_ON.Q	AND
+	not Clear_Timer_ON.q THEN
+	EX_Deg_Cyl_Var.In_AutoWork	:= TRUE;
+	EX_Deg_Cyl_Var.In_AutoHome	:= FALSE;
+ELSE
+	EX_Deg_Cyl_Var.In_AutoWork	:= FALSE;
+	EX_Deg_Cyl_Var.In_AutoHome	:= TRUE;
+END_IF
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

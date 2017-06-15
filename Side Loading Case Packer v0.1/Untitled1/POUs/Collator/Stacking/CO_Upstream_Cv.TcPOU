@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_Upstream_Cv" Id="{6aa403a3-cd2c-4724-bd94-a9b9d5a06190}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_Upstream_Cv
+VAR
+	Upstream_Cv_Jam		:BOOL;
+	Upstream_CV_Jam_TON	:ton;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[Upstream_CV_Jam_TON(IN:= I_Upstream_Jam_Sen AND CO_UpStreamCv_Mtr_Var.In_AutoON	, PT:= T#5S);
+Upstream_Cv_Jam	:= Upstream_CV_Jam_TON.Q;
+
+O_UpStream_ReqToStpNC				:= 	Sc[0].AutoRun AND 
+										NOT Sc[0].MinorFault AND 
+										NOT Upstream_Cv_Jam AND									
+										NOT (	er_auto_arm.End_Production AND 
+												er_auto_arm.NoWPonErector)  ;
+O_UpStream_ReqToStpNO				:= NOT O_UpStream_ReqToStpNC OR NOT Sc[0].Running;
+O_UpStream_ReqEmptying				:= hmi.T_EndProd;
+
+CO_UpStreamCv_Mtr_Var.In_AutoON		:= Sc[0].AutoRun AND 
+										NOT Sc[0].MinorFault AND																		
+										NOT (	er_auto_arm.End_Production AND 
+												er_auto_arm.NoWPonErector);]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

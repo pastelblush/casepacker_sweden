@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="ER_Timers" Id="{0b418049-be46-4c3e-a6e5-7c1acab83114}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM ER_Timers
+VAR
+	ER_Carton_TON	:ton;
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+ER_BufCv_Ctn_TON 	(IN := 	I_ER_RefillL_PE AND 
+							I_ER_EmptyL_PE	AND
+							I_ER_EmptyR_PE	AND
+							I_ER_BufferL_PE	AND
+							I_ER_BufferR_PE, pt := T#0.5S);
+ER_Carton_TON(IN := 		I_ER_EmptyL_PE	AND
+							I_ER_EmptyR_PE	AND
+							I_ER_BufferL_PE	AND
+							I_ER_BufferR_PE, pt := T#1S); 
+							
+ER_BufCvL_Ctn_TON 	(IN := (I_ER_EmptyL_PE AND mc.AutoRunning) OR I_ER_BufferL_PE , pt := T#70MS);
+ER_BufCvR_Ctn_TON 	(IN := (I_ER_EmptyR_PE AND mc.AutoRunning) OR I_ER_BufferR_PE , pt := T#70MS);
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

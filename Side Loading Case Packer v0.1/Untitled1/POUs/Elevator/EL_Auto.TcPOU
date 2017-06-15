@@ -1,0 +1,423 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="EL_Auto" Id="{08631fd5-4ddc-44d3-a6db-40b132ff59fa}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM EL_Auto
+VAR_IN_OUT
+	Station			:structStationCtrl;
+END_VAR
+VAR
+	Timeout	:TON;	
+	WT_Cv_CtnPE_TON: Ton;
+	tmrCartonINP	:TON;	
+	ServoTargetPos:REAL;
+	TimeoutTrigger: BOOL;
+	TimeoutSetting: TIME;
+	ServoMoveStarted:BOOL;
+	EL_SpeedChange_Pos :REAL;
+	EL_SpeedChange_to_Exit: BOOL;
+	LightCurtain_Unmute_TON: TON;
+	bLightCurtain_Delay_Mute_Off: bool;	
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(**************************************************************************************************************)
+(* GENERAL STATION MAPPING  *)
+(**************************************************************************************************************)
+Station.Name			:=	'ELEVATOR';
+Station.Rdy 			:= 	Station.Origin;
+Station.AutoRun 		:=	(MC.AutoRunning OR Station.M_Step) AND 
+							NOT (Station.Bypass OR Station.MajorFault OR Station.MinorFault);
+Station.RunReq			:= 	(H_ER_CtnGlueDone AND EL_Ctn_TOFF.Q)
+							OR Station.M_Step;
+Station.RunCond			:=	(NOT SC[3].Running OR SC[3].RunStep >= 40) AND	(*Erector Arm Not Running or finished pushing*)
+							NOT SC[4].Running AND	(*Exit Not Running*) 
+							NOT (Station.Done OR MC.StopPressed );
+Station.Run_NextStepPls	:=	(Station.AutoRun AND NOT Station.M_Step) OR 
+							(Station.M_Step AND M_StepFwdPls) OR HMI.T_OneCycleRun;
+Station.Run_PrevStepPls	:=	(Station.M_Step AND M_StepBwdPls);
+
+(**************************************************************************************************************)
+(* Auto Sequance*)
+(**************************************************************************************************************)
+
+Timeout(IN:=TimeoutTrigger, PT:=TimeoutSetting);
+IF Timeout.Q THEN
+	TimeoutTrigger := FALSE;
+END_IF
+
+tmrCartonINP(IN:=WT_Mtr_Var.S_Running AND I_EX_Cv_Ctn_PE, PT:=T#1S);
+
+
+LightCurtain_Unmute_TON(IN:= bLightCurtain_Delay_Mute_Off, PT:=T#2S);
+IF LightCurtain_Unmute_TON.Q THEN
+	A_EL_LC_Muting:=FALSE;
+	bLightCurtain_Delay_Mute_Off:=FALSE;
+END_IF
+			
+
+IF Station.AutoRun OR Station.M_Step THEN
+	
+	CASE Station.RunStep OF
+
+	0 : 	(************* Ready To Run ****************)
+			A_EL_LC_Muting 					:= FALSE;
+			IF Station.RunCond AND Station.RunReq AND Station.Rdy THEN
+				H_EL_CtnWeightOK := FALSE;
+				Station.RunStep := Station.RunStep + 10;
+			ELSIF NOT Station.RunCond THEN
+				Station.Status 		:= '0: Station Waiting for Run Conditions';
+				Station.StatusInt	:= 1;
+			ELSIF NOT Station.RunReq THEN
+				Station.Status 		:= '0: Station Waiting for Run Request';
+				Station.StatusInt	:= 2;
+			ELSE
+				Station.Status 		:= '0: Station Not Ready';
+				Station.StatusInt	:= 3;				
+			END_IF
+			
+
+	10 : 	(************* Vacuum ON  ****************)
+			Station.Status 		:= '10: Vacuum ON';
+			Station.StatusInt	:= 351;
+			WT_Mtr_Var.In_AutoON := TRUE;
+						
+			IF NOT MC.DryRun AND tmrCartonINP.Q THEN
+					EL_Tilt_Vac_Var.In_AutoVacuum := TRUE;
+					EL_Tilt_Vac_Lift_Var.In_AutoWork:=TRUE;
+					EL_Tilt_Vac_Lift_Var.In_AutoHome:=FALSE;
+			END_IF
+
+			TimeoutSetting := T#15S;
+			TimeoutTrigger := TRUE;
+				
+			IF	(EL_Tilt_Vac_Var.S_Vacuum OR MC.DryRun) AND
+				Station.Run_NextStepPls THEN
+				WT_Mtr_Var.In_AutoON := FALSE;
+				TimeoutTrigger:=FALSE;
+				Station.RunStep := Station.RunStep + 10;				
+			ELSIF Timeout.Q THEN
+				Station.SeqFaultWord 		:= 202;
+				E_Weight_CV_CartonNotDetect	:= TRUE;
+				Station.SeqFaultString 		:= 'Auto: Weight Conveyor Sensor Failed to detect Carton.';
+			END_IF
+
+	20 : 	(************* Tilt Cylinder Fwd  ****************)
+			Station.Status 		:= '20: Tilt Cylinder Fwd';
+			Station.StatusInt	:= 352;
+			
+			EL_Tilt_Cyl_Var.In_AutoWork := TRUE;
+			
+			IF 	EL_Tilt_Cyl_Var.S_WorkPos THEN
+				EL_Tilt_Vac_Lift_Var.In_AutoWork	:= FALSE;
+				EL_Tilt_Vac_Lift_Var.In_AutoHome	:= TRUE;
+			END_IF
+				
+			IF 	EL_Tilt_Cyl_Var.S_WorkPos AND
+				Station.Run_NextStepPls THEN
+				EL_Tilt_Cyl_Var.In_AutoWork 		:= FALSE;
+				EX_FlapHoldL_Cyl_Var.In_AutoHome 	:= FALSE;
+				EX_FlapHoldR_Cyl_Var.In_AutoHome 	:= FALSE;	
+	
+				IF I_EX_Cv_Ctn_PE THEN
+					(* 200 - Carton Detected on Weigh Conveyor After Tilting.*)
+					Station.SeqFaultWord 		:= 200;
+					E_Weight_CV_CartonDetect	:= TRUE;		
+					Station.SeqFaultString 		:= 'Auto Sequence: Carton Detected on Weigh Conveyor After Tilting';
+				ELSE
+					Station.RunStep := Station.RunStep + 10;
+				END_IF				
+			END_IF
+			
+	30 : 	(************* Centering Servo Move to End Target Position and Vacuum ON ****************)
+			Station.Status 		:= '30: Centering Servo Move to End Target Position and Vacuum ON';
+			Station.StatusInt	:= 353;
+			EL_Center_Srv_Var.In_PosCmd := H_EL_Center_Srv_EndDatumPos -CurrRecipe.rCaseB; 
+			EL_Center_Srv_Var.In_VelCmd := A_Srv_BeltAutoHiSpeed;
+			EL_Center_Srv_Var.In_MoveAbs := TRUE;
+			
+			IF NOT MC.DryRun THEN
+				EL_Center_Vac_Var.In_AutoVacuum := TRUE;
+			END_IF
+			
+			EL_Tilt_Vac_Var.In_AutoPurge 	:= TRUE;
+			EL_Tilt_Vac_Var.In_AutoVacuum 	:= FALSE;
+			EL_Tilt_Vac_Lift_Var.In_AutoWork:=FALSE;
+			EL_Tilt_Vac_Lift_Var.In_AutoHome:=TRUE;
+			
+			IF fcComparePos(CurrPos:= EL_Center_Srv_Var.Out_CurrPos, TargetPos:= EL_Center_Srv_Var.In_PosCmd) AND
+				EL_Center_Srv_Var.Out_InPos AND
+				(EL_Center_Vac_Var.S_Vacuum OR MC.DryRun) AND
+				EL_Tilt_Vac_Var.S_Release AND
+				Station.Run_NextStepPls THEN			
+				EL_Center_Srv_Var.In_MoveAbs := FALSE;
+				EL_Center_Vac_Var.In_AutoVacuum := FALSE;
+				EL_Tilt_Vac_Var.In_AutoPurge := FALSE;
+				H_EL_CtnWeightOK := H_ER_CtnWeightOK;
+				Station.RunStep := Station.RunStep + 10;
+			END_IF
+
+	40 : 	(************* Centering Servo Move Carton to Taping Centerline  ****************)
+			Station.Status 		:= '40: Centering Servo Move Carton to Taping Centerline';	
+			Station.StatusInt	:= 354;
+			
+
+				EL_Center_Srv_Var.In_PosCmd := H_EL_Center_Srv_MidDatumPos - ((CurrRecipe.rCaseB-Cfg_CaseB_Min)/2); 
+				EL_Center_Srv_Var.In_VelCmd := A_Srv_BeltAutoHiSpeed;
+				EL_Center_Srv_Var.In_MoveAbs := TRUE;
+				EL_TapeOpening_Var.In_AutoWork	:=TRUE;
+	
+			
+			IF fcComparePos(CurrPos:= EL_Center_Srv_Var.Out_CurrPos, TargetPos:= EL_Center_Srv_Var.In_PosCmd) AND
+				EL_Center_Srv_Var.Out_InPos AND
+				Station.Run_NextStepPls THEN			
+				EL_Center_Srv_Var.In_MoveAbs := FALSE;
+				H_EL_CtnWeightOK := H_ER_CtnWeightOK;
+				IF Station.M_Step THEN
+					H_EL_CtnWeightOK 	:= TRUE;
+				END_IF
+				H_ER_CtnWeightOK 		:= FALSE;
+				H_ER_CtnGlueDone 		:= FALSE;
+				H_ER_CtnRdyForGlue 		:= FALSE;
+				IF NOT I_EL_Ctn_PE AND NOT MC.DryRun THEN
+					(* 201 - Carton Not Detected on Elevator After Tilting.*)
+					Station.SeqFaultWord 	:= 201;
+					E_EL_CartonNotDetect	:= TRUE;			
+					Station.SeqFaultString 	:= 'Auto Sequence: Carton Not Detected on Elevator After Tilting';
+				ELSE
+					Station.RunStep := Station.RunStep + 10;
+				END_IF
+			END_IF
+
+
+	50 : 	(************* Elevator Moves High Speed to Tape Starting Position ****************)
+			Station.Status 		:= '50: Elevator Moves High Speed to Tape Starting Position';	
+			Station.StatusInt	:= 355;
+			
+			EL_Srv_Var.In_PosCmd 	:= H_EL_Srv_TapeStartPos - CurrRecipe.rCaseA ; 
+			EL_Srv_Var.In_VelCmd 	:= A_Srv_ElevAutoHiSpeed;
+			EL_SpeedChange_Pos		:= H_EL_Srv_TapeStartPos - CurrRecipe.rCaseA -100;
+			
+			
+			IF EL_TapeOpening_Var.S_WorkPos THEN
+				EL_Srv_Var.In_MoveAbs := TRUE;
+			END_IF
+			
+			IF 	((fcComparePos(CurrPos:= EL_Srv_Var.Out_CurrPos, TargetPos:= EL_Srv_Var.In_PosCmd) AND
+				EL_Srv_Var.Out_InPos )
+				OR 
+			    (EL_Srv_Var.Out_CurrPos >= EL_SpeedChange_Pos )) AND
+				Station.Run_NextStepPls THEN	
+				ServoMoveStarted 				:= FALSE;		
+				EL_Srv_Var.In_MoveAbs 			:= FALSE;
+				EL_TapeOpening_Var.In_AutoWork	:= FALSE;
+				Station.RunStep := Station.RunStep + 10;
+			END_IF
+
+	60 : 	(************* Elevator Moves Slow Speed to Tape End Position and Tilt Cylinders Bwd ****************)
+			Station.Status 		:= '60: Elevator Moves Slow Speed to Tape End Position';	
+			Station.StatusInt	:= 356;
+			
+			EL_Srv_Var.In_PosCmd 		:= H_EL_Srv_TapeEndPos + 50;
+			EL_Srv_Var.In_VelCmd 		:= A_Srv_ElevAutoLoSpeed;
+			EL_SpeedChange_Pos			:= H_EL_Srv_TapeEndPos ;
+			EL_Srv_Var.In_MoveAbs 		:= TRUE;
+			
+			IF NOT EL_SERVO_OUTPUT.bEL_NotSafePos THEN	
+				EL_Tilt_Cyl_Var.In_AutoHome	:= TRUE;
+				EL_Tilt_Cyl_Var.In_AutoWork	:= FALSE;
+			END_IF
+			
+
+			IF 	((fcComparePos(CurrPos:= EL_Srv_Var.Out_CurrPos, TargetPos:= EL_Srv_Var.In_PosCmd) AND
+				EL_Srv_Var.Out_InPos )
+				OR 
+			    FALSE (*(EL_Srv_Var.Out_CurrPos >= EL_SpeedChange_Pos )*))
+				AND
+				Station.Run_NextStepPls AND	
+				EL_Tilt_Cyl_Var.S_HomePos THEN		
+				ServoMoveStarted 			:= FALSE;			
+				EL_Srv_Var.In_MoveAbs 		:= FALSE;
+				EL_Tilt_Cyl_Var.In_AutoHome := FALSE;
+				Station.RunStep 			:= 100;
+			END_IF
+			
+	100 : 	(************* Elevator Moves to Target Good/NG Exit Position ****************)
+			(************* Centering Move to Almost Home Position ****************)
+			
+			EL_TapeOpening_Var.In_AutoHome	:=TRUE;
+			EL_Center_Srv_Var.In_PosCmd := H_EL_Center_Srv_HomePos + 40; 
+			EL_Center_Srv_Var.In_VelCmd := A_Srv_BeltAutoHiSpeed;
+			EL_Center_Srv_Var.In_MoveAbs := TRUE;
+	
+			IF H_EL_CtnWeightOK THEN
+				Station.Status 		:= '100: Elevator Moves to Target Good Exit Position';	
+				Station.StatusInt	:= 357;
+				EL_Srv_Var.In_PosCmd := H_EL_Srv_CtnGoodExitPos; 
+				EL_Srv_Var.In_VelCmd := A_Srv_ElevAutoHiSpeed;
+			ELSE
+				Station.Status 		:= '100: Elevator Moves to Target Reject Exit Position';	
+				Station.StatusInt	:= 358;
+				EL_Srv_Var.In_PosCmd := H_EL_Srv_CtnRejectExitPos; 
+				EL_Srv_Var.In_VelCmd := A_Srv_ElevAutoHiSpeed;
+			END_IF
+			
+			IF EL_TapeOpening_Var.S_HomePos THEN
+				EL_Srv_Var.In_MoveAbs := TRUE;
+			END_IF
+			
+			IF 	fcComparePos(CurrPos:= EL_Srv_Var.Out_CurrPos, TargetPos:= EL_Srv_Var.In_PosCmd) AND
+				EL_Srv_Var.Out_InPos AND
+				fcComparePos(CurrPos:= EL_Center_Srv_Var.Out_CurrPos, TargetPos:= EL_Center_Srv_Var.In_PosCmd) AND
+				EL_Center_Srv_Var.Out_InPos AND	
+				Station.Run_NextStepPls THEN			
+				ServoMoveStarted 				:= FALSE;			
+				EL_Srv_Var.In_MoveAbs 			:= FALSE;
+				EL_TapeOpening_Var.In_AutoHome	:= FALSE;
+				EL_Center_Srv_Var.In_MoveAbs 	:= FALSE;
+				Station.RunStep 				:= Station.RunStep + 10;
+			END_IF
+			
+	110 : 	(************* Release Carton Centering Vacuum and Pusher Rotate Cylinder Out  ****************)		
+			Station.Status 		:= '110: Release Carton Centering Vacuum and Pusher Rotate Cylinder Out';	
+			Station.StatusInt	:= 359;
+			EL_Center_Srv_Var.In_PosCmd := H_EL_Center_Srv_HomePos; 
+			EL_Center_Srv_Var.In_VelCmd := A_Srv_BeltAutoHiSpeed;
+			
+			EL_Center_Vac_Var.In_AutoPurge 	:= TRUE;
+			EL_Center_Vac_Var.In_AutoVacuum	:= FALSE;
+			EL_Pusher_Cyl_Var.In_AutoWork 	:= FALSE;
+			EL_Pusher_Cyl_Var.In_AutoHome 	:= TRUE;
+
+			EL_PushRot_Cyl_Var.In_AutoWork 	:= TRUE;
+			EL_PushRot_Cyl_Var.In_AutoHome 	:= FALSE;
+			
+			IF EL_Center_Vac_Var.S_Release AND
+				EL_PushRot_Cyl_Var.S_WorkPos THEN
+				EL_Center_Srv_Var.In_MoveAbs 	:= TRUE;
+				EL_PushRot_Cyl_Var.In_AutoWork 	:= FALSE;
+				EL_Center_Vac_Var.In_AutoPurge 	:= FALSE;
+				
+				IF 	fcComparePos(CurrPos:= EL_Center_Srv_Var.Out_CurrPos, TargetPos:= EL_Center_Srv_Var.In_PosCmd) AND
+				EL_Center_Srv_Var.Out_InPos AND	
+				Station.Run_NextStepPls THEN
+				EL_Center_Srv_Var.In_MoveAbs 	:= FALSE;
+				Station.RunStep := Station.RunStep + 10;
+				END_IF	
+			END_IF
+
+	120 : 	(************* Move Pusher to Final Position ****************)
+			Station.Status 		:= '120: Move Pusher to Final Position ';	
+			Station.StatusInt	:= 360;
+			
+			EL_Pusher_Cyl_Var.In_AutoWork	:= TRUE;
+			EL_Pusher_Cyl_Var.In_AutoHome 	:= FALSE;
+			A_EL_LC_Muting 					:= TRUE;
+	
+
+			TimeoutSetting := T#15S;
+			TimeoutTrigger := TRUE;
+			
+			IF 	EL_Pusher_Cyl_Var.S_WorkPos AND 
+				Station.Run_NextStepPls  THEN
+				EL_Pusher_Cyl_Var.In_AutoWork		:=FALSE;
+				(*A_EL_LC_Muting 					:= FALSE;*)
+				EL_Pusher_Cyl_Var.In_AutoWork		:= FALSE;
+				H_EL_CtnWeightOK 					:= FALSE;
+				Statistic_CurShift_CaseProduce		:= Statistic_CurShift_CaseProduce + 1;
+				Statistic_Total_CaseProduce			:= Statistic_Total_CaseProduce	+1;
+				Statistic_Man_Total_CaseProduce		:= Statistic_Man_Total_CaseProduce +1;
+				Station.RunStep := Station.RunStep + 10;
+				
+			END_IF					
+
+
+			
+	130 : 	(************* Move Pusher Rot Home then travel to Home Position ****************)
+			Station.Status 		:= '130: Move Pusher to Home Position';
+			Station.StatusInt	:= 361;
+	
+				EL_Pusher_Cyl_Var.In_AutoHome	:= TRUE;
+				bLightCurtain_Delay_Mute_Off:= TRUE;
+				
+			IF 	EL_Pusher_Cyl_Var.S_HomePos	THEN
+				EL_PushRot_Cyl_Var.In_AutoHome	:= TRUE;
+			END_IF			
+						
+			IF 	EL_Pusher_Cyl_Var.S_HomePos	AND
+				EL_PushRot_Cyl_Var.S_HomePos AND
+				Station.Run_NextStepPls THEN				
+				EL_Pusher_Cyl_Var.In_AutoHome	:= FALSE;
+				EL_PushRot_Cyl_Var.In_AutoHome	:= FALSE;
+				Station.RunStep := Station.RunStep + 10;
+			END_IF		
+
+	140 : 	(************* Move Elevator Servo to Bottom Home Position ****************)
+			Station.Status 		:= '140: Move Elevator Servo to Bottom Home Position';	
+			Station.StatusInt	:= 362;
+			EL_Srv_Var.In_PosCmd := H_EL_Srv_CtnLoadPos; 
+			EL_Srv_Var.In_VelCmd := A_Srv_ElevAutoHiSpeed;
+			EL_Srv_Var.In_MoveAbs := TRUE;
+			
+			EL_PushRot_Cyl_Var.In_AutoWork := FALSE;
+			EL_PushRot_Cyl_Var.In_AutoHome := TRUE;
+
+			IF fcComparePos(CurrPos:= EL_Srv_Var.Out_CurrPos, TargetPos:= EL_Srv_Var.In_PosCmd) AND			
+				EL_PushRot_Cyl_Var.S_HomePos AND
+				EL_Srv_Var.Out_InPos AND
+				Station.Run_NextStepPls THEN
+				EL_Srv_Var.In_MoveAbs := FALSE;
+				Station.RunStep := Station.RunStep + 10;
+			END_IF
+
+	150 : 	(************* Tilt Cylinder Bwd  ****************)
+			Station.Status 		:= '150: Tilt Cylinder Bwd';	
+			Station.StatusInt	:= 363;
+			EL_Tilt_Cyl_Var.In_AutoHome := TRUE;
+	
+			IF EL_Tilt_Cyl_Var.S_HomePos AND
+				Station.Run_NextStepPls THEN
+				EL_Tilt_Cyl_Var.In_AutoHome := FALSE;
+				Station.RunStep := 1000;				
+			END_IF
+			
+	1000 : 	(************* Process Done ****************)
+			Station.Status 		:= '1000: Process Done';	
+			Station.StatusInt	:= 499;
+			M_StepRun := FALSE;
+			HMI.T_OneCycleRun := FALSE;			
+			Station.RunStep := 0;
+			
+
+	END_CASE
+
+
+ELSE
+	Station.RunStep := 0;
+	A_EL_LC_Muting := FALSE;
+	
+	IF Station.MajorFault OR Station.MinorFault THEN
+		Station.Status 		:= 'Station Error';
+		Station.StatusInt	:= 4;
+	ELSIF Station.Origin THEN
+		Station.Status 		:= 'Station In Origin';
+		Station.StatusInt	:= 5;
+	ELSIF NOT Station.OriginSchRun AND NOT MC.OriginSchRun THEN
+		Station.Status 		:= 'Station Not In Origin';
+		Station.StatusInt	:= 6;
+	END_IF
+END_IF
+
+Station.Running := (Station.RunStep>0);
+
+
+
+
+
+
+
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

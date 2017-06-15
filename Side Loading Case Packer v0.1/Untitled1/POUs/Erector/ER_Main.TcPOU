@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="ER_Main" Id="{76797e5d-a46f-47e0-ac09-c3365765acf3}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM ER_Main
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF Cfg_BypassErector THEN
+	HMI.T_Station_BypassP[3] := TRUE;
+ELSE
+	HMI.T_Station_BypassP[3] := FALSE;
+END_IF
+
+ER_Timers();
+
+ER_Error			(Station:= SC[3]);
+ER_Auto_Arm			(Station:= SC[3]);
+ER_Auto_FixedFlap	(Station:= SC[3]);
+ER_Glue				(Station:= SC[3]);
+ER_Origin			(Station:= SC[3]);
+
+ER_Cylinder_Output();
+ER_Servo_Output();
+ER_Motor_Output();
+ER_Vacuum_Output();
+
+(* ER Structure is only for displaying on HMI*)
+SC[3].T_OriginSearch := ER.T_OriginSearch;
+ER := SC[3];
+
+(*debug*)
+
+IF T_SimPushIn THEN
+	H_ER_CtnRdyForPushIn := FALSE;
+	H_ER_CtnPushInDone := TRUE;
+	H_ER_CtnSideFlapDone := FALSE;
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

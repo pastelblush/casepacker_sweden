@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <GVL Name="GVL_Ethercat" Id="{b7679fc5-68a0-4f2b-89a1-f1dd89d6bc43}">
+    <Declaration><![CDATA[VAR_GLOBAL
+
+	S_ECat_NOK:BOOL;
+	
+	I_ECat_41BC1 	AT %I*	:UINT;
+	I_ECat_41DI1 	AT %I*	:UINT;
+	I_ECat_41DI2 	AT %I*	:UINT;
+	I_ECat_41DO1 	AT %I*	:UINT;
+	I_ECat_41DO2 	AT %I*	:UINT;
+	I_ECat_41CO1 	AT %I*	:UINT;	
+	I_ECat_41BC2 	AT %I*	:UINT;
+	I_ECat_41BC3 	AT %I*	:UINT;
+	I_ECat_70A1 	AT %I*	:UINT;
+	I_ECat_71A1 	AT %I*	:UINT;
+	I_ECat_60A1 	AT %I*	:UINT;
+	I_ECat_61A1 	AT %I*	:UINT;
+	I_ECat_62A1 	AT %I*	:UINT;
+	I_ECat_63A1 	AT %I*	:UINT;
+	I_ECat_64A1 	AT %I*	:UINT;
+	I_ECat_65A1 	AT %I*	:UINT;
+	I_ECat_66A1 	AT %I*	:UINT;
+
+	I_ECat_141BC1 	AT %I*	:UINT;
+	I_ECat_141DI1 	AT %I*	:UINT;
+	I_ECat_141DO1 	AT %I*	:UINT;
+	I_ECat_141BC2 	AT %I*	:UINT;
+	I_ECat_170A1 	AT %I*	:UINT;
+	I_ECat_160A1 	AT %I*	:UINT;
+	I_ECat_161A1 	AT %I*	:UINT;
+	I_ECat_162A1 	AT %I*	:UINT;
+	I_ECat_163A1 	AT %I*	:UINT;
+	
+	I_ECat_241BC1 	AT %I*	:UINT;
+	I_ECat_241DI1 	AT %I*	:UINT;
+	I_ECat_241DO1 	AT %I*	:UINT;
+	I_ECat_260A1 	AT %I*	:UINT;
+	
+	I_ECat_341BC1 	AT %I*	:UINT;
+	I_ECat_341DI1 	AT %I*	:UINT;
+	I_ECat_341DO1 	AT %I*	:UINT;
+	I_ECat_341BC2 	AT %I*	:UINT;
+	I_ECat_370A1 	AT %I*	:UINT;
+	I_ECat_360A1 	AT %I*	:UINT;
+	I_ECat_361A1 	AT %I*	:UINT;
+	I_ECat_362A1 	AT %I*	:UINT;
+	I_ECat_363A1 	AT %I*	:UINT;
+	I_ECat_364A1 	AT %I*	:UINT;
+	I_ECat_365A1 	AT %I*	:UINT;
+
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

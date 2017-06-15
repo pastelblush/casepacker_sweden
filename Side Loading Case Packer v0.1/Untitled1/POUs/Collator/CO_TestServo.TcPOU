@@ -1,0 +1,104 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_TestServo" Id="{73c27510-b5ba-42b3-8e51-80cb78659d8b}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_TestServo
+VAR
+	plsTestSequence: R_trig;
+	TestSequencePosX1: REAL;
+	TestSequencePosX2: REAL;
+	TestSequencePosY1: REAL;
+	TestSequencePosY2: REAL;
+	TestSequenceInPos: Ton;
+	TestSequenceStep: INT;
+	TestBit:BOOL;
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*Test Servo Sequence*)
+IF MC.ManualMode AND NOT MC.Trouble AND 
+	(CO_XPush_Srv_Var.In_MoveXLock OR
+	CO_YPush_Srv_Var.In_MoveXLock) AND 
+	TestBit THEN
+	IF HMI.T_Start AND
+		(CO_XPush_Srv_Var.In_MoveXLock AND
+		CO_YPush_Srv_Var.In_MoveXLock) THEN
+		TestSequence := TRUE;
+		CO_XPush_Srv_Var.In_ServoOn := TRUE;
+		CO_YPush_Srv_Var.In_ServoOn := TRUE;
+		TestSequenceStep := 10;
+	END_IF
+	IF HMI.T_Stop THEN
+		TestSequence := FALSE;
+		TestSequenceStep := 0;
+	END_IF
+ELSE
+	TestSequence := FALSE;
+	TestSequenceStep := 0;
+END_IF
+
+plsTestSequence(CLK:=TestSequence);
+
+TestSequenceInPos (IN := CO_XPush_Srv_Var.Out_InPos AND
+							CO_YPush_Srv_Var.Out_InPos, pt := T#0.1S);
+
+IF TestSequence THEN
+
+	CO_XPush_Srv_Var.In_VelCmd := 1800000;
+	CO_YPush_Srv_Var.In_VelCmd := 1800000;
+	TestSequencePosX1 := 200;
+	TestSequencePosX2 := 1100;
+	TestSequencePosY1 := 100;
+	TestSequencePosY2 := 1000;
+	
+	CASE TestSequenceStep OF
+		10:
+			IF CO_XPush_Srv_Var.Out_Ready THEN
+				CO_XPush_Srv_Var.In_PosCmd := TestSequencePosX1;
+				CO_XPush_Srv_Var.In_MoveAbs := TRUE;				
+			END_IF
+			IF CO_YPush_Srv_Var.Out_Ready THEN
+				CO_YPush_Srv_Var.In_PosCmd := TestSequencePosY1;
+				CO_YPush_Srv_Var.In_MoveAbs := TRUE;				
+			END_IF
+
+			IF fcComparePos(CurrPos:= CO_XPush_Srv_Var.Out_CurrPos, TargetPos:= TestSequencePosX1) AND
+				fcComparePos(CurrPos:= CO_YPush_Srv_Var.Out_CurrPos, TargetPos:= TestSequencePosY1) THEN
+				EL_Srv_Var.In_MoveAbs := FALSE;
+				TestSequenceStep := TestSequenceStep + 10;
+			END_IF
+			
+		20:
+			IF TestSequenceInPos.Q THEN
+				TestSequenceStep := TestSequenceStep + 10;
+			END_IF
+			
+		30:
+			IF CO_XPush_Srv_Var.Out_Ready THEN
+				CO_XPush_Srv_Var.In_PosCmd := TestSequencePosX2;
+				CO_XPush_Srv_Var.In_MoveAbs := TRUE;
+			END_IF
+			IF CO_YPush_Srv_Var.Out_Ready THEN
+				CO_YPush_Srv_Var.In_PosCmd := TestSequencePosY2;
+				CO_YPush_Srv_Var.In_MoveAbs := TRUE;
+			END_IF
+				
+			IF fcComparePos(CurrPos:= CO_XPush_Srv_Var.Out_CurrPos, TargetPos:= TestSequencePosX2) AND
+				fcComparePos(CurrPos:= CO_YPush_Srv_Var.Out_CurrPos, TargetPos:= TestSequencePosY2) THEN
+				EL_Srv_Var.In_MoveAbs := FALSE;
+				TestSequenceStep := TestSequenceStep + 10;
+			END_IF
+
+		40:
+			IF TestSequenceInPos.Q THEN
+				TestSequenceStep := 10;
+			END_IF
+		
+	END_CASE
+ELSE
+	TestSequenceStep := 0;	
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

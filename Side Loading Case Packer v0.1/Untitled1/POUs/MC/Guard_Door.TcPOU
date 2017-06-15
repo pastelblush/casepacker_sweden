@@ -1,0 +1,68 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="Guard_Door" Id="{215e39f0-3b1d-46de-bf57-0a91d1e98585}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Guard_Door
+VAR
+	Guard_Door_Fault	:	BOOL;
+	tmrGuardDoor		:	TON;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*
+Guard_Door_Fault	:= 	E_Erector_FrontDoor_Opn	OR
+						E_Erector_RearDoor_Opn	OR
+						E_Collator_FrontDoor_Opn OR
+						E_Collator_RearDoor_Opn OR
+						E_Elevator_LeftTopDoor_Opn OR
+						E_Elevator_LeftBtmDoor_Opn OR
+						E_Elevator_RightDoor_Opn OR
+						E_Horizontal_LeftDoor_Opn OR
+						E_Horizontal_RightDoor_Opn ;*)
+
+tmrGuardDoor (IN := (Guard_Door_Fault AND I_Door_SC_OK ) OR (NOT Guard_Door_Fault AND not I_Door_SC_OK ), pt:= T#1S);
+(*
+IF tmrGuardDoor.Q THEN
+E_Door_SafetyBroken	:= TRUE;						
+END_IF											
+*)
+
+IF mc.ResetPressed THEN
+	E_Erector_FrontDoor_Opn		:= FALSE;
+	E_Erector_RearDoor_Opn		:= FALSE;
+	E_Collator_FrontDoor_Opn	:= FALSE;
+	E_Collator_RearDoor_Opn		:= FALSE;
+	E_Elevator_LeftTopDoor_Opn	:= FALSE;
+	E_Elevator_LeftBtmDoor_Opn	:= FALSE;
+	E_Elevator_RightDoor_Opn	:= FALSE;
+	E_Horizontal_LeftDoor_Opn	:= FALSE;
+	E_Horizontal_RightDoor_Opn	:= FALSE;
+	E_Door_SafetyBroken			:= FALSE;
+END_IF
+
+IF not I_Erector_Front_Door_Sen THEN
+	E_Erector_FrontDoor_Opn	:= TRUE;
+END_IF
+
+IF NOT I_Erector_Rear_Door_Sen THEN
+	E_Erector_RearDoor_Opn	:= TRUE;
+END_IF
+
+IF NOT I_COL_Front_Door_Sen THEN
+	E_Collator_FrontDoor_Opn	:=TRUE;
+END_IF
+
+IF NOT I_COL_Rear_Door_Sen THEN
+	E_Collator_RearDoor_Opn	:=TRUE;
+END_IF
+
+IF NOT I_HOR_Left_Door THEN
+	E_Horizontal_LeftDoor_Opn	:=TRUE;
+END_IF
+
+IF NOT I_HOR_Right_Door THEN
+	E_Horizontal_RightDoor_Opn	:=TRUE;
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,70 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="fbStatistic_RegisterCase" Id="{dc518970-59f2-4857-8b58-d47731f1532b}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK fbStatistic_RegisterCase
+VAR_INPUT
+	StartToRegister		:BOOL;
+	Current_Recipe		:STRING;
+	Current_RejectType	:STRING;
+	Current_Day			:WORD;
+	Current_Month		:WORD;
+	Current_Year		:WORD;
+	Current_Hour		:WORD;
+	Current_Minute		:WORD;
+	Current_Second		:WORD;
+END_VAR
+VAR_OUTPUT
+	Done				:BOOL;
+END_VAR
+VAR
+	RunStep			:INT;
+	Loop			:INT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+CASE RunStep OF
+	(* Waiting for Start Signal *)
+	0:	
+		IF StartToRegister THEN
+			RunStep	:= RunStep	+ 10;
+		END_IF
+	
+	(* Shift Statistic Memory Position *)	
+	10:	
+		FOR loop := 0 TO 32000  BY 1 DO
+			StatisticCase[32001-loop]	:= StatisticCase[32000-loop];
+		END_FOR
+			RunStep	:= RunStep	+ 10;
+	
+	(* Register statistic Data	*)		
+	20: 
+		StatisticCase[0].Date_Time_Day		:= Current_Day;
+		StatisticCase[0].Date_Time_Month	:= Current_Month;
+		StatisticCase[0].Date_Time_Year		:= Current_Year;
+		StatisticCase[0].Date_Time_Second	:= Current_Second;
+		StatisticCase[0].Date_Time_Minute	:= Current_Minute;
+		StatisticCase[0].Date_Time_Hour		:= Current_Hour;
+		StatisticCase[0].RecipeName			:= Current_Recipe;
+		StatisticCase[0].RejectType			:= Current_RejectType;
+		RunStep	:= RunStep	+ 10;
+		
+	(*	Waiting for Start Signal to Off *)
+	30:
+		IF NOT StartToRegister THEN
+			RunStep	:= 0;
+		END_IF
+
+	
+END_CASE
+
+
+(* Sending Done Signal *)
+IF runstep = 30 THEN
+	Done	:= TRUE;
+ELSE
+	Done	:= FALSE;	
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

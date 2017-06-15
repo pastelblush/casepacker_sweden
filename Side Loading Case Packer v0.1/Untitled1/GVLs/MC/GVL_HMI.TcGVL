@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <GVL Name="GVL_HMI" Id="{ef8f5418-443b-4820-9632-5f438ba09a5c}">
+    <Declaration><![CDATA[VAR_GLOBAL
+	
+	NewRecipe:structRecipe;
+	
+	
+	T_GlobalAckAlarm:BOOL;
+	
+	T_SimPushIn:BOOL;
+	
+	T_DisplayWordSelect:WORD;
+	T_MonitorWord:WORD;
+	T_MonitorByte1Name:STRING;
+	T_MonitorByte2Name:STRING;
+	T_Monitor2Bytes:BOOL;
+	MC_WA_Run	:BOOL;
+END_VAR
+
+VAR_GLOBAL RETAIN PERSISTENT
+
+	CurrRecipe		:structRecipe;
+	McData			:structMachineData;
+	HMI				:structHMI;
+	T_GlueEnable	:BOOL;
+	T_ExitCvFull	:BOOL;
+	
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

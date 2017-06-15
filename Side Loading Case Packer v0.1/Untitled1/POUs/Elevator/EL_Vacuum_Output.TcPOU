@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="EL_Vacuum_Output" Id="{b8a18411-ddea-4642-bcd0-721cf589aff2}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM EL_Vacuum_Output
+VAR
+	bEnable: BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[bEnable := TRUE;
+
+EL_Tilt_Vac(
+	IN_Name:= 'EXIT TILT VACUUM', 
+	In_Enable:= TRUE (*O_VacPump_On*), 
+	In_Reset:= MC.ResetPressed, 
+	In_Vacuum_Switch:= I_EL_Tilt_VacSw, 
+	In_Drop_Monitor_Enable:= FALSE, 
+	In_VacuumTON:= T#500MS, 
+	In_Release_TON:= T#10MS, 
+	In_PurgeTON:= T#10MS, 
+	in_Timeout:= T#15S, 
+	Out_VacuumSV=> o_EL_Tilt_Vac_oN, 
+	Out_PurgeSV=> , 
+	VacVar:= EL_Tilt_Vac_Var,
+	Station			:= SC[5]);
+	
+EL_Center_Vac(
+	IN_Name:= 'ELEVATOR CENTERING VACUUM', 
+	In_Enable:= TRUE (*O_VacPump_On*), 
+	In_Reset:= MC.ResetPressed, 
+	In_Vacuum_Switch:= I_EL_Center_VacSw, 
+	In_Drop_Monitor_Enable:= TRUE, 
+	In_VacuumTON:= T#500MS, 
+	In_Release_TON:= T#10MS, 
+	In_PurgeTON:= T#10MS, 
+	in_Timeout:= T#15S, 
+	Out_VacuumSV=> o_EL_Center_Vac_oN, 
+	Out_PurgeSV=> , 
+	VacVar:= EL_Center_Vac_Var,
+	Station			:= SC[5]);
+	
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="fcCompareWAPos" Id="{b41f3de0-430f-4c4f-9cb3-7a5db3d8152e}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION fcCompareWAPos : BOOL
+VAR_INPUT
+	CurrPos:REAL;
+	TargetPos:REAL;
+END_VAR
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF CurrPos >= (TargetPos-1) AND
+	CurrPos <= (TargetPos+1) THEN
+	fcCompareWAPos := TRUE;
+ELSE
+	fcCompareWAPos := FALSE;
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

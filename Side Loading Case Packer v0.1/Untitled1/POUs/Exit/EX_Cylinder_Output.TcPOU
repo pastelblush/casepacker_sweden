@@ -1,0 +1,124 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="EX_Cylinder_Output" Id="{7a1223b3-9d54-4df1-921f-1e4242e9e00f}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM EX_Cylinder_Output
+VAR
+	bEnableL: 	BOOL;
+	bEnableR: 	BOOL;
+	bEnable:	BOOL;
+	Reset:	 	BOOL;
+	TempStationStruct:structStationCtrl;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[bEnableL := NOT MC.Trouble (*AND (NOT (SC[4].RunStep = 30) OR I_ER_FlapHoldL_Fwd)*);
+bEnableR := NOT MC.Trouble (*AND (NOT (SC[4].RunStep = 30) OR I_ER_FlapHoldR_Fwd)*);
+bEnable	 := NOT MC.Trouble;
+
+EX_FlapHoldL_Cyl_Var.In_HomeXLock := TRUE;
+EX_FlapHoldL_Cyl_Var.In_WorkXLock := TRUE;
+
+EX_FlapHoldL_Cyl(				
+	IN_CylName		:='(1Y8) FLAP HOLD', 	
+	In_Enable		:= bEnableL, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= NOT I_ER_FlapHoldL_Bwd, 	
+	In_HomeRS		:= I_ER_FlapHoldL_Bwd, 	
+	In_WorkTON		:= T#500MS, 	
+	In_HomeTON		:= T#100MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_ER_FlapHoldL_Fwd, 	
+	Out_HomeSV		=> O_ER_FlapHoldL_Bwd, 	
+	CylVar			:= EX_FlapHoldL_Cyl_Var,
+	Station			:= SC[4],
+	Station2		:= SC[5]);
+
+EX_FlapHoldR_Cyl_Var.In_HomeXLock := TRUE;
+EX_FlapHoldR_Cyl_Var.In_WorkXLock := TRUE;
+
+EX_FlapHoldR_Cyl(				
+	IN_CylName		:='(2Y8) FLAP HOLD', 	
+	In_Enable		:= bEnableR, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= NOT I_ER_FlapHoldR_Bwd, 	
+	In_HomeRS		:= I_ER_FlapHoldR_Bwd, 	
+	In_WorkTON		:= T#500MS, 	
+	In_HomeTON		:= T#100MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_EX_FlapHoldR_Fwd, 	
+	Out_HomeSV		=> O_EX_FlapHoldR_Bwd, 	
+	CylVar			:= EX_FlapHoldR_Cyl_Var,
+	Station			:= SC[4],
+	Station2		:= SC[5]);
+
+EX_SquarenessCylL_Var.In_HomeXLock := TRUE;
+EX_SquarenessCylL_Var.In_WorkXLock := TRUE;
+
+EX_SquarenessCylL_Cyl(				
+	IN_CylName		:='SQUARENESS CYL LEFT', 
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_EX_SquarenessL_Fwd, 	
+	In_HomeRS		:= I_EX_SquarenessL_Bwd, 	
+	In_WorkTON		:= T#100MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_EX_SquarenessCylL_Fwd, 	
+	Out_HomeSV		=> O_EX_SquarenessCylL_Bwd, 	
+	CylVar			:= Ex_SquarenessCylL_Var,
+	Station			:= SC[4]);
+
+EX_SquarenessCylR_Var.In_HomeXLock := TRUE;
+EX_SquarenessCylR_Var.In_WorkXLock := TRUE;
+
+EX_SquarenessCylR_Cyl(				
+	IN_CylName		:='SQUARENESS CYL RIGHT', 
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_EX_SquarenessR_Fwd, 	
+	In_HomeRS		:= I_EX_SquarenessR_Bwd, 	
+	In_WorkTON		:= T#100MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_EX_SquarenessCylR_Fwd, 	
+	Out_HomeSV		=> O_EX_SquarenessCylR_Bwd, 	
+	CylVar			:= Ex_SquarenessCylR_Var,
+	Station			:= SC[4]);				
+				
+EX_StpCylL_Var.In_HomeXLock := TRUE;
+EX_StpCylL_Var.In_WorkXLock := TRUE;
+
+EX_StpCylL_Cyl(				
+	IN_CylName		:='EXIT STOPPER CYL LEFT', 
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= NOT I_EX_StpL_Dn, 	
+	In_HomeRS		:= I_EX_StpL_Dn, 	
+	In_WorkTON		:= T#100MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_EX_StpCylL_Up, 	
+	Out_HomeSV		=> O_EX_StpCylL_Dn, 	
+	CylVar			:= EX_StpCylL_Var,
+	Station			:= SC[4]);
+
+EX_StpCylR_Var.In_HomeXLock := TRUE;
+EX_StpCylR_Var.In_WorkXLock := TRUE;
+
+EX_StpCylR_Cyl(				
+	IN_CylName		:='EXIT STOPPER CYL RIGHT', 
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= NOT I_EX_StpR_Dn, 	
+	In_HomeRS		:= I_EX_StpR_Dn, 	
+	In_WorkTON		:= T#100MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_EX_StpCylR_Up, 	
+	Out_HomeSV		=> O_EX_StpCylR_Dn, 	
+	CylVar			:= EX_StpCylR_Var,
+	Station			:= SC[4]);				
+				]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <GVL Name="GVL_Symbol_Spec" Id="{ac4bb9ba-4e75-4157-95b1-30fd35e7c7ec}">
+    <Declaration><![CDATA[VAR_GLOBAL
+	
+(*FlexLink Standard Symbol Naming Convention*)
+(*
+ER = Erector
+CO = Collator
+EX = Exit
+EL = Elevator
+WT = Weight checker
+PB = push button
+PL = push button light
+Emg = Emergency Stop
+SC = Safety Circuit
+Cyl = Cylinder
+Srv = Servo Motor
+Mtr = AC Motor
+Nord = Nordson Dispenser
+Alm = Alarm
+Rdy = Ready
+SFlapL = Side Flap Left
+SFlapR = Side Flap Right
+BFlapL = Bottom Flap Left
+BFlapR = Bottom Flap Right
+Stp = Stopper
+Ctn = Carton
+LC = Light Curtain
+Bdl = Bundle
+Stk = Stack
+Push = Pusher
+Brdg = Bridge
+Fx = Fixed
+Mv = Moving
+
+SC[0] = COLLATOR STACKING
+SC[1] = COLLATOR X PUSHER
+SC[2] = COLLATOR Y PUSHER & BRIDGE
+SC[3] = ERECTOR ARM & SIDE FLAP CLOSE
+SC[4] = HOT GLUE & WEIGHT CHECKING 
+SC[5] = TILT & ELEVATOR
+SC[6] = HORIZONTAL
+
+*)
+
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

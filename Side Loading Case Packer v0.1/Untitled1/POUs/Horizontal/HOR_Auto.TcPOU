@@ -1,0 +1,369 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="HOR_Auto" Id="{94608702-9058-4973-b5d6-22715b784996}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM HOR_Auto
+VAR_IN_OUT
+	Station			:structStationCtrl;
+END_VAR
+VAR
+	Timeout							:TON;	
+	WT_Cv_CtnPE_TON					:Ton;
+	ExitCvFull_TON					:Ton;
+	tmrCartonINP					:TON;	
+	tmrHorEntryPresent				:ton;
+	tmrHorEntryNotPresent			:ton;	
+	ServoTargetPos					:REAL;
+	TimeoutTrigger					:BOOL;
+	TimeoutSetting					:TIME;
+	ServoMoveStarted				:BOOL;
+	HOR_SpeedChange_Pos 			:REAL;
+	HOR_SpeedChange_to_Exit			:BOOL;
+	LightCurtain_Unmute_TON			:TON;
+	bLightCurtain_Delay_Mute_Off	:BOOL;	
+	CntTapeReal_SlotL				:CTU;
+	CntTapeReal_SlotR				:CTU;
+	FullCaseRemoved					:F_TRIG;
+	Weight_reading_Dly				:Ton;
+	TiltOutCv_StopDly				:Ton;
+	TiltInCv_InPosDly				:TON;	
+	Weight_Fail_Counter				:INT;
+	
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(**************************************************************************************************************)
+(* GENERAL STATION MAPPING  *)
+(**************************************************************************************************************)
+Station.Name			:=	'HORIZONTAL';
+Station.Rdy 			:= 	Station.Origin;
+Station.AutoRun 		:=	(MC.AutoRunning OR Station.M_Step) AND 
+							NOT (Station.Bypass OR Station.MajorFault OR Station.MinorFault );
+Station.RunReq			:= 	(HOR_DnStream_TOFF.Q AND H_ER_CtnGlueDone)
+							OR Station.M_Step;
+Station.RunCond			:=	(NOT SC[6].Running OR SC[6].RunStep >= 40) AND
+							NOT (Station.Done OR MC.StopPressed );
+Station.Run_NextStepPls	:=	(Station.AutoRun AND NOT Station.M_Step) OR 
+							(Station.M_Step AND M_StepFwdPls) OR HMI.T_OneCycleRun;
+Station.Run_PrevStepPls	:=	(Station.M_Step AND M_StepBwdPls);
+
+(**************************************************************************************************************)
+(* Auto Sequance*)
+(**************************************************************************************************************)
+
+Timeout(IN:=TimeoutTrigger, PT:=TimeoutSetting);
+IF Timeout.Q THEN
+	TimeoutTrigger := FALSE;
+END_IF
+
+TiltOutCv_StopDly( IN:= NOT I_HOR_Tilt_Out_Cv_Present AND HOR_Tilt_Out_Mtr_Var.S_Running, PT:= T#5S); 
+TiltInCv_InPosDly( IN:= I_HOR_Tilt_In_Cv_Present AND HOR_Tilt_In_Mtr_Var.S_Running, PT:= T#2S);
+
+tmrCartonINP			(IN:=WT_Mtr_Var.S_Running AND I_HOR_Entry_Cv_Present, PT:=T#1S);
+tmrHorEntryPresent		(IN:=I_HOR_Entry_Cv_Present, PT := T#100MS);
+tmrHorEntryNotPresent	(IN:=NOT I_HOR_Entry_Cv_Present, PT := T#100MS);
+ExitCvFull_TON			(IN:= I_HOR_DnStream_Cv_Full, pt:= T#5S);
+T_ExitCvFull 			:= ExitCvFull_TON.Q AND mc.AutoMode;
+W_HOR_Conv_Full			:= T_ExitCvFull;
+
+FullCaseRemoved( CLK:= I_HOR_DnStream_Cv_Full );
+IF FullCaseRemoved.Q THEN
+	Exit_Case_Good 					:= FALSE;
+	Exit_Case_NG					:= FALSE;
+END_IF
+
+IF E_Weigh_ConsecutiveErr AND mc.ResetPressed THEN
+	Hor_Auto.Weight_Fail_Counter := 0;	
+END_IF
+
+(*********************Tape Reel turn counter *****************************)
+CntTapeReal_SlotL(
+	CU:= (Station.RunStep >= 20 ) AND I_HOR_TapeL_Empty_PE , 
+	RESET:= Station.RunStep = 0 , 
+	PV:= 3 , 
+	Q=> , 
+	CV=> );
+	
+TapeReel_ActivatedL	:= CntTapeReal_SlotL.Q;
+
+CntTapeReal_SlotR(
+	CU:= (Station.RunStep >= 20 ) AND I_HOR_TapeR_Empty_PE , 
+	RESET:= Station.RunStep = 0 , 
+	PV:= 3 , 
+	Q=> , 
+	CV=> );
+	
+TapeReel_ActivatedR	:= CntTapeReal_SlotR.Q;
+
+(*-----------------------------------------------------------------------------*)
+
+Weight_reading_Dly (IN:= Station.RunReq AND I_Weighing_Status_SteadyBit, pt:= T#0.5S);
+			
+
+IF Station.AutoRun OR Station.M_Step THEN
+	
+	CASE Station.RunStep OF
+
+	0 : 	(************* Ready To Run / Capture Carton Weight ****************)
+			IF 	Station.RunCond AND Station.RunReq THEN	
+				TimeoutTrigger := TRUE;
+				TimeoutSetting := T#30S;
+			ELSE
+				TimeoutTrigger := FALSE;	
+			END_IF
+			
+			IF 	Station.RunCond AND Station.RunReq AND 
+				(NOT I_HOR_DnStream_Cv_Full OR mc.DryRun) AND
+				((I_Weighing_Status_SteadyBit AND	Weight_reading_Dly.q) OR
+				 H_HOR_CtnWeightOK OR NOT Cfg_EnbWeightCheck OR mc.DryRun) THEN			 
+				 
+				IF NOT H_HOR_CtnWeightOK THEN
+					H_HOR_CtnWeightOK 	:= TRUE;
+					H_CartonWeight		:= DINT_TO_REAL(I_Weighing) / 1000;
+				END_IF
+				
+				Station.RunStep 	:= Station.RunStep + 10;
+				TimeoutTrigger 		:= FALSE;
+			ELSIF NOT Station.RunCond THEN
+				Station.Status 		:= '0: Station Waiting for Run Conditions';
+				Station.StatusInt	:= 1;
+			ELSIF I_HOR_DnStream_Cv_Full THEN
+				Station.Status 		:= '0: Station Waiting for Exit Conveyor Empty';
+				Station.StatusInt	:= 2;
+			ELSIF Timeout.Q THEN
+				E_Weigh_ReadingErr	:= TRUE;
+			ELSE
+				Station.Status 		:= '0: Station Not Ready';
+				Station.StatusInt	:= 3;				
+			END_IF
+	
+
+	10 : 	(************* Waiting Product Coming  ****************)
+			Station.Status 		:= '20: Waiting Product Coming';
+			Station.StatusInt	:= 351;
+			TimeoutTrigger 		:= TRUE;
+			TimeoutSetting		:= T#10S;
+			
+			IF Timeout.Q THEN
+				E_Hor_Entry_Sensor 			:= TRUE;
+			END_IF
+			
+				WT_Mtr_Var.In_AutoON 		:= TRUE;
+				HOR_BotCv_Mtr_Var.In_AutoON := TRUE;
+				HOR_TopCv_Mtr_Var.In_AutoON := TRUE;
+				EX_StpCylL_Var.In_AutoHome	:= TRUE;
+				EX_StpCylL_Var.In_Autowork	:= FALSE;
+				EX_StpCylR_Var.In_AutoHome	:= TRUE;
+				EX_StpCylR_Var.In_Autowork	:= FALSE;
+				
+			IF I_HOR_Entry_Cv_Present OR mc.DryRun THEN
+				H_ER_CtnRdyForGlue 					:= FALSE;
+				EX_FlapHoldL_Cyl_Var.In_AutoWork 	:= FALSE;
+				EX_FlapHoldL_Cyl_Var.In_AutoHome 	:= TRUE;
+				EX_FlapHoldR_Cyl_Var.In_AutoWork 	:= FALSE;
+				EX_FlapHoldR_Cyl_Var.In_AutoHome 	:= TRUE;
+				TimeoutTrigger 						:= FALSE;
+				Station.RunStep	:= Station.RunStep + 10;
+			END_IF
+	
+	20 : 	(************* Top and Bottom Conveyor Run  ****************)
+			Station.Status 		:= '20: Top and Bottom Cv Run';
+			Station.StatusInt	:= 352;
+			HOR_BotCv_Mtr_Var.In_AutoON := TRUE;
+			HOR_TopCv_Mtr_Var.In_AutoON := TRUE;
+			TimeoutTrigger 		:= TRUE;
+			TimeoutSetting		:= T#10S;
+			
+			IF NOT I_HOR_Entry_Cv_Present AND T_GlueEnable THEN
+				EX_StpCylL_Var.In_AutoHome	:=FALSE;
+				EX_StpCylL_Var.In_Autowork	:=TRUE;
+				EX_StpCylR_Var.In_AutoHome	:=FALSE;
+				EX_StpCylR_Var.In_Autowork	:=TRUE;
+			END_IF
+			
+			IF Timeout.Q THEN
+				E_Hor_Entry_Sensor := TRUE;	
+			END_IF
+					
+			IF 	tmrHorEntryPresent.Q OR 
+				mc.DryRun THEN
+				WT_Mtr_Var.In_AutoON 	:= FALSE;		
+				TimeoutTrigger 			:= FALSE;	
+				Station.RunStep			:= Station.RunStep + 10;
+			END_IF
+
+	30 : 	(************* Carton Send to Exit Conveyor  ****************)
+			Station.Status 		:= '30: Carton Send to Exit Conveyor';
+			Station.StatusInt	:= 353;
+			H_ER_CtnGlueDone	:= FALSE;
+			TimeoutTrigger 		:= TRUE;
+			TimeoutSetting		:= T#10S;
+			
+			IF Timeout.Q THEN
+				IF NOT tmrHorEntryNotPresent.q THEN
+					E_Hor_Entry_Sensor := TRUE;
+				ELSIF NOT I_HOR_DnStream_Cv_Full THEN
+					E_Hor_Exit_Sensor	:= TRUE;
+				END_IF			
+			END_IF
+			
+			IF (tmrHorEntryNotPresent.q AND I_HOR_DnStream_Cv_Full) OR
+				mc.DryRun THEN
+				TimeoutTrigger 					:= FALSE;
+				Station.RunStep	:= Station.RunStep + 10;
+			END_IF
+
+	40 : 	(************* Carton Send to Exit Conveyor  ****************)
+			Station.Status 		:= '40: Carton Send to Exit Conveyor';
+			Station.StatusInt	:= 354;
+			
+			IF NOT A_HOR_LC_Muting THEN
+				HOR_BotCv_Mtr_Var.In_AutoON 			:= 	FALSE;
+				HOR_TopCv_Mtr_Var.In_AutoON 			:= 	FALSE;
+
+
+			(*	Case Counter *)				
+					Statistic_CurShift_CaseProduce		:= Statistic_CurShift_CaseProduce + 1;
+					Statistic_Total_CaseProduce			:= Statistic_Total_CaseProduce	+1;
+					Statistic_Man_Total_CaseProduce		:= Statistic_Man_Total_CaseProduce +1;
+					
+			(* Update Statistic *)
+			IF NOT mc.DryRun THEN
+				IF NOT TapeReel_ActivatedL OR  W_HOR_TapeLRefill THEN
+					Statistic_Current.RejectLeftTape	:= Statistic_Current.RejectLeftTape + 1;
+					Statistic_Manual.RejectLeftTape		:= Statistic_Manual.RejectLeftTape + 1;
+					Statistic_Total.RejectLeftTape		:= Statistic_Total.RejectLeftTape + 1;					
+					E_CartonTapingErrL					:= TRUE;	
+					Exit_Case_NG 						:= TRUE;
+				
+					
+				ELSIF NOT TapeReel_ActivatedR OR W_HOR_TapeRRefill THEN
+					Statistic_Current.RejectRightTape	:= Statistic_Current.RejectRightTape + 1;
+					Statistic_Manual.RejectRightTape	:= Statistic_Manual.RejectRightTape + 1;
+					Statistic_Total.RejectRightTape		:= Statistic_Total.RejectRightTape + 1;
+					E_CartonTapingErrR					:= TRUE;	
+					Exit_Case_NG 						:= TRUE;
+
+					
+				ELSIF 	H_CartonWeight < (CurrRecipe.rWeightTarget - CurrRecipe.rWeightTol) AND Cfg_EnbWeightCheck THEN
+					Statistic_Current.RejectUnderWeight	:= Statistic_Current.RejectUnderWeight	+ 1;
+					Statistic_Manual.RejectUnderWeight	:= Statistic_Manual.RejectUnderWeight	+ 1;
+					Statistic_Total.RejectUnderWeight	:= Statistic_Total.RejectUnderWeight	+ 1;
+					Weight_Fail_Counter					:= Weight_Fail_Counter +1;
+					Exit_Case_NG 						:= TRUE;
+					
+					
+				ELSIF 	H_CartonWeight > (CurrRecipe.rWeightTarget + CurrRecipe.rWeightTol) AND Cfg_EnbWeightCheck THEN
+					Statistic_Current.RejectOverWeight	:= Statistic_Current.RejectOverWeight + 1;
+					Statistic_Manual.RejectOverWeight	:= Statistic_Manual.RejectOverWeight + 1;
+					Statistic_Total.RejectOverWeight	:= Statistic_Total.RejectOverWeight + 1;
+					Weight_Fail_Counter					:= Weight_Fail_Counter +1;
+					Exit_Case_NG 						:= TRUE;
+
+			
+				ELSE
+					Statistic_Current.GoodCase			:= Statistic_Current.GoodCase + 1;	
+					Statistic_Manual.GoodCase			:= Statistic_Manual.GoodCase + 1;	
+					Statistic_Total.GoodCase			:= Statistic_Total.GoodCase + 1;	
+					Exit_Case_Good 						:= TRUE;
+					Weight_Fail_Counter					:= 0;
+
+
+				END_IF
+				
+			ELSE
+					Statistic_Manual.GoodCase			:= Statistic_Manual.GoodCase + 1;
+					Weight_Fail_Counter					:= 0;
+
+			END_IF		
+								
+				Station.RunStep	:= Station.RunStep + 10;
+			END_IF
+	
+	50: (************* Tilt In conveyor waiting for carton in position ****************)
+			Station.Status 		:= '50: Tilt Conveyor Waiting For Carton In Position';
+			
+			HOR_Tilt_In_Mtr_Var.In_AutoON	:= TRUE;
+			HOR_Tilt_Out_Mtr_Var.In_AutoON	:= TRUE;
+
+			IF (TiltInCv_InPosDly.Q OR mc.DryRun) AND NOT I_HOR_Tilt_Out_Cv_Present  THEN	
+				Station.RunStep	:= Station.RunStep + 10;
+			END_IF	
+				
+	60: (************* Tilt Unit Tilt to Tilt Out Conveyor ****************)
+			Station.Status 		:= '60: Tilt Unit Tilt Carton To Out Conveyor';
+			
+			EX_Tilt_Srv_Var.In_PosCmd := 85.0;
+			EX_Tilt_Srv_Var.In_VelCmd := 100;
+			EX_Tilt_Srv_Var.In_MoveAbs := TRUE; 
+	
+			IF fcComparePos(CurrPos:= EX_Tilt_Srv_Var.Out_CurrPos, TargetPos:= EX_Tilt_Srv_Var.In_PosCmd, Tolerance := 0.5) THEN
+				EX_Tilt_Srv_Var.In_MoveAbs := FALSE; 
+				Station.RunStep	:= Station.RunStep + 10;
+			END_IF
+	
+	70: (************* Tilt Unit Start Seaching for Sensor ****************)
+			Station.Status 		:= '70: Tilt Unit Searching for Home Sensor';
+	
+			EX_Tilt_Srv_Var.In_SetAbsRef	:= TRUE;
+	
+			IF NOT EX_Tilt_Srv_Var.Out_Referenced THEN
+				Station.RunStep	:= Station.RunStep + 10;
+			END_IF
+	80: (************* Tilt Unit Waiting for Home Sensor ****************)	
+			Station.Status 		:= '80: Tilt Unit Waiting for Homing Complete';
+			
+			HOR_Tilt_In_Mtr_Var.In_AutoON		:= FALSE;
+	
+	
+			IF  EX_Tilt_Srv_Var.Out_Referenced THEN
+				EX_Tilt_Srv_Var.In_SetAbsRef	:= FALSE;
+				Station.RunStep					:= 1000;
+			END_IF
+			
+	1000 : 	(************* Process Done ****************)
+			Station.Status 		:= '1000: Process Done';	
+			Station.StatusInt	:= 499;
+			M_StepRun 			:= FALSE;
+			HMI.T_OneCycleRun 	:= FALSE;			
+			Station.RunStep 	:= 0;
+			H_ER_CtnGlueDone	:= FALSE;
+			H_HOR_CtnWeightOK	:= FALSE;
+			TimeoutTrigger 		:= FALSE;
+	END_CASE
+
+(* Tilt Out Conveyor Stop *)
+IF TiltOutCv_StopDly.Q	THEN
+	HOR_Tilt_Out_Mtr_Var.In_AutoON		:= FALSE;
+END_IF
+
+	
+
+ELSE
+	Station.RunStep := 0;
+	
+	IF Station.MajorFault OR Station.MinorFault THEN
+		Station.Status 		:= 'Station Error';
+		Station.StatusInt	:= 4;
+	ELSIF Station.Origin THEN
+		Station.Status 		:= 'Station In Origin';
+		Station.StatusInt	:= 5;
+	ELSIF NOT Station.OriginSchRun AND NOT MC.OriginSchRun THEN
+		Station.Status 		:= 'Station Not In Origin';
+		Station.StatusInt	:= 6;
+	END_IF
+END_IF
+
+Station.Running := (Station.RunStep>0) OR (sc[4].RunStep >0) ;
+
+
+
+
+
+
+
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

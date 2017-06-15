@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <GVL Name="GVL_SerialCOM" Id="{e9b872e3-43d0-4e97-b889-84ccfb798894}">
+    <Declaration><![CDATA[VAR_GLOBAL
+
+   RxBufferEL : ComBuffer; (* Receive data buffer; used with all receive function blocks *)
+   TxBufferEL : ComBuffer; (* Transmit data buffer; used with all receive function blocks *)
+
+   RxBufferKL : ComBuffer; (* Receive data buffer; used with all receive function blocks *)
+   TxBufferKL : ComBuffer; (* Transmit data buffer; used with all receive function blocks *)
+	
+   (* I/O variables for a EL6001 terminal*)
+   stIn_EL6001 AT %I*    : EL6inData22B; (* linked to the EL6001 in the TwinCAT System Manager *)
+   stOut_EL6001 AT %Q*    : EL6outData22B;(* linked to the EL6001 in the TwinCAT System Manager *)
+   (* I/O variables for a KL6001 terminal*)
+   (*stIn_KL6001 AT %I*    : KL6inData; (* linked to the KL6001 in the TwinCAT System Manager *)
+   stOut_KL6001 AT %Q*    : KL6outData; (* linked to the KL6001 in the TwinCAT System Manager *)*)
+   
+    (* background communication with the PC COM port device *)
+    fbPcComCtrl       : SerialLineControl;
+    bPcComCtrlError   : BOOL;
+    ePcComCtrlErrorID : ComError_t;
+	
+	
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

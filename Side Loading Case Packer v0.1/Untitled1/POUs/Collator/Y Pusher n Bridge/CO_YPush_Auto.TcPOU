@@ -1,0 +1,322 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_YPush_Auto" Id="{c34a8b64-72f2-4a1e-83b4-b757afaf4479}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_YPush_Auto
+VAR_IN_OUT
+	Station		:structStationCtrl;
+END_VAR
+VAR
+	Timeout:ton;
+	ManualInit_TOn:Ton;
+	CO_YStk_AtBuf1_PEOff_Ton : ton;
+	TimeoutTrigger	: BOOL;
+	PTC_OK			: BOOL;
+	TimeoutSetting	: TIME;
+	
+	BundleFull		:BOOL;
+	NoBundle		:BOOL;
+	YWaitingTime	:Ton;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CurrRecipe.iStackX	:= 6;
+
+CASE CurrRecipe.iStackX OF
+	1:
+		PTC_OK := I_CO_PTC_PE1;
+	2:
+		PTC_OK := I_CO_PTC_PE1 AND I_CO_PTC_PE2;
+	3:
+		PTC_OK := I_CO_PTC_PE1 AND I_CO_PTC_PE2 AND I_CO_PTC_PE3;
+	4:
+		PTC_OK := I_CO_PTC_PE1 AND I_CO_PTC_PE2 AND I_CO_PTC_PE3 AND I_CO_PTC_PE4;
+	5:
+		PTC_OK := I_CO_PTC_PE1 AND I_CO_PTC_PE2 AND I_CO_PTC_PE3 AND I_CO_PTC_PE4 AND I_CO_PTC_PE5;
+	6:
+		PTC_OK := I_CO_PTC_PE1 AND I_CO_PTC_PE2 AND I_CO_PTC_PE3 AND I_CO_PTC_PE4 AND I_CO_PTC_PE5 AND I_CO_PTC_PE6;
+	7:
+		PTC_OK := I_CO_PTC_PE1 AND I_CO_PTC_PE2 AND I_CO_PTC_PE3 AND I_CO_PTC_PE4 AND I_CO_PTC_PE5 AND I_CO_PTC_PE6 AND I_CO_PTC_PE7;
+	8:
+		PTC_OK := I_CO_PTC_PE1 AND I_CO_PTC_PE2 AND I_CO_PTC_PE3 AND I_CO_PTC_PE4 AND I_CO_PTC_PE5 AND I_CO_PTC_PE6 AND I_CO_PTC_PE7 AND I_CO_PTC_PE8;
+		
+	ELSE
+		PTC_OK := FALSE;												
+END_CASE
+
+YWaitingTime	(In:= NOT PTC_OK, PT:= T#5S);
+
+(**************************************************************************************************************)
+(* GENERAL STATION MAPPING  *)
+(**************************************************************************************************************)
+Station.Name			:=	'COLLATOR Y PUSHER AND BRIDGE';
+Station.Rdy 			:= 	Station.Origin;
+Station.AutoRun 		:=	(MC.AutoRunning OR Station.M_Step) AND 
+							NOT (Station.Bypass OR Station.MajorFault OR Station.MinorFault);
+Station.RunReq			:= 	((H_CO_StkRdyForYPush  OR mc.DryRun) 
+							AND(NOT (H_ER_CtnSideFlapDone OR H_ER_CtnPushInDone)))
+							OR Station.M_Step ;
+Station.RunCond			:=	(NOT ER.Running OR ER.RunStep >= 20) AND(*Erector Arm Not Running*)
+							NOT (Station.Done OR MC.StopPressed);
+Station.Run_NextStepPls	:=	(Station.AutoRun AND NOT Station.M_Step) OR 
+							(Station.M_Step AND M_StepFwdPls) OR HMI.T_OneCycleRun;
+Station.Run_PrevStepPls	:=	(Station.M_Step AND M_StepBwdPls);
+
+(**************************************************************************************************************)
+(*	Initial Device	, detect there is a cartoon *)
+(**************************************************************************************************************)
+
+IF CO_Bdl_Reach_TON.Q THEN
+	H_CO_StkRdyForYPush := TRUE;
+END_IF
+
+
+(**************************************************************************************************************)
+(*	Initial Device	*)
+(**************************************************************************************************************)
+ManualInit_TOn (in:= mc.ManualMode AND NOT mc.OriginSchRun, pt:= T#1S);
+
+IF mc.ManualMode AND NOT mc.OriginSchRun AND NOT ManualInit_TOn.Q THEN
+	CO_YPush_Srv_Var.In_MoveAbs := FALSE;
+END_IF
+
+(**************************************************************************************************************)
+(* Auto Sequance*)
+(**************************************************************************************************************)
+
+TimeoutSetting	:= T#50S;
+Timeout(IN:=TimeoutTrigger, PT:=TimeoutSetting);
+IF Timeout.Q THEN
+	TimeoutTrigger := FALSE;
+END_IF
+CO_YStk_AtBuf1_PEOff_Ton ( IN:= (Station.RunStep = 0) AND NOT I_CO_YStk_AtBuf1_PE , pt:= T#3S);
+
+IF Station.AutoRun OR Station.M_Step THEN
+	
+	CASE Station.RunStep OF
+
+	0 : 	(************* Ready To Run ****************)
+			IF Station.RunCond AND Station.RunReq AND Station.Rdy THEN
+				IF BundleFull OR mc.DryRun OR NOT Cfg_EnbAutoWA	THEN
+					IF (H_ER_CtnRdyForPushIn AND NOT H_ER_CtnPushInDone) OR 
+						Station.M_Step OR Cfg_BypassErector THEN
+						Station.RunStep := 100;
+					END_IF
+				ELSE	
+					E_PTC_BundleNOK			:= TRUE;
+					Station.SeqFaultString 	:= 'Auto: Part Transfer Confirmation Not Complete';				
+				END_IF
+				
+			ELSIF H_CO_StkRdyForYPush AND CO_YStk_AtBuf1_PEOff_Ton.Q AND NOT mc.DryRun  THEN
+				Station.SeqFaultWord 	:= 200;
+				E_Buf1_BundleMissing	:= TRUE;	
+				Station.SeqFaultString 	:= 'Auto: Stack Missing at Buffer 1 Area.';										
+			ELSIF NOT Station.RunCond THEN
+				Station.Status 			:= '0: Station Waiting for Run Conditions';
+				Station.StatusInt		:= 1;
+			ELSIF NOT Station.RunReq THEN
+				Station.Status 			:= '0: Station Waiting for Run Request';
+				Station.StatusInt		:= 2;
+			ELSE
+				Station.Status 			:= '0: Station Not Ready';	
+				Station.StatusInt		:= 3;			
+			END_IF
+	
+	100 : 	(************* Bridge Cylinder, Flap Guides Forward ****************)
+			Station.Status 		:= '100: Bridge Cylinders & Flap Guides Forward';
+			Station.StatusInt	:= 152;
+			
+			CO_Brdg_Cyl_Var.In_AutoWork := TRUE;
+			CO_Brdg_Cyl_Var.In_AutoHome := FALSE;
+
+			CO_FlapGuide_Cyl_Var.In_AutoWork := TRUE;
+			CO_FlapGuide_Cyl_Var.In_AutoHome := FALSE;
+			
+			CO_YPush_Cyl_Var.In_AutoWork := FALSE;
+			CO_YPush_Cyl_Var.In_AutoHome := TRUE;
+
+			
+			CO_YPush_Srv_Var.In_PosCmd := H_CO_YPush_Srv_CtnFinalPos;
+			CO_YPush_Srv_Var.In_VelCmd := A_Srv_YPusherLoSpeed;
+			IF 	CO_YPush_Srv_Var.In_MoveXLock 		AND 
+				CO_Brdg_Cyl_Var.In_WorkXLock 		AND 
+				NOT CO_Brdg_Cyl_Var.S_HomePos		AND 
+				NOT CO_FlapGuide_Cyl_Var.S_HomePos 	
+				AND CO_YPush_Cyl_Var.S_HomePos		THEN
+				CO_YPush_Srv_Var.In_MoveAbs := TRUE;
+				CO_YPush_Cyl_Var.In_AutoWork := FALSE;
+				CO_YPush_Cyl_Var.In_AutoHome := FALSE;			
+			END_IF
+		
+			IF 	CO_Brdg_Cyl_Var.S_WorkPos 		AND 
+				CO_FlapGuide_Cyl_Var.S_WorkPos 	AND
+				Station.Run_NextStepPls 		THEN
+				CO_YPush_Srv_Var.In_MoveAbs := FALSE;
+				CO_Brdg_Cyl_Var.In_AutoWork := FALSE;
+				CO_FFlapBrdg_Cyl_Var.In_AutoWork := FALSE;
+				CO_FlapGuide_Cyl_Var.In_AutoWork := FALSE;
+				Station.RunStep := Station.RunStep + 10;
+			END_IF
+			
+
+	110 : 	(************* Move Y Pusher To Push Stack into Carton  ****************)
+			Station.Status 		:= '110: Move Y Pusher To Push Stack into Carton';
+			Station.StatusInt	:= 153;
+			
+			CO_YPush_Srv_Var.In_PosCmd := H_CO_YPush_Srv_CtnFinalPos;
+			CO_YPush_Srv_Var.In_VelCmd := A_Srv_YPusherLoSpeed;
+			CO_YPush_Srv_Var.In_MoveAbs := TRUE;
+
+			
+			IF 	CO_YPush_Srv_Var.Out_CurrPos >= (CO_YPush_Srv_Var.In_PosCmd - 100) THEN
+				CO_YPush_Strk_Cyl_Var.In_AutoWork := TRUE;
+				CO_YPush_Strk_Cyl_Var.In_AutoHome := FALSE;
+			END_IF
+			
+			IF ((fcComparePos(CurrPos:= CO_YPush_Srv_Var.Out_CurrPos, TargetPos:= CO_YPush_Srv_Var.In_PosCmd, Tolerance := 0.5)) AND
+							CO_YPush_Srv_Var.Out_InPos) AND
+				CO_YPush_Strk_Cyl_Var.S_WorkPos AND
+				Station.Run_NextStepPls THEN	
+				H_CO_StkRdyForYPush := FALSE;	
+				H_CO_Bdl_StkY_Count := 0;	
+				CO_YPush_Srv_Var.In_MoveAbs := FALSE;
+				CO_YPush_Strk_Cyl_Var.In_AutoWork := FALSE;
+				
+				IF NOT Cfg_BypassErector AND H_ER_CtnRdyForPushIn THEN
+					H_ER_CtnPushInDone := TRUE;
+				END_IF
+				H_ER_CtnRdyForPushIn := FALSE;
+				
+				IF 	I_CO_YStk_AtBuf1_PE  THEN	
+					Station.SeqFaultWord 	:= 204;	
+					E_Buf1_BundleJam		:= TRUE;
+					Station.SeqFaultString 	:= 'Auto: Stack Detected at Buffer 1 After Push. ';	
+				ELSIF 	I_CO_YStk_AtBuf2_PE   THEN
+					Station.SeqFaultWord 	:= 205;	
+					E_Buf2_Sensor			:= TRUE;
+					Station.SeqFaultString 	:= 'Auto: Stack Detected at Buffer 2 After Push. ';	
+				ELSE
+					Station.RunStep := Station.RunStep + 5;
+				END_IF	
+			END_IF
+
+	115:	(************* Y Pusher Servo Move to Safe Pos ****************)			
+
+			CO_YPush_Strk_Cyl_Var.In_AutoWork 	:= FALSE;
+			CO_YPush_Strk_Cyl_Var.In_AutoHome 	:= TRUE;
+
+				CO_YPush_Srv_Var.In_PosCmd := H_CO_YPush_Srv_SafePosition; 
+				CO_YPush_Srv_Var.In_VelCmd := A_Srv_BeltAutoHiSpeed;
+				CO_YPush_Srv_Var.In_MoveAbs := TRUE;
+			
+			
+			IF ((fcComparePos(CurrPos:= CO_YPush_Srv_Var.Out_CurrPos, TargetPos:= H_CO_YPush_Srv_SafePosition, Tolerance := 0.5)) AND
+			CO_YPush_Srv_Var.Out_InPos) THEN
+			CO_YPush_Cyl_Var.In_AutoWork 		:= TRUE;
+			CO_YPush_Cyl_Var.In_AutoHome 		:= FALSE;
+				CO_YPush_Srv_Var.In_MoveAbs := FALSE;
+			Station.RunStep := Station.RunStep+5;	
+			END_IF
+
+
+			
+	120 : 	(************* Move Y Pusher Back To Home Position and all Cylinders Bwd  ****************)
+			(************* Flap Guide Cylinder Bwd ****************)
+			Station.Status 		:= '120: Move Y Pusher Back and all Cylinders Bwd';
+			Station.StatusInt	:= 154;
+				
+			CO_Brdg_Cyl_Var.In_AutoWork 		:= FALSE;
+			CO_Brdg_Cyl_Var.In_AutoHome			:= TRUE;
+
+			
+			IF CO_YPush_Strk_Cyl_Var.S_HomePos THEN
+				CO_YPush_Cyl_Var.In_AutoWork 		:= TRUE;
+				CO_YPush_Cyl_Var.In_AutoHome 		:= FALSE;
+			END_IF
+			
+			IF CO_YPush_Cyl_Var.S_WorkPos THEN
+				CO_YPush_Srv_Var.In_PosCmd := H_CO_YPush_Srv_CurrStandbyPos;
+				CO_YPush_Srv_Var.In_VelCmd := A_Srv_YPusherHiSpeed;
+				CO_YPush_Srv_Var.In_MoveAbs := TRUE;
+				
+				CO_FlapGuide_Cyl_Var.In_AutoWork := FALSE;
+				CO_FlapGuide_Cyl_Var.In_AutoHome := TRUE;	
+			END_IF	
+
+						
+			IF 	CO_Brdg_Cyl_Var.S_HomePos AND 
+				CO_YPush_Strk_Cyl_Var.S_HomePos AND
+				CO_FlapGuide_Cyl_Var.S_HomePos AND
+				(CO_YPush_Srv_Var.Out_CurrPos <= (H_CO_YPush_Srv_CtnFinalPos - 600)) 
+				AND Station.Run_NextStepPls THEN
+				CO_YPush_Srv_Var.In_MoveAbs := FALSE;		
+				CO_Brdg_Cyl_Var.In_AutoHome := FALSE;
+				CO_FFlapBrdg_Cyl_Var.In_AutoHome := FALSE;
+				CO_FlapGuide_Cyl_Var.In_AutoHome := FALSE;
+				CO_YPush_Strk_Cyl_Var.In_AutoHome := FALSE;
+				
+				IF NOT I_CO_YPush_Gap_PE THEN
+					Station.SeqFaultWord 	:= 203;	
+					E_GapSensor				:= TRUE;	
+					Station.SeqFaultString 	:= 'Auto: Bundle Detected at Pusher Gap Sensor Error';												
+				ELSE
+					Station.RunStep := 200;	(*Flap Closing Can Start After this process*)
+				END_IF
+			END_IF
+
+			
+	200 : 	(************* Wait for Pusher to Reach Home Position  ****************)
+			Station.Status 		:= '200: Wait for Pusher to Reach Home Position';
+			Station.StatusInt	:= 155;
+			CO_YPush_Srv_Var.In_MoveAbs := TRUE;		
+			
+			IF ((fcComparePos(CurrPos:= CO_YPush_Srv_Var.Out_CurrPos, TargetPos:= CO_YPush_Srv_Var.In_PosCmd, Tolerance := 0.5)) AND
+							CO_YPush_Srv_Var.Out_InPos) THEN
+				CO_YPush_Srv_Var.In_MoveAbs 	:= FALSE;
+				CO_YPush_Cyl_Var.In_AutoWork 	:= FALSE;
+				CO_YPush_Cyl_Var.In_AutoHome 	:= TRUE;
+				Station.RunStep := 1000;
+			END_IF
+
+	1000 : 	(************* Process Done ****************)
+			Station.Status 		:= '1000: Process Done';
+			Station.StatusInt	:= 499;			
+			M_StepRun := FALSE;
+			Station.RunStep := 0;
+	END_CASE
+
+
+ELSE
+	Station.RunStep := 0;
+	
+	IF Station.MajorFault OR Station.MinorFault THEN
+		Station.Status := 'Station Error';
+		Station.StatusInt	:= 4;
+	ELSIF Station.Origin THEN
+		Station.Status := 'Station In Origin';
+		Station.StatusInt	:= 5;
+	ELSIF NOT Station.OriginSchRun AND NOT MC.OriginSchRun THEN
+		Station.Status := 'Station Not In Origin';
+		Station.StatusInt	:= 6;
+	END_IF
+END_IF
+
+Station.Running := (Station.RunStep>0);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

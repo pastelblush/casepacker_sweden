@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="HOR_Main" Id="{02bff952-cb3d-4c0a-8273-2ae6740cb445}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM HOR_Main
+VAR
+	plsTestSequence: R_trig;
+	TestSequencePos1: REAL;
+	TestSequencePos2: REAL;
+	TestSequenceInPos: Ton;
+	TestSequenceStep: INT;
+	HOR_LC_MuteTON: Ton;
+	testbit: BOOL;
+	MutingStartRtig	:R_TRIG;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF Cfg_BypassHorizontal THEN
+	HMI.T_Station_BypassP[6] := TRUE;
+ELSE
+	HMI.T_Station_BypassP[6] := FALSE;  
+END_IF
+
+HOR_Timers();
+
+HOR_Error	(Station:= SC[6]);
+HOR_Auto	(Station:= SC[6]);
+HOR_Origin	(Station:= SC[6]);
+Option_90Deg_Conv();
+HOR_Servo_Output();
+HOR_Motor_Output();
+
+MutingStartRtig(CLK:= HOR_BotCv_Mtr_Var.S_Running AND HOR_TopCv_Mtr_Var.S_Running AND I_HOR_Entry_Cv_Present , Q=> );
+IF MutingStartRtig.Q THEN
+	A_HOR_LC_Muting := TRUE;
+END_IF	
+IF HOR_LC_MuteTON.Q THEN
+	A_HOR_LC_Muting := FALSE;
+END_IF
+
+HOR_LC_Muting 	:= A_HOR_LC_Muting;
+HOR_LC_MuteTON 	(IN := O_HOR_LC_Mute1, pt := T#5S);
+O_HOR_LC_Mute1 	:= HOR_LC_Muting;
+
+(* HOR Structure is only for displaying on HMI*)
+SC[6].T_OriginSearch := HOR.T_OriginSearch;
+HOR := SC[6];
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

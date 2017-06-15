@@ -1,0 +1,77 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="ER_Error" Id="{1c96a2af-21d6-4993-a231-d16ab965f367}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM ER_Error
+VAR_IN_OUT
+	Station		:structStationCtrl;
+END_VAR
+
+VAR
+	CaseBufferWaitTON			:Ton;
+	CaseBufferEmpty_ResetTON	:ton;
+	GlueEmpty_ResetTON			:ton;
+	CaseBufferEmptySen_Timeout	:ton;
+
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF MC.ResetPressed THEN
+	Station.SeqFaultWord := 0;
+END_IF
+
+(* 	Reserved Station.SeqFaultWord 
+	= 1~49 for Major Fault
+	= 100~149 for Origin Sequence Fault
+	= 150~199 for Origin Width Adjust Sequence Fault
+	= 200~299 for Auto Sequence Fault
+	= 300~399 for misc fault listed on this page*)
+
+Station.MajorFault := ((Station.SeqFaultWord > 0) 	AND (Station.SeqFaultWord < 50)) OR E_Case_Infeed_Safety_NOk ;
+Station.MinorFault := (Station.SeqFaultWord >= 100) OR Station.DeviceFault 
+													OR E_Nordson_Alarm 
+													OR E_CaseBufferAlignment_Err
+													OR ((E_ER_EmptyL_PE
+													OR E_ER_BufferL_PE
+													OR E_ER_EmptyR_PE
+													OR E_ER_BufferR_PE) AND sc[3].RunStep = 0);
+									
+													
+(* Case Infeed safety not OK *)
+IF NOT I_Case_Infeed_Safety_Ok AND I_Emg_SC_OK AND I_Door_SC_OK AND NOT MC_WA_Run AND NOT Erector_SafetySensorBypass THEN
+	E_Case_Infeed_Safety_NOk	:= TRUE;
+END_IF
+
+(* Case Buffer Error *)
+CaseBufferWaitTON			(IN:= ((I_ER_EmptyL_PE AND NOT I_ER_BufferL_PE) OR (I_ER_EmptyR_PE AND NOT I_ER_BufferR_PE)) AND mc.AutoRunning AND (sc[3].RunStep = 0), PT:= T#30S); 
+IF CaseBufferWaitTON.Q THEN
+	E_CaseBufferAlignment_Err	:= TRUE;
+END_IF
+(*
+W_CaseBuffer_is_Empty	:= 	(CaseBufferEmptying_Counter >= CaseBufferEmptying_Setting);
+CaseBufferEmpty_ResetTON	( IN:= I_ER_RefillL_PE, pt:= T#3S);
+IF CaseBufferEmpty_ResetTON.Q THEN
+	CaseBufferEmptying_Counter	:= 0;
+END_IF
+*)
+CaseBufferEmptySen_Timeout	( IN:= (I_ER_EmptyL_PE AND NOT I_ER_EmptyR_PE) OR (I_ER_EmptyR_PE AND NOT I_ER_EmptyL_PE), pt:= T#10S);
+IF CaseBufferEmptySen_Timeout.Q THEN
+	E_CaseBuffer_EmptySensors	:= TRUE;
+END_IF
+
+
+(*Refill Carton Buffer Warning*)
+W_ER_BufRefill		:= MC.AutoMode AND NOT Station.Bypass AND 
+						NOT I_ER_RefillL_PE AND NOT HMI.T_EndProd;
+
+
+
+(* Glue Alarm/Warning *)
+(*E_Nordson_Alarm		:= (NOT I_Nord_Rdy AND T_GlueEnable) AND NOT mc.DryRun AND mc.AutoRunning;*)
+W_Glue_Low_Level	:= I_Nord_TankLow;
+W_Glue_is_Empty		:= (GlueEmptying_Counter >= GlueEmptying_Setting );
+IF NOT I_Nord_TankLow THEN 
+	GlueEmptying_Counter	:= 0;
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,208 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="fbHBMSerialCtrl" Id="{181e7c70-138b-446a-a6f5-34e588388885}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK fbHBMSerialCtrl
+
+VAR_INPUT
+	In_Enable:BOOL;
+	In_Reset:BOOL;
+END_VAR
+
+VAR_OUTPUT
+	Out_Trigger:BOOL;
+END_VAR
+
+VAR_IN_OUT
+	TxBuffer	: ComBuffer;
+	RxBuffer	: ComBuffer;
+	HBM_Var		: structHBMSerialCtrl;
+	Station		: structStationCtrl;
+END_VAR
+VAR
+	InitTimeout		: TON := (PT:=T#3S);
+	WeightTimeout	: TON := (PT:=T#20S);
+	fbSend		: SendString;
+	bSendBusy	: BOOL;
+	eSendErrorID: ComError_t;
+
+	fbReceive		: ReceiveString;
+	sReceivedString	: STRING;
+	sLastReceivedString: STRING;
+	bStringReceived	: BOOL;
+	bReceiveBusy	: BOOL;
+	bReceiveError	: BOOL;
+	eReceiveErrorID	: ComError_t;
+	bReceiveTimeout	: BOOL;
+	nReceiveCounter	: UDINT;
+	plsTrigger:r_trig;
+	plsInitialize:R_Trig;
+	InitRun:BOOL;
+	InitStep:INT;
+	StringToSend:STRING;
+	TriggerSend:BOOL;
+	plsbStringReceived:r_trig;
+	HBM_Error:BOOL;
+END_VAR
+
+
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[//  Handles HBM Error
+IF In_Reset THEN
+	HBM_Var.Out_ErrorWord := 0;
+	HBM_Var.Out_ErrorString := 'HBM COM Port Ready';
+END_IF
+
+IF In_Enable THEN
+
+	IF eSendErrorID > 0 THEN
+		HBM_Var.Out_ErrorWord := 1;
+		HBM_Var.Out_ErrorString := concat('HBM COM Port Send Error: ', INT_TO_STRING(eSendErrorID));
+	END_IF
+	
+	IF eReceiveErrorID > 0 THEN
+		HBM_Var.Out_ErrorWord := 2;
+		HBM_Var.Out_ErrorString := concat('HBM COM Port Receive Error: ', INT_TO_STRING(eReceiveErrorID));
+	END_IF
+	
+	IF bReceiveTimeout THEN
+		HBM_Var.Out_ErrorWord := 3;
+		HBM_Var.Out_ErrorString := 'HBM COM Port Receive Error Timeout';	
+	END_IF
+	
+	IF WeightTimeout.Q THEN
+		HBM_Var.Out_ErrorWord := 4;
+		HBM_Var.Out_ErrorString := 'HBM COM Port Wait Trigger Result Timeout';			
+	END_IF
+END_IF
+	
+HBM_Error := (HBM_Var.Out_ErrorWord > 0);
+
+
+//  Initialize HBM Load Cell Setting
+//  Use the command TRC1,1,0,20,5; to activate the external trigger.
+//  Use the command COF128+i; to define the output format for the measured values. 
+//  i=3 for ASCII output
+plsInitialize(CLK:=HBM_Var.In_Init);
+
+IF NOT HBM_Error AND In_Enable THEN
+	IF plsInitialize.Q THEN
+		InitRun := TRUE;
+		InitStep := 0;
+	END_IF
+ELSE
+	HBM_Var.In_Trigger := FALSE;
+	InitRun := FALSE;
+	InitStep := 0;
+END_IF
+
+IF InitRun THEN
+	CASE InitStep OF 
+ 	0: 	(*Ready*)
+		IF plsInitialize.Q THEN
+			TriggerSend := FALSE;
+			HBM_Var.Out_InitOK := FALSE;
+			InitTimeout(IN:=FALSE);
+			InitStep := InitStep + 10;
+		END_IF
+ 	10: (*Send TRC Command*)
+		StringToSend := 'TRC1,1,0,20,5;';
+		TriggerSend := TRUE;
+		InitTimeout(IN:=TRUE);
+		IF plsbStringReceived.Q THEN
+			TriggerSend := FALSE;
+			InitTimeout(IN:=FALSE);
+			IF LEFT(sReceivedString,1) = '0' THEN
+				InitStep := InitStep + 10;
+			ELSE
+				HBM_Var.Out_ErrorWord := 10;
+				HBM_Var.Out_ErrorString := 'COM Port Send TRC Command Failed';
+				InitStep := 0;
+			END_IF
+		ELSIF InitTimeout.Q THEN
+			InitTimeout(IN:=FALSE);
+			HBM_Var.Out_ErrorWord := 11;
+			HBM_Var.Out_ErrorString := 'COM Port Send TRC Command Timeout';
+		END_IF
+ 	20: (*Send COF Command*)
+		StringToSend := 'COF131;';
+		TriggerSend := TRUE;
+		InitTimeout(IN:=TRUE);
+		IF plsbStringReceived.Q THEN
+			TriggerSend := FALSE;
+			InitTimeout(IN:=FALSE);
+			IF LEFT(sReceivedString,1) = '0' THEN
+				InitStep := InitStep + 10;
+			ELSE
+				HBM_Var.Out_ErrorWord := 12;
+				HBM_Var.Out_ErrorString := 'COM Port Send COF Command Failed';
+				InitStep := 0;
+			END_IF
+		ELSIF InitTimeout.Q THEN
+			InitTimeout(IN:=FALSE);
+			HBM_Var.Out_ErrorWord := 13;
+			HBM_Var.Out_ErrorString := 'COM Port Send TRC Command Timeout';
+		END_IF
+	30: (*Initialize Done*)
+		HBM_Var.Out_InitOK := TRUE;
+		InitRun := FALSE;
+		InitStep := 0;
+	END_CASE
+ELSE
+	TriggerSend := FALSE;
+END_IF
+
+// Call the send block when triggered.
+// Also call the block as long as it is busy to finish a transmission.
+plsTrigger(CLK:=TriggerSend);
+
+IF (plsTrigger.Q OR bSendBusy) AND In_Enable THEN
+	fbSend(	SendString:= StringToSend,
+			TXbuffer:= TxBuffer,
+			Busy=> bSendBusy,
+			Error=> eSendErrorID);
+END_IF
+
+//  Handles Hardware Trigger Output
+//  After Trigger, result will be automatically sent by HBM
+
+Out_Trigger := HBM_Var.In_Trigger AND
+				(*HBM_Var.Out_InitOK AND*)
+				In_Enable AND 
+				NOT HBM_Error;
+
+WeightTimeout (IN:= Out_Trigger);
+
+IF WeightTimeout.Q THEN
+	HBM_Var.Out_ReceiveDone := FALSE;
+END_IF
+
+//	Receive string data:
+//	The block receives any data strings ending with CR+LF.	
+fbReceive(
+	Prefix:= '',
+	Suffix:= '$0D$0A',
+	Timeout:= T#3S,
+	ReceivedString:= sReceivedString,
+	RXbuffer:= RxBuffer,
+	StringReceived=> bStringReceived,
+	Busy=> bReceiveBusy,
+	Error=> eReceiveErrorID,
+	RxTimeout=> bReceiveTimeout );
+	
+plsbStringReceived(CLK:=bStringReceived);
+	
+IF plsbStringReceived.Q THEN
+	nReceiveCounter := nReceiveCounter + 1;
+	HBM_Var.Out_WeightResult := STRING_TO_REAL(sReceivedString)/1000;
+	HBM_Var.Out_ReceiveDone := TRUE;
+END_IF
+
+(***********************************************************************************************)
+(*Set Station Error Bit if Device has error*)
+Station.DeviceFault := Station.DeviceFault OR HBM_Error;
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

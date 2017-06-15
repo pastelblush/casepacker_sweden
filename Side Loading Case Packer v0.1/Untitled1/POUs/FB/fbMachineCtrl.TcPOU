@@ -1,0 +1,604 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="fbMachineCtrl" Id="{9de520ff-a67b-427e-bf74-22e5ee398b7b}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK fbMachineCtrl
+
+VAR_INPUT
+	In_Start_PB:						BOOL;
+	In_Stop_PB:							BOOL;
+	In_EmgOK:							BOOL;
+	In_Door_Sw: 						BOOL;
+	In_Pressure_Sw: 					BOOL;
+	In_LightCurtainSafeToCross:			BOOL;
+	In_LightCurtainOK: 					BOOL;
+	In_CommunicationOK:					BOOL;
+	In_IncomingPowerPhase_OK:			BOOL;
+	In_OtherTrouble: 					BOOL;
+	In_Reset_PB:						BOOL;
+	In_Start_Enable:					BOOL;
+	In_EndProdWPCleared:				BOOL;
+	In_WaitingForMaterial:				BOOL;	
+	I_StepFwdPB:						BOOL;
+	I_StepBwdPB:						BOOL;
+
+END_VAR
+
+VAR_IN_OUT
+	McVar:structMachineCtrl;
+	HMI:structHMI;
+END_VAR
+
+VAR_OUTPUT
+	Out_RedTower:BOOL;
+	Out_YelTower :BOOL;
+	Out_GrnTower:BOOL;
+	Out_Buzzer:BOOL;
+	Out_StartPL:BOOL;
+	Out_StopPL:BOOL;
+	Out_ResetPL:BOOL;
+	
+END_VAR
+
+VAR
+	Loop: INT;
+	LoopStation: INT;
+(*************************************************************************************************************************************)
+(*Status Bit*)
+(*************************************************************************************************************************************)
+
+	AllStationStop:BOOL;
+
+(*************************************************************************************************************************************)
+(*Auto*)
+(*************************************************************************************************************************************)
+	AutoPBMem	: BOOL;
+	StartMem	: BOOL;
+	StartDly	: Ton;
+	StartCmdHoldDly	:	TON;
+	NotAutoRunning:BOOL;
+
+		
+	pls_OriginSchRun: R_TRIG;
+	OriginSchRunPls: BOOL;
+
+(*************************************************************************************************************************************)
+(*Manual*)
+(*************************************************************************************************************************************)
+	Pls_StepFwd: 	R_TRIG;
+	Pls_StepBwd: 	R_TRIG;
+	CycleTimer: 	TON;
+	ManualCond: 	BOOL;
+	T_LampTest:		BOOL;
+(*************************************************************************************************************************************)
+	(* Error Handling*)
+(*************************************************************************************************************************************)
+	tmrResetOffDly	:TOF;
+	
+	tmrEmgOn: TON;
+	EmgPBTON :BOOL;
+
+	tmrEmgOn_Air: TON;
+	EmgPBTON_Air: BOOL;
+
+	pls_Reset :R_TRIG;
+	ResetPls:BOOL;
+
+	tmrDoorSwitch: TON;
+	DoorSwTOFF: BOOL;
+
+	tmrCurtainCrossed: TON;
+	CurtainCrossedTON:BOOL;
+
+
+	plsManPBOff: R_trig;
+	plsResetCycleTime:ARRAY[1..20] OF r_trig;
+	plsResetIdleTime:ARRAY[1..20] OF r_trig;
+	plsAutorun:r_trig;
+	
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(**************************************************************************************************************)
+(* Auto Mode Selection*)
+(**************************************************************************************************************)
+plsManPBOff(CLK:= NOT HMI.T_Manual);
+
+IF (HMI.T_Auto OR plsManPBOff.Q) AND 
+	NOT MC.Trouble AND 
+	NOT MC.StationStopErr THEN
+	AutoPBMem := TRUE;
+END_IF;
+
+IF( AutoPBMem OR MC.AutoRunning) AND NOT MC.Trouble THEN
+	MC.AutoMode := TRUE;
+ELSE
+	MC.AutoMode := FALSE;
+	AutoPBMem := FALSE;
+END_IF;
+
+(**************************************************************************************************************)
+(*Manual Mode Selection*)
+(**************************************************************************************************************)
+IF HMI.T_Manual THEN
+	AutoPBMem := FALSE;
+END_IF;
+
+IF NOT (AutoPBMem OR MC.AutoRunning) THEN
+	MC.ManualMode :=TRUE;
+ELSE
+	MC.ManualMode :=FALSE;
+END_IF;
+
+IF NOT MC.AutoRunning THEN (*Do Not Process during Autorun to Optimize Cyclic Time*)
+	
+(**************************************************************************************************************)
+	(* Manual Interlocking *)
+	(**************************************************************************************************************)
+	
+	ManualSafetyOK 	:= NOT MC.Trouble;
+	ManualCond 		:= MC.ManualMode AND ManualSafetyOK AND NOT mc.OriginSchRun;
+	
+	(**************************************************************************************************************)
+	(* Manual General*)
+	(**************************************************************************************************************)
+	
+	Pls_StepFwd(CLK:= I_StepFwdPB OR HMI.T_StepFwd);
+	M_StepFwdPls := Pls_StepFwd.Q;
+	
+	Pls_StepBwd(CLK:= I_StepBwdPB OR HMI.T_StepBwd);
+	M_StepBwdPls := Pls_StepBwd.Q;
+	
+	(**************************************************************************************************************)
+	(* Manual Stepping Mode*)
+	(**************************************************************************************************************)
+	IF (NOT HMI.T_StepStop) AND ManualCond AND
+		NOT (SC[HMI.T_Curr_Step_Station].MajorFault OR 
+			SC[HMI.T_Curr_Step_Station].MinorFault OR
+			SC[HMI.T_Curr_Step_Station].DeviceFault OR 
+			MC.Trouble OR MC_Ctrl.In_Stop_PB OR MC_Ctrl.HMI.T_Stop OR
+				HMI.T_StepStop  ) THEN
+		IF HMI.T_StepRun THEN
+			M_StepRun := TRUE;
+		END_IF;
+	ELSE
+		M_StepRun := FALSE;
+		HMI.T_StepRun := FALSE;	
+		HMI.T_StepStop := FALSE;
+	END_IF;
+
+	(* Display Status on Visio*)
+	HMI.T_StationError 			:= sc[HMI.T_Curr_Step_Station].MajorFault OR sc[HMI.T_Curr_Step_Station].MinorFault;
+	HMI.T_Origin 				:= sc[HMI.T_Curr_Step_Station].Origin;
+	HMI.V_StepRunCurrStation 	:= sc[HMI.T_Curr_Step_Station].Name;
+	HMI.V_StepRunStatus 		:= sc[HMI.T_Curr_Step_Station].Status;
+	HMI.T_StepRunning 			:= sc[HMI.T_Curr_Step_Station].M_Step;
+	HMI.T_OriginRunning			:= sc[HMI.T_Curr_Step_Station].OriginSchRun;
+
+	FOR Loop := 0 TO Number_of_Station BY 1 DO
+		SC[Loop].M_Step		:= FALSE;
+	END_FOR
+
+	IF M_StepRun THEN
+		SC[HMI.T_Curr_Step_Station].M_Step	:= TRUE;
+	END_IF;
+
+	(* CycleTime Calculation*)
+	CycleTimer(IN:=M_StepRun , PT:=t#1100h , Q=> , ET=> );
+	
+	IF M_StepRun THEN
+		HMI.T_ManualCycleTime :=CycleTimer.ET;
+	END_IF
+
+	(**************************************************************************************************************)
+	(*Station Origin Search Run*)
+	(**************************************************************************************************************)
+	
+	IF mc.ManualMode THEN
+		(*Handles Origin Search in Step Mode Page*)
+		IF 	NOT SC[HMI.T_Curr_Step_Station].Origin AND
+			NOT (SC[HMI.T_Curr_Step_Station].MajorFault OR 
+			SC[HMI.T_Curr_Step_Station].MinorFault OR
+			SC[HMI.T_Curr_Step_Station].DeviceFault OR 
+			MC.Trouble OR MC_Ctrl.In_Stop_PB OR MC_Ctrl.HMI.T_Stop OR
+				HMI.T_StepStop  )  THEN
+			IF HMI.T_StationOriginSearch THEN		
+				SC[HMI.T_Curr_Step_Station].OriginSchRun	:= TRUE;
+			END_IF
+		ELSE
+			SC[HMI.T_Curr_Step_Station].OriginSchRun		:= FALSE;
+		END_IF		
+		(*Handles Individual Station Origin Search Button*)
+		FOR Loop := 0 TO Number_of_Station BY 1 DO
+			IF NOT SC[Loop].Origin AND
+			NOT (SC[Loop].MajorFault OR 
+				SC[Loop].MinorFault OR
+				SC[Loop].DeviceFault OR 
+				MC.Trouble OR MC_Ctrl.In_Stop_PB OR MC_Ctrl.HMI.T_Stop OR
+					HMI.T_StepStop )  THEN
+				IF SC[Loop].T_OriginSearch THEN		
+					SC[Loop].OriginSchRun	:= TRUE;
+				END_IF
+			ELSE
+				SC[Loop].OriginSchRun	:= FALSE;
+			END_IF			
+		END_FOR
+	ELSE
+		FOR Loop := 0 TO Number_of_Station BY 1 DO
+			SC[Loop].OriginSchRun	:= FALSE;	
+		END_FOR
+	END_IF;
+	
+	(**************************************************************************************************************)
+	(*Origin Search Run*)
+	(**************************************************************************************************************)
+	IF MC.ManualMode AND NOT MC.AllOrigin AND 
+		NOT (MC.StationStopErr OR MC.Trouble OR MC.StopPressed OR
+			 MC_Ctrl.In_Stop_PB OR MC_Ctrl.HMI.T_Stop)  THEN
+		IF HMI.T_OriginSearch THEN
+			MC.OriginSchRun  := TRUE;
+		END_IF;
+	ELSE
+		MC.OriginSchRun := FALSE;
+	END_IF;
+
+	pls_OriginSchRun(CLK:= MC.OriginSchRun);
+	OriginSchRunPls := pls_OriginSchRun.Q;
+	
+	(**************************************************************************************************************)
+	(*Dry Run Mode Selection*)
+	(**************************************************************************************************************)
+	IF NOT MC.AutoRunning AND HMI.T_DryRun THEN
+		MC.DryRun := TRUE;
+	ELSE
+		MC.DryRun := FALSE;
+	END_IF;
+	
+	IF NOT MC.AutoMode THEN
+		HMI.T_EndProd := FALSE;
+	END_IF;
+
+	(**************************************************************************************************************)
+	(* For programmer Station Bypass - Debug Only*)
+	(**************************************************************************************************************)
+	FOR Loop := 0 TO Number_of_Station DO
+		IF HMI.T_Station_BypassP[Loop] THEN
+				SC[Loop].Bypass := TRUE;
+		ELSE
+			SC[Loop].Bypass := FALSE;
+		  END_IF;
+	END_FOR
+	
+END_IF	
+	
+(**************************************************************************************************************)
+(* Machine Start *)
+(**************************************************************************************************************)
+NotAutoRunning := NOT MC.AutoRunning;
+
+StartDly(IN:= StartMem, PT:=T#3S);
+StartCmdHoldDly (IN:= 	(In_Start_PB OR HMI.T_Start) AND
+						NOT MC.StationStopErr AND
+						NOT (In_Stop_PB OR HMI.T_Stop) AND 
+						In_Start_Enable AND 
+						MC.AllOrigin,
+					PT:= T#1S);		
+
+IF MC.AutoRunning THEN
+	HMI.V_AutorunString := 'Running';
+ELSE
+	HMI.V_AutorunString := 'Auto Mode';
+END_IF
+
+IF MC.AutoMode AND NOT MC.Stop THEN
+	IF StartCmdHoldDly.Q THEN
+		StartMem		:= TRUE;
+	ELSIF StartDly.Q THEN
+		MC.AutoRunning 	:= TRUE;
+	ELSIF (In_Start_PB OR HMI.T_Start) AND NOT MC.AllOrigin THEN	
+		HMI.V_AutorunString := 'Machine Not Origin';
+	END_IF;
+ELSE
+	MC.AutoRunning 	:= FALSE;
+	StartMem		:= FALSE;
+END_IF;
+
+(**************************************************************************************************************)
+(* Machine Stop *)
+(**************************************************************************************************************)
+IF MC.AutoRunning THEN
+	IF In_Stop_PB OR HMI.T_Stop OR 
+		In_EndProdWPCleared OR MC.StationStopErr THEN
+		MC.StopPressed := TRUE;
+	END_IF;
+ELSE
+	MC.StopPressed := FALSE;
+END_IF;
+
+
+IF MC.StopPressed AND AllStationStop THEN
+	MC.StopPressed := FALSE;
+	MC.Stop:=TRUE;
+ELSE
+	MC.Stop :=FALSE;	
+END_IF;
+	
+(**************************************************************************************************************)
+(* Machine Status *)
+(*From Station Status*)
+(**************************************************************************************************************)
+
+FOR Loop := 0 TO Number_of_Station BY 1  DO
+	IF NOT SC[Loop].Running THEN
+		AllStationStop := TRUE;
+	ELSE
+		AllStationStop := FALSE;
+		EXIT;
+	END_IF
+END_FOR
+
+MC.IdleState := AllStationStop;
+
+FOR Loop := 0 TO Number_of_Station BY 1  DO
+	IF SC[Loop].Rdy OR SC[LOOP].BYPASS	THEN
+		MC.AllStationRdy := TRUE;
+	ELSE
+		MC.AllStationRdy := FALSE;
+		EXIT;
+	END_IF
+END_FOR
+
+FOR Loop := 0 TO Number_of_Station BY 1  DO
+	IF SC[Loop].NoWP THEN
+		MC.AllStationNoWP := TRUE;
+	ELSE
+		MC.AllStationNoWP := FALSE;
+		EXIT;
+	END_IF
+END_FOR
+
+FOR Loop := 0 TO Number_of_Station BY 1  DO
+	IF SC[Loop].Origin OR SC[Loop].Bypass THEN
+		MC.AllOrigin:= TRUE;
+	ELSE
+		MC.AllOrigin := FALSE;
+		EXIT;
+	END_IF
+END_FOR
+
+(*Major Error for Immediate Stop*)
+MC.Trouble:=	MC.E_EmgStop OR 
+				MC.E_AirLow OR 
+				MC.E_LightCurtain OR 
+				MC.E_Communication OR 
+				MC.E_SafetyDoorOpen OR
+				MC.E_IncomingPowerPhase OR
+				In_OtherTrouble;
+
+FOR Loop := 0 TO Number_of_Station BY 1  DO
+	IF SC[Loop].MajorFault THEN
+		MC.Trouble:= TRUE;
+	END_IF
+END_FOR
+
+(*Minor Error for Stop after one cycle*)
+MC.StationStopErr := MC.E_LightCurtain;
+(*
+FOR Loop := 0 TO Number_of_Station BY 1  DO
+	IF SC[Loop].MinorFault AND NOT SC[Loop].Bypass THEN
+		MC.StationStopErr:= TRUE;
+	END_IF
+END_FOR
+*)
+(**************************************************************************************************************)
+(* Auto Msg Alarm Display  *)
+(**************************************************************************************************************)
+
+IF MC.E_Communication THEN
+	HMI.T_StatusString 		:= 'Machine Ethercat Communication Major Error';
+	HMI.T_StatusStringInt	:= 1;
+ELSIF mc.E_IncomingPowerPhase THEN
+	HMI.T_StatusString 		:= 'Machine Incoming Power Phase Major Error';
+	HMI.T_StatusStringInt	:= 2;
+ELSIF MC.E_EmgStop THEN
+	HMI.T_StatusString 		:= 'Machine Safety Circuit Broke Major Error';
+	HMI.T_StatusStringInt	:= 3;
+ELSIF MC.E_AirLow THEN
+	HMI.T_StatusString 		:= 'Machine Incoming Air Pressure Low Major Error';
+	HMI.T_StatusStringInt	:= 4;
+ELSIF MC.E_LightCurtain THEN
+	HMI.T_StatusString 		:= 'Machine Light Curtain Crossed Major Error';
+	HMI.T_StatusStringInt	:= 5;
+ELSIF MC.Trouble THEN
+	HMI.T_StatusString 		:= 'Machine Major Error';
+	HMI.T_StatusStringInt	:= 6;	
+ELSIF MC.StationStopErr THEN
+	HMI.T_StatusString 		:= 'Machine Station Error';
+	HMI.T_StatusStringInt	:= 7;	
+ELSIF MC.StopPressed THEN
+	HMI.T_StatusString 		:= 'Machine is Stopping Autorun Mode';
+	HMI.T_StatusStringInt	:= 8;	
+ELSIF MC.AutoRunning THEN
+	HMI.T_StatusString 		:= 'Auto Running';
+	HMI.T_StatusStringInt	:= 9;	
+ELSIF MC.AutoMode THEN
+	HMI.T_StatusString 		:= 'Auto Mode';
+	HMI.T_StatusStringInt	:= 10;	
+ELSIF MC.ManualMode THEN
+	HMI.T_StatusString 		:= 'Manual Mode';
+	HMI.T_StatusStringInt	:= 11;	
+END_IF
+
+(*************************************************************************************************************************************)
+(* Reset Error And Warning Memory*)
+(*************************************************************************************************************************************)
+
+tmrEmgOn (IN := In_EmgOK, pt := T#1s);
+EmgPBTON := tmrEmgOn.Q;
+
+tmrEmgOn_Air (IN := In_EmgOK AND In_Door_Sw, pt := T#3S);
+EmgPBTON_Air := tmrEmgOn_Air.Q;
+
+MC.ResetPressed := HMI.T_Reset OR In_Reset_PB OR tmrResetOffDly.Q;
+tmrResetOffDly	(IN:= HMI.T_Reset OR In_Reset_PB, PT:= T#3S);
+
+pls_Reset (CLK := MC.ResetPressed);
+ResetPls := pls_Reset.Q;
+
+(* Reset Error*)
+	IF tmrResetOffDly.Q THEN
+	FOR LoopStation := 0 TO Number_of_Station BY 1 DO
+		SC[LoopStation].DeviceFault := FALSE;
+		FOR Loop := 1 TO 10 BY 1 DO
+			ErrorDWord[LoopStation,Loop] :=0;
+			WarningDWord[LoopStation,Loop] :=0;
+		END_FOR
+	END_FOR
+
+			MC.E_EmgStop				:=FALSE;
+			MC.E_LightCurtain			:=FALSE;
+			MC.E_AirLow 				:=FALSE;
+			MC.E_SafetyDoorOpen			:=FALSE;
+			MC.E_Communication 			:=FALSE;
+			MC.E_IncomingPowerPhase 	:=FALSE;
+			
+	END_IF;
+
+(* Set Warning*)
+(*
+MC.Warning := FALSE;
+FOR LoopStation := 0 TO Number_of_Station BY 1 DO
+	FOR Loop := 1 TO 10 DO
+		IF WarningDWord[LoopStation,Loop]>0 OR sc[LoopStation].Warning THEN
+			MC.Warning := TRUE;
+		END_IF;
+	END_FOR
+END_FOR
+*)
+HMI.T_AutoMsgAlarm := MC.Trouble OR MC.StationStopErr OR (NOT MC.AutoRunning AND NOT MC.AllOrigin) ;
+
+(*************************************************************************************************************************************)
+(*Error And Warning Summaries*)
+(*************************************************************************************************************************************)
+MC.ErrDetection := MC.AutoRunning OR MC.OriginSchRun;
+
+(*************************************************************************************************************************************)
+(*General Error and Trouble*)
+(*************************************************************************************************************************************)
+
+(*Incoming Power Phase Error*)
+IF NOT In_IncomingPowerPhase_OK THEN
+	MC.E_IncomingPowerPhase	:=TRUE;
+END_IF
+
+(*E-stop Error*)
+
+IF NOT EmgPBTON THEN
+	MC.E_EmgStop := TRUE;
+END_IF;
+
+(*Safety Door Error*)
+tmrDoorSwitch (in:= NOT In_Door_Sw, PT:= T#1S);
+DoorSwTOFF := tmrDoorSwitch.q;
+
+IF DoorSwTOFF AND NOT HMI.T_BypassDoor THEN
+	MC.E_SafetyDoorOpen := TRUE;
+END_IF;
+
+(*Air Low Error*)
+IF EmgPBTON_Air AND NOT In_Pressure_Sw THEN
+	MC.E_AirLow := TRUE;
+END_IF;
+
+(*Light Curtain Crossed Error*)
+tmrCurtainCrossed(IN := NOT In_LightCurtainOK, PT:= t#0.1s);
+CurtainCrossedTON := tmrCurtainCrossed.Q;
+
+IF NOT In_LightCurtainSafeToCross  AND NOT In_LightCurtainOK THEN
+	MC.E_LightCurtain := TRUE;
+END_IF;
+
+(*Communication Bus Error*)
+IF EmgPBTON AND In_CommunicationOK THEN
+	MC.E_Communication := TRUE;
+END_IF
+
+(**************************************************************************************************************)
+(* General Output*)
+(**************************************************************************************************************)
+
+Out_RedTower := MC.Trouble OR 
+				( MC.StationStopErr AND ON_1s) OR
+				(mc.ManualMode AND T_LampTest);
+
+Out_YelTower := MC.ManualMode OR 
+				( MC.Warning AND ON_1s AND NOT  MC.Trouble AND NOT  MC.StationStopErr ) OR
+				(mc.ManualMode AND T_LampTest);
+
+Out_GrnTower := ((MC.AutoRunning AND NOT MC.StopPressed) OR NOT AllStationStop) OR 
+				(MC.StopPressed AND ON_1s) OR
+				(mc.ManualMode AND T_LampTest);
+
+IF NOT (Out_RedTower OR MC.Warning) THEN
+	HMI.T_BuzzerOff := FALSE;
+END_IF
+
+Out_Buzzer := 	(Out_RedTower OR (MC.Warning AND ON_1s) OR 
+				(mc.ManualMode AND T_LampTest) OR
+				(StartMem AND NOT MC.AutoRunning AND ON_50ms)) AND NOT HMI.T_BuzzerOff AND NOT HMI.T_BypassBuzzer;
+
+Out_StartPL := 	(((*MC.AutoRunning AND In_WaitingForMaterial) OR*) MC.StopPressed (*OR StartMem*)) AND ON_1s) OR
+				(mc.ManualMode AND T_LampTest) OR
+			(mc.AutoMode AND NOT (*MC.StationStopErr*) mc.AutoRunning AND
+				NOT (In_Stop_PB OR HMI.T_Stop) AND 
+				NOT W_ServiceStop AND
+					In_Start_Enable AND 
+					MC.AllOrigin);
+
+Out_StopPL 	:= 	(MC.StopPressed AND ON_1s) OR (NOT MC.AutoRunning);
+
+Out_ResetPL := 	(MC.Trouble OR MC.StationStopErr) OR
+				(mc.ManualMode AND T_LampTest) OR
+				MC.StopPressed OR
+				W_ServiceStop;			
+
+(**************************************************************************************************************)
+(* Station Cylce Time Calculation*)
+(**************************************************************************************************************)
+
+FOR LoopStation := 0 TO Number_of_Station BY 1 DO
+	plsResetCycleTime[LoopStation] (CLK := SC[LoopStation].Running);
+	IF plsResetCycleTime[LoopStation].Q THEN
+		IF MC.AutoMode THEN
+			IF SC[LoopStation].CycleTimeSecAvg > 0 THEN
+				SC[LoopStation].CycleTimeSecAvg := (SC[LoopStation].CycleTimeSecAvg+SC[LoopStation].CycleTimeSec)/2;
+			ELSE
+				SC[LoopStation].CycleTimeSecAvg := SC[LoopStation].CycleTimeSec;
+			END_IF
+		END_IF
+		SC[LoopStation].CycleTimeSec := 0;
+	END_IF
+	
+	plsResetIdleTime[LoopStation] (CLK := SC[LoopStation].AutoRun AND NOT SC[LoopStation].Running);
+	IF plsResetIdleTime[LoopStation].Q THEN
+		IF MC.AutoMode THEN
+			IF SC[LoopStation].IdleTimeSecAvg > 0 THEN
+				SC[LoopStation].IdleTimeSecAvg := (SC[LoopStation].IdleTimeSecAvg+SC[LoopStation].IdleTimeSec)/2;
+			ELSE
+				SC[LoopStation].IdleTimeSecAvg := SC[LoopStation].IdleTimeSec;
+			END_IF
+		END_IF
+		SC[LoopStation].IdleTimeSec := 0;
+	END_IF
+	
+	IF SC[LoopStation].Running AND
+		Clock100msOnPls THEN
+		SC[LoopStation].CycleTimeSec := SC[LoopStation].CycleTimeSec + 0.1 ;
+	ELSIF SC[LoopStation].AutoRun AND NOT SC[LoopStation].Running AND
+		Clock100msOnPls THEN
+		SC[LoopStation].IdleTimeSec := SC[LoopStation].IdleTimeSec + 0.1 ;
+	END_IF
+END_FOR
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

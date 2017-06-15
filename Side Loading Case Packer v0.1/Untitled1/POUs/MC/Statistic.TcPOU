@@ -1,0 +1,400 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="Statistic" Id="{fe4ef2a3-d70c-434a-946d-a33c636c3f2e}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Statistic
+VAR
+	pls_1Minute			:BOOL;	
+	tmr_1Minute			:TON;
+	pls_1Second			:BOOL;	
+	tmr_1Second			:TON;
+	plsReportDone			:F_TRIG;
+	plsServiceStop			:R_Trig;
+	plsGlueL_Shift			:R_Trig;
+	plsTapeL_Shift			:R_trig;
+	plsGlueL_All			:R_Trig;
+	plsTapeL_All			:R_trig;	
+	plsGlueR_Shift			:R_Trig;
+	plsTapeR_Shift			:R_trig;
+	plsGlueR_All			:R_Trig;
+	plsTapeR_All			:R_trig;		
+	
+	LocalSystemTime		:FB_LocalSystemTime;
+	Current_Date		:STRING;	
+	
+	RunStep_Report		:INT;
+	WeekDay				:STRING;
+	ProdSpd_Efficiency	:REAL;
+	ProdSpd_OEE			:REAL;
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// *************************************************
+(* Timer Pulse *)
+tmr_1Minute(IN:= NOT pls_1Minute , PT:= T#60S);
+pls_1Minute := tmr_1Minute.Q;
+tmr_1Second(IN:= NOT pls_1Second , PT:= T#1S);
+pls_1Second := tmr_1Second.Q;
+
+
+(* PC Local Time *)
+LocalSystemTime(
+	sNetID:= '10.1.33.138.1.1' , 
+	bEnable:= TRUE , 
+	dwCycle:= , 
+	dwOpt:= , 
+	tTimeout:= , 
+	bValid=> , 
+	systemTime=> , 
+	tzID=> );
+
+(* Weekday *)
+CASE LocalSystemTime.systemTime.wDayOfWeek OF
+	0: WeekDay := 'SUN'	;
+	1: WeekDay := 'MON'	;
+	2: WeekDay := 'TUE'	;
+	3: WeekDay := 'WED'	;
+	4: WeekDay := 'THUR';
+	5: WeekDay := 'FRI'	;
+	6: WeekDay := 'SAT'	;					
+END_CASE
+	
+// *************************************************************
+(*	To Calculate Current Shift Number	*)
+IF LocalSystemTime.systemTime.wYear <> 1970 THEN
+IF 	(WORD_TO_UINT(LocalSystemTime.systemTime.wHour) 	> Statistic_Shift_StartTimeH[1] OR
+	(WORD_TO_UINT(LocalSystemTime.systemTime.wHour) 	= Statistic_Shift_StartTimeH[1] AND LocalSystemTime.systemTime.wMinute 	>= Statistic_Shift_StartTimeM[1]) )
+	AND
+	(WORD_TO_UINT(LocalSystemTime.systemTime.wHour) 	< Statistic_Shift_EndTimeH[1] OR
+	(WORD_TO_UINT(LocalSystemTime.systemTime.wHour) 	= Statistic_Shift_EndTimeM[1] AND LocalSystemTime.systemTime.wMinute 	<= Statistic_Shift_EndTimeM[1]))
+THEN
+	Statistic_CurShift_Number := 1;
+ELSE	
+		IF 	(WORD_TO_UINT(LocalSystemTime.systemTime.wHour) 	> Statistic_Shift_StartTimeH[2] OR
+			(WORD_TO_UINT(LocalSystemTime.systemTime.wHour) 	= Statistic_Shift_StartTimeH[2] AND LocalSystemTime.systemTime.wMinute 	>= Statistic_Shift_StartTimeM[2]) )
+			AND
+			(WORD_TO_UINT(LocalSystemTime.systemTime.wHour) 	< Statistic_Shift_EndTimeH[2] OR
+			(WORD_TO_UINT(LocalSystemTime.systemTime.wHour) 	= Statistic_Shift_EndTimeM[2] AND LocalSystemTime.systemTime.wMinute 	<= Statistic_Shift_EndTimeM[2]))
+		THEN
+			Statistic_CurShift_Number := 2;
+ELSE	
+		IF 	(WORD_TO_UINT(LocalSystemTime.systemTime.wHour) 	> Statistic_Shift_StartTimeH[3] OR
+			(WORD_TO_UINT(LocalSystemTime.systemTime.wHour) 	= Statistic_Shift_StartTimeH[3] AND LocalSystemTime.systemTime.wMinute 	>= Statistic_Shift_StartTimeM[3]) )
+			AND
+			(WORD_TO_UINT(LocalSystemTime.systemTime.wHour) 	< Statistic_Shift_EndTimeH[3] OR
+			(WORD_TO_UINT(LocalSystemTime.systemTime.wHour) 	= Statistic_Shift_EndTimeM[3] AND LocalSystemTime.systemTime.wMinute 	<= Statistic_Shift_EndTimeM[3]))
+		THEN
+					Statistic_CurShift_Number := 3;
+		ELSE				
+					Statistic_CurShift_Number := 0;
+END_IF
+END_IF					
+END_IF
+END_IF
+
+// ***********************************************************************************************
+(* Generate Report *)
+CASE RunStep_Report OF
+	0: (* To check shift number change *)
+		IF 	(Statistic_PreviousShift_Number <> Statistic_CurShift_Number) THEN
+			RunStep_Report	:= RunStep_Report + 10;		
+		END_IF
+	
+	10: (* Copy Statistic to History for Reporting then reset current shift data *)
+		Statistic_History	:= Statistic_Current;
+(* Date *)		
+		Statistic_Current.ShiftInformation	:= WORD_TO_STRING(LocalSystemTime.systemTime.wDay) ;
+		Statistic_Current.ShiftInformation	:=	CONCAT(STR1:= Statistic_Current.ShiftInformation , STR2:= '-' );
+		Statistic_Current.ShiftInformation	:=	CONCAT(STR1:= Statistic_Current.ShiftInformation , STR2:= WORD_TO_STRING(LocalSystemTime.systemTime.wMonth ));
+		Statistic_Current.ShiftInformation	:=	CONCAT(STR1:= Statistic_Current.ShiftInformation , STR2:= '-' );
+		Statistic_Current.ShiftInformation	:=	CONCAT(STR1:= Statistic_Current.ShiftInformation , STR2:= WORD_TO_STRING(LocalSystemTime.systemTime.wYear ));
+		Statistic_Current.ShiftInformation	:=	CONCAT(STR1:= Statistic_Current.ShiftInformation , STR2:= ' ' );
+		Statistic_Current.ShiftInformation	:=	CONCAT(STR1:= Statistic_Current.ShiftInformation , STR2:= WeekDay );		
+		Statistic_Current.ShiftInformation	:=	CONCAT(STR1:= Statistic_Current.ShiftInformation , STR2:= ' - ' );
+(* Start Time *)		
+		IF Statistic_Shift_StartTimeH[Statistic_CurShift_Number] < 10 THEN
+			Statistic_Current.ShiftInformation	:=	CONCAT(STR1:= Statistic_Current.ShiftInformation , STR2:= '0' );
+		END_IF
+		Statistic_Current.ShiftInformation	:=	CONCAT(STR1:= Statistic_Current.ShiftInformation , STR2:= WORD_TO_STRING(Statistic_Shift_StartTimeH[Statistic_CurShift_Number] ));
+		IF Statistic_Shift_StartTimeM[Statistic_CurShift_Number] < 10 THEN
+			Statistic_Current.ShiftInformation	:=	CONCAT(STR1:= Statistic_Current.ShiftInformation , STR2:= '0' );
+		END_IF
+		Statistic_Current.ShiftInformation	:=	CONCAT(STR1:= Statistic_Current.ShiftInformation , STR2:= WORD_TO_STRING(Statistic_Shift_StartTimeM[Statistic_CurShift_Number] ));
+		
+		Statistic_Current.ShiftInformation	:=	CONCAT(STR1:= Statistic_Current.ShiftInformation , STR2:= ' - ' );
+(* End Time *)
+		IF Statistic_Shift_EndTimeH[Statistic_CurShift_Number] < 10 THEN
+			Statistic_Current.ShiftInformation	:=	CONCAT(STR1:= Statistic_Current.ShiftInformation , STR2:= '0' );
+		END_IF
+		Statistic_Current.ShiftInformation	:=	CONCAT(STR1:= Statistic_Current.ShiftInformation , STR2:= WORD_TO_STRING(Statistic_Shift_EndTimeH[Statistic_CurShift_Number] ));
+		IF Statistic_Shift_EndTimeM[Statistic_CurShift_Number] < 10 THEN
+			Statistic_Current.ShiftInformation	:=	CONCAT(STR1:= Statistic_Current.ShiftInformation , STR2:= '0' );
+		END_IF
+		Statistic_Current.ShiftInformation	:=	CONCAT(STR1:= Statistic_Current.ShiftInformation , STR2:= WORD_TO_STRING(Statistic_Shift_EndTimeM[Statistic_CurShift_Number] ));
+
+(* Reset Data *)
+		Statistic_Current.RejectLeftTape		:= 0;
+		Statistic_Current.RejectRightTape		:= 0;
+		Statistic_Current.RejectUnderWeight		:= 0;
+		Statistic_Current.RejectOverWeight		:= 0;
+		Statistic_Current.GoodCase				:= 0;
+		Statistic_Current.RunTime_Second		:= 0;
+		Statistic_Current.ExternalStop_Second	:= 0;
+		Statistic_Current.InternalStop_Second	:= 0;
+		Statistic_Current.WaitingTime_Second	:= 0;
+		Statistic_Current.RejectCaseRemoved		:= 0;
+		Statistic_Current.ServiceStop_Number	:= 0;	
+		Statistic_Current.ServiceStop_Second	:= 0;
+		Statistic_Current.StackerFault_Number	:= 0;
+		Statistic_Current.StackerFault_Second	:= 0;
+		Statistic_Current.XPusherFault_Number	:= 0;
+		Statistic_Current.XPusherFault_Second	:= 0;
+		Statistic_Current.YPusherFault_Number	:= 0;
+		Statistic_Current.YPusherFault_Second	:= 0;
+		Statistic_Current.ErectorFault_Number	:= 0;
+		Statistic_Current.ErectorFault_Second	:= 0;
+		Statistic_Current.ExitFault_Number		:= 0;
+		Statistic_Current.ExitFault_Second		:= 0;
+		Statistic_Current.HorizontalFault_Number:= 0;
+		Statistic_Current.HorizontalFault_Second:= 0;
+		Statistic_Current.MajorFault_Number		:= 0;
+		Statistic_Current.MajorFault_Second		:= 0;			
+		Statistic_Current.GlueLeft_Number		:= 0;	
+		Statistic_Current.GlueRight_Number		:= 0;			
+		Statistic_Current.TapeLeft_Number		:= 0;	
+		Statistic_Current.TapeRight_Number		:= 0;				
+		Statistic_Current.RecipeName			:= CurrRecipe.sDescription;
+		
+		RunStep_Report	:= RunStep_Report + 10;	
+		
+	20: (* To Generate Report *)
+		IF	(Statistic_PreviousShift_Number <>0) THEN
+			Generate_Report	:=1;
+		END_IF	
+			Statistic_PreviousShift_Number	:=Statistic_CurShift_Number;
+			RunStep_Report	:= RunStep_Report + 10;	
+			
+	30: (* Waiting for Reporting Done *)		
+		IF NOT Generate_Report THEN
+			RunStep_Report	:= 0;
+		END_IF
+END_CASE
+
+// **********************************************************************************************************
+(* Production Data Update *)
+IF (Statistic_Current.GoodCase + 
+	Statistic_Current.RejectLeftTape + 
+	Statistic_Current.RejectRightTape + 
+	Statistic_Current.RejectOverWeight + 
+	Statistic_Current.RejectUnderWeight + 
+	Statistic_Current.RejectCaseRemoved ) > 0 THEN
+	Statistic_Current.Production_Percentage	:= 	DINT_TO_REAL(Statistic_Current.GoodCase * 100) / 
+												DINT_TO_REAL((Statistic_Current.GoodCase + 
+												Statistic_Current.RejectLeftTape + 
+												Statistic_Current.RejectRightTape +
+												Statistic_Current.RejectOverWeight +
+												Statistic_Current.RejectUnderWeight +
+												Statistic_Current.RejectCaseRemoved));
+											
+	Statistic_Current.Reject_Percentage		:= 	DINT_TO_REAL((Statistic_Current.RejectLeftTape + 
+												Statistic_Current.RejectRightTape +
+												Statistic_Current.RejectOverWeight +
+												Statistic_Current.RejectUnderWeight +
+												Statistic_Current.RejectCaseRemoved ) * 100)/
+												DINT_TO_REAL((Statistic_Current.GoodCase + 
+												Statistic_Current.RejectLeftTape + 
+												Statistic_Current.RejectRightTape +
+												Statistic_Current.RejectOverWeight +
+												Statistic_Current.RejectUnderWeight +
+												Statistic_Current.RejectCaseRemoved));
+				
+ELSE
+	Statistic_Current.Production_Percentage	:= 0;
+	Statistic_Current.Reject_Percentage		:= 0;
+END_IF											
+
+
+							
+IF (Statistic_Current.RunTime_Second + Statistic_Current.ExternalStop_Second + Statistic_Current.InternalStop_Second + Statistic_Current.WaitingTime_Second)>0 THEN
+	ProdSpd_Efficiency					:= 	DINT_TO_REAL(Cfg_prodSpeed_perHour)/3600 *	
+											DINT_TO_REAL(Statistic_Current.RunTime_Second + Statistic_Current.ExternalStop_Second + Statistic_Current.InternalStop_Second + Statistic_Current.WaitingTime_Second);
+	Statistic_Current.Net_Efficiency	:= Statistic_Current.GoodCase * 100 / ProdSpd_Efficiency;											
+ELSE
+	ProdSpd_Efficiency					:= 0;
+	Statistic_Current.Net_Efficiency	:= 0;
+END_IF	
+
+IF (Statistic_Current.RunTime_Second + Statistic_Current.InternalStop_Second)>0 THEN											
+	ProdSpd_OEE							:= 	DINT_TO_REAL(Cfg_prodSpeed_perHour)/3600 *		
+										 	DINT_TO_REAL(Statistic_Current.RunTime_Second + Statistic_Current.InternalStop_Second);
+	Statistic_Current.OEE				:= Statistic_Current.GoodCase * 100 / ProdSpd_OEE;
+ELSE
+	ProdSpd_OEE							:=0;
+	Statistic_Current.OEE				:=0;
+END_IF
+
+// *************************************************************************************************
+// To set fault statistic memory
+IF 		NOT H_ServiceStop_Pressed 
+	AND NOT MajorFault_Triggered 
+	AND NOT StackerFault_Triggered 
+	AND NOT XPusherFault_Triggered 
+	AND NOT YPusherFault_Triggered 
+	AND NOT ErectorFault_Triggered
+	AND NOT ExitFault_Triggered
+	AND NOT HorizontalFault_Triggered	THEN
+	
+	IF 		mc.Trouble	THEN
+			MajorFault_Triggered					:= TRUE;
+			Statistic_Current.MajorFault_Number		:= Statistic_Current.MajorFault_Number + 1;
+			Statistic_Manual.MajorFault_Number		:= Statistic_Manual.MajorFault_Number + 1;
+			Statistic_Total.MajorFault_Number		:= Statistic_Total.MajorFault_Number + 1;
+	ELSIF	SC[0].MinorFault THEN
+			StackerFault_Triggered 					:= TRUE;	
+			Statistic_Current.StackerFault_Number	:= Statistic_Current.StackerFault_Number + 1;
+			Statistic_Manual.StackerFault_Number	:= Statistic_Manual.StackerFault_Number + 1;
+			Statistic_Total.StackerFault_Number		:= Statistic_Total.StackerFault_Number + 1;
+	ELSIF 	SC[1].MinorFault THEN
+			XPusherFault_Triggered					:= TRUE;
+			Statistic_Current.XPusherFault_Number	:= Statistic_Current.XPusherFault_Number + 1;
+			Statistic_Manual.XPusherFault_Number	:= Statistic_Manual.XPusherFault_Number + 1;
+			Statistic_Total.XPusherFault_Number		:= Statistic_Total.XPusherFault_Number + 1;
+	ELSIF 	SC[2].MinorFault THEN
+			YPusherFault_Triggered					:= TRUE;
+			Statistic_Current.YPusherFault_Number	:= Statistic_Current.YPusherFault_Number + 1;
+			Statistic_Manual.YPusherFault_Number	:= Statistic_Manual.YPusherFault_Number + 1;
+			Statistic_Total.YPusherFault_Number		:= Statistic_Total.YPusherFault_Number + 1;			
+	ELSIF 	SC[3].MinorFault THEN
+			ErectorFault_Triggered					:= TRUE;
+			Statistic_Current.ErectorFault_Number	:= Statistic_Current.ErectorFault_Number + 1;
+			Statistic_Manual.ErectorFault_Number	:= Statistic_Manual.ErectorFault_Number + 1;
+			Statistic_Total.ErectorFault_Number		:= Statistic_Total.ErectorFault_Number + 1;				
+	ELSIF 	SC[4].MinorFault THEN
+			ExitFault_Triggered						:= TRUE;
+			Statistic_Current.ExitFault_Number		:= Statistic_Current.ExitFault_Number + 1;
+			Statistic_Manual.ExitFault_Number		:= Statistic_Manual.ExitFault_Number + 1;
+			Statistic_Total.ExitFault_Number		:= Statistic_Total.ExitFault_Number + 1;		
+	ELSIF 	SC[6].MinorFault THEN
+			HorizontalFault_Triggered				:= TRUE;
+			Statistic_Current.HorizontalFault_Number:= Statistic_Current.HorizontalFault_Number + 1;
+			Statistic_Manual.HorizontalFault_Number	:= Statistic_Manual.HorizontalFault_Number + 1;
+			Statistic_Total.HorizontalFault_Number	:= Statistic_Total.HorizontalFault_Number + 1;				
+	END_IF
+END_IF
+
+// ************************************************************************************************											
+(* Update Statistic Data by Timer *)
+IF pls_1Second THEN
+// During shift
+	IF Statistic_CurShift_Number >0 THEN
+		IF 	H_ServiceStop_Pressed THEN
+			Statistic_Current.ServiceStop_Second := Statistic_Current.ServiceStop_Second + 1;
+		END_IF	
+		IF MajorFault_Triggered THEN
+			Statistic_Current.MajorFault_Second		:= Statistic_Current.MajorFault_Second + 1;			
+		END_IF
+		IF StackerFault_Triggered THEN
+			Statistic_Current.StackerFault_Second	:= Statistic_Current.StackerFault_Second + 1;			
+		END_IF
+		IF XPusherFault_Triggered THEN
+			Statistic_Current.XPusherFault_Second	:= Statistic_Current.XPusherFault_Second + 1;			
+		END_IF
+		IF YPusherFault_Triggered THEN
+			Statistic_Current.YPusherFault_Second	:= Statistic_Current.YPusherFault_Second + 1;			
+		END_IF
+		IF ErectorFault_Triggered THEN
+			Statistic_Current.ErectorFault_Second	:= Statistic_Current.ErectorFault_Second + 1;			
+		END_IF
+		IF ExitFault_Triggered THEN
+			Statistic_Current.ExitFault_Second		:= Statistic_Current.ExitFault_Second + 1;			
+		END_IF
+		IF HorizontalFault_Triggered THEN
+			Statistic_Current.HorizontalFault_Second:= Statistic_Current.HorizontalFault_Second + 1;			
+		END_IF
+	
+		
+		IF mc.Trouble OR mc.StationStopErr OR NOT mc.AutoRunning THEN
+			Statistic_Current.InternalStop_Second	:= Statistic_Current.InternalStop_Second + 1;
+		ELSIF 	CO_YPush_Auto.YWaitingTime.Q THEN
+			Statistic_Current.WaitingTime_Second	:= Statistic_Current.WaitingTime_Second + 1;
+		ELSE
+			Statistic_Current.RunTime_Second		:= Statistic_Current.RunTime_Second + 1;
+		END_IF
+
+	END_IF
+
+// All Time	
+		IF 	H_ServiceStop_Pressed THEN
+			Statistic_Total.ServiceStop_Second := Statistic_Total.ServiceStop_Second + 1;
+			Statistic_Manual.ServiceStop_Second := Statistic_Manual.ServiceStop_Second + 1;
+		END_IF	
+		IF MajorFault_Triggered THEN
+			Statistic_Total.MajorFault_Second		:= Statistic_Total.MajorFault_Second + 1;	
+			Statistic_Manual.MajorFault_Second		:= Statistic_Manual.MajorFault_Second + 1;			
+		END_IF
+		IF StackerFault_Triggered THEN
+			Statistic_Total.StackerFault_Second		:= Statistic_Total.StackerFault_Second + 1;	
+			Statistic_Manual.StackerFault_Second	:= Statistic_Manual.StackerFault_Second + 1;			
+		END_IF
+		IF XPusherFault_Triggered THEN
+			Statistic_Total.XPusherFault_Second		:= Statistic_Total.XPusherFault_Second + 1;	
+			Statistic_Manual.XPusherFault_Second	:= Statistic_Manual.XPusherFault_Second + 1;					
+		END_IF
+		IF YPusherFault_Triggered THEN
+			Statistic_Total.YPusherFault_Second		:= Statistic_Total.YPusherFault_Second + 1;	
+			Statistic_Manual.YPusherFault_Second	:= Statistic_Manual.YPusherFault_Second + 1;			
+		END_IF
+		IF ErectorFault_Triggered THEN
+			Statistic_Total.ErectorFault_Second		:= Statistic_Total.ErectorFault_Second + 1;		
+			Statistic_Manual.ErectorFault_Second	:= Statistic_Manual.ErectorFault_Second + 1;		
+		END_IF
+		IF ExitFault_Triggered THEN
+			Statistic_Total.ExitFault_Second		:= Statistic_Total.ExitFault_Second + 1;		
+			Statistic_Manual.ExitFault_Second		:= Statistic_Manual.ExitFault_Second + 1;		
+		END_IF
+		IF HorizontalFault_Triggered THEN
+			Statistic_Total.HorizontalFault_Second	:= Statistic_Total.HorizontalFault_Second + 1;	
+			Statistic_Manual.HorizontalFault_Second	:= Statistic_Manual.HorizontalFault_Second + 1;			
+		END_IF
+		
+		IF mc.Trouble OR mc.StationStopErr OR NOT mc.AutoRunning THEN
+			Statistic_Total.InternalStop_Second		:= Statistic_Total.InternalStop_Second + 1;
+			Statistic_Manual.InternalStop_Second	:= Statistic_Manual.InternalStop_Second + 1;			
+		ELSIF 	CO_YPush_Auto.YWaitingTime.Q THEN
+			Statistic_Total.WaitingTime_Second		:= Statistic_Total.WaitingTime_Second + 1;
+			Statistic_Manual.WaitingTime_Second		:= Statistic_Manual.WaitingTime_Second + 1;			
+		ELSE
+			Statistic_Total.RunTime_Second			:= Statistic_Total.RunTime_Second + 1;
+			Statistic_Manual.RunTime_Second			:= Statistic_Manual.RunTime_Second + 1;			
+	END_IF	
+	
+END_IF
+
+// **************************************************************************************************
+(* Update Statistic Data by Counter *)
+plsServiceStop	(CLK:= H_ServiceStop_Pressed);
+IF plsServiceStop.Q THEN
+Statistic_Current.ServiceStop_Number	:= Statistic_Current.ServiceStop_Number + 1;
+END_IF
+
+IF Statistic_CurShift_Number >0 THEN
+		plsGlueL_Shift	(CLK:= O_Nord_ValveL_On);
+		IF plsGlueL_Shift.Q THEN
+			Statistic_Current.GlueLeft_Number := Statistic_Current.GlueLeft_Number + 1;
+		END_IF
+		plsTapeL_Shift	(CLK:=I_HOR_TapeL_Empty_PE);	
+		IF plsTapeL_Shift.Q THEN
+			Statistic_Current.TapeLeft_Number := Statistic_Current.TapeLeft_Number + 1;
+		END_IF	
+		plsGlueR_Shift	(CLK:= O_Nord_ValveR_On);
+		IF plsGlueR_Shift.Q THEN
+			Statistic_Current.GlueRight_Number := Statistic_Current.GlueRight_Number + 1;
+		END_IF		
+		plsTapeR_Shift	(CLK:=I_HOR_TapeR_Empty_PE);	
+		IF plsTapeR_Shift.Q THEN
+			Statistic_Current.TapeRight_Number := Statistic_Current.TapeRight_Number + 1;
+		END_IF	
+END_IF		]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

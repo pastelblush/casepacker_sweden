@@ -1,0 +1,208 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="MAIN" Id="{8f53a5b7-e277-45c2-8edb-581d2848c665}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+	Reset: BOOL;
+	MachineEmpty: BOOL;
+	plsMemoryReset: R_trig;
+	tmrStartWrite: Ton;
+	tmrWriteInterval: Ton;
+	WritePersistentDataBusy: BOOL;
+	plsStartWrite: R_trig;
+	InstWritePersistentData:WritePersistentData;
+	Timeout:ton;
+	Test: BOOL;
+	TIMEr: TIME;
+	plsPurgeErectorCaseOff	: 	R_trig;
+	plsServiceStop			:	R_trig;
+	plsMAchineStart			:	R_trig;
+	WA_ResetDly:TON;
+	MC_Empty:BOOL;
+	GetUPSStatus:FB_GetUPSStatus;
+	GetFB_LocalSystemTime:FB_LocalSystemTime;
+END_VAR
+
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+(**************************************************************************************************************)
+(* Machine Control *)
+(**************************************************************************************************************)
+
+HMI.V_MachineSpeed	:= 100;
+
+Check_AutorunCond();
+
+Check_Ethercat();
+
+MC_Ctrl(
+	In_Start_PB					:= I_Start_PB AND NOT W_ServiceStop AND ER_origin.ER_WA_Origin  ,
+	In_Stop_PB					:= I_Stop_PB ,
+	In_EmgOK					:= I_Emg_SC_OK AND NOT  E_EStop_SafetyBroken,
+	In_Door_Sw					:= I_Door_SC_OK AND NOT E_Door_SafetyBroken,
+	In_Pressure_Sw				:= (I_PressSw_OK AND NOT I_Pneumatic_Sup1_ON AND NOT I_Pneumatic_Sup2_ON) OR NOT (I_Door_SC_OK AND Guard_door.Guard_Door_Fault) ,
+	In_LightCurtainSafeToCross	:= TRUE(*HOR_LC_Muting*) ,
+	In_LightCurtainOK			:= I_HLC_SC_OK  OR NOT I_Door_SC_OK OR Guard_door.Guard_Door_Fault,
+	In_CommunicationOK			:= S_ECat_NOK,
+	In_IncomingPowerPhase_OK	:= I_IncomingPowerPhase_OK,
+	In_OtherTrouble				:= Guard_door.Guard_Door_Fault ,
+	In_Reset_PB					:= I_Reset_PB ,
+	In_Start_Enable				:= A_AutorunDataOK ,
+	In_EndProdWPCleared			:= ,
+	In_WaitingForMaterial		:= NOT(I_Nord_Rdy OR NOT T_GlueEnable OR mc.DryRun) OR W_Glue_is_Empty	OR W_CaseBuffer_is_Empty,	
+	Out_RedTower				=> O_Red_TL ,
+	Out_YelTower				=> O_Yel_TL ,
+	Out_GrnTower				=> O_Grn_TL ,
+	Out_Buzzer					=> O_Buz_TL, 
+	Out_StartPL					=> O_Start_PL,
+	Out_StopPL					=> O_Stop_PL,
+	Out_ResetPL					=> O_Reset_PL,
+	McVar 						:= MC,	
+	HMI 						:= HMI);
+
+
+// ************************************************
+// Service Stop Memory
+IF I_Stop_PB AND mc.autorunning THEN 
+	H_ServiceStop_Pressed	:= TRUE;
+END_IF
+
+plsMAchineStart	(CLK:= mc.AutoRunning);
+IF plsMAchineStart.Q	THEN
+	H_ServiceStop_Pressed	:= FALSE;
+	MajorFault_Triggered 	:= FALSE;
+	StackerFault_Triggered 	:= FALSE;
+	XPusherFault_Triggered 	:= FALSE;
+	YPusherFault_Triggered 	:= FALSE;
+	ErectorFault_Triggered	:= FALSE;
+	ExitFault_Triggered		:= FALSE;
+	HorizontalFault_Triggered:= FALSE;
+END_IF
+
+// *************************************************	
+// Service Stop Warning
+plsServiceStop (CLK := H_ServiceStop_Pressed AND NOT mc.AutoRunning );
+IF plsServiceStop.Q THEN
+	W_ServiceStop	:= TRUE;	
+END_IF	
+
+
+
+// Machine Empty	
+MachineEmpty := NOT I_ER_StpL_Ctn_PE AND
+				NOT I_ER_StpR_Ctn_PE AND
+				NOT I_EX_Cv_Ctn_PE AND
+				NOT I_HOR_Entry_Cv_Present AND
+				MC.AllStationRdy;
+
+				
+O_DoorLock	:= 	(* MC.ManualMode AND 
+				I_Pneumatic_Sup1_ON AND 
+				I_Pneumatic_Sup2_ON AND*)
+				NOT (	mc.AutoRunning OR 
+						SC[0].OriginSchRun OR
+						SC[1].OriginSchRun OR
+						SC[2].OriginSchRun OR
+						SC[3].OriginSchRun OR
+						SC[4].OriginSchRun OR
+						SC[5].OriginSchRun OR
+						SC[6].OriginSchRun);				
+
+				
+IF 	HMI.T_EndProd AND 
+	sc[0].Rdy AND
+	sc[1].Rdy AND
+	sc[2].Rdy AND
+	sc[3].Rdy AND
+	sc[4].Rdy AND
+	sc[6].Rdy AND	
+	MachineEmpty AND
+ 	mc.AutoRunning THEN
+	MC.StopPressed	:= TRUE;
+END_IF
+
+
+IF NOT mc.AutoRunning THEN
+	HMI.T_EndProd := FALSE;
+END_IF
+
+(**************************************************************************************************************)
+(* Calling of Programs *)
+(**************************************************************************************************************)
+WarningMsg();
+Calc_McPerformance();
+Std_System_Out();
+TouchScreen();
+Statistic();
+Recipe_Handling();
+Guard_Door();
+Emergency_Stop();
+CO_Main();			(*COLLATOR MAIN PROGRAM*)
+ER_Main();			(*ERECTOR MAIN PROGRAM*)
+EX_Main();			(*EXIT MAIN PROGRAM*)
+(*EL_Main();		(*ELEVATOR MAIN PROGRAM*)*)
+HMI.T_Station_BypassP[5] := TRUE;
+HOR_Main();			(*HORIZONTAL MAIN PROGRAM*)
+Track_and_Trace(); 	(* TRACK AND TRACE PROGRAM *)
+
+
+(* MACHINE CONDITION *)
+MC_Empty	:= NOT( 	I_CO_YStk_AtBuf1_PE OR 
+						I_CO_YStk_AtBuf2_PE OR
+						I_CO_Bdl_Stack_PE OR
+						I_CO_Bdl_PE1 OR
+						I_CO_Bdl_PE2 OR
+						I_CO_Bdl_PE3 OR
+						I_CO_Bdl_PE4 OR
+						I_CO_Bdl_PE5 OR
+						I_CO_Bdl_ZLimit_PE OR
+						I_CO_Bdl_ZFull_PE OR
+						I_ER_RefillL_PE OR
+						I_ER_BufferL_PE OR
+						I_ER_BufferR_PE OR
+						I_ER_StpL_Ctn_PE OR
+						I_ER_StpR_Ctn_PE OR
+						I_EX_Cv_Ctn_PE OR
+						I_HOR_Entry_Cv_Present									
+												);
+
+
+IF NOT MC.AutoMode THEN
+	Memory_Handling();
+END_IF
+
+WA_ResetDly	(IN := NOT (sc[0].OriginSchRun OR
+		sc[1].OriginSchRun OR
+	 	sc[2].OriginSchRun OR 
+		sc[3].OriginSchRun OR
+		sc[4].OriginSchRun OR 
+		sc[6].OriginSchRun OR	
+		HMI.T_OriginSearch OR
+		MC.OriginSchRun) AND 
+		MC.AllOrigin AND
+		MC_WA_Run , pt := T#1S);
+
+		
+IF WA_ResetDly.Q THEN
+	MC_WA_Run	:=FALSE;
+END_IF			
+
+(**************************************************************************************************************)
+(* UPS Battery Status *)
+(**************************************************************************************************************)
+GetUPSStatus(
+	sNetId:= '10.1.33.138.1.1' , 
+	nPort:= 801, 
+	bEnable:=TRUE , 
+	bValid=> , 
+	bError=> , 
+	nErrId=> , 
+	stStatus=> );
+
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

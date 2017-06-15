@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <GVL Name="GVL_Auto" Id="{dc732375-ae00-4db6-9ccf-c13c440a9e66}">
+    <Declaration><![CDATA[{attribute 'Tc2GvlVarNames'}
+VAR_GLOBAL
+
+	A_EL_LC_Muting:bool; 	(*Mute Elevator Light Curtain in Auto*)
+	A_AutorunDataOK:BOOL;	(*Recipe Data OK for Autorun to start*)
+	
+	A_HOR_LC_Muting:BOOL; 	(*Mute Horizontal Light Curtain in Auto*)
+	
+	
+(**************************************************************************************************************)
+(*----------   P0 - COLLATOR   ----------*)
+(* All P0 control bits and words must be within address MD3000~MD3039*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+	A0_RunStep				AT %MW3000:INT;
+
+(**************************************************************************************************************)
+(*----------   P1 - ERECTOR   ----------*)
+(* All P1 control bits and words must be within address MD3040~MD3079*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+
+	A1_RunStep 				AT %MW3040:INT;
+
+(**************************************************************************************************************)
+(*---------- P2 - EXIT ----------*)
+(* All P2 control bits and words must be within address MD3080~MD3119*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+	A2_RunStep 				AT %MW3080:INT;
+
+(**************************************************************************************************************)
+(*---------- P3 - ELEVATOR ----------*)
+(* All P3 control bits and words must be within address MD3120~MD3159*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+
+	A3_RunStep 				AT %MW3120		:INT;
+	TapeReel_ActivatedL		AT %MX3122.0	:BOOL;
+	TapeReel_ActivatedR		AT %MX3122.1	:BOOL;	
+	
+(**************************************************************************************************************)
+(*---------- P4 - HORIZONTAL ----------*)
+(* All P4 control bits and words must be within address MD3160~MD3199*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+
+	A4_RunStep 				AT %MW3160 :INT;
+
+(**************************************************************************************************************)
+(*---------- P5 SPARE ---------*)
+(* All P5 control bits and words must be within address MD3200~MD3239*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+
+	A5_RunStep 				AT %MW3200:INT;
+
+(**************************************************************************************************************)
+(*---------- P6 SPARE ----------*)
+(* All P6 control bits and words must be within address MD3240~MD3279*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+
+	A6_RunStep  			AT %MW3240 :INT;
+
+(**************************************************************************************************************)
+(*---------- P7 SPARE ----------*)
+(* All P7 control bits and words must be within address MD3280~MD3319*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+
+	A7_RunStep 				AT %MW3280:INT;
+
+(**************************************************************************************************************)
+(*---------- P8 SPARE ----------*)
+(* All P8 control bits and words must be within address MD3320~MD3359*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+
+	A8_RunStep 				AT %MW3320:INT;
+
+	
+	
+	INPUT_TEST		AT %I* 	:INT;
+	OUTPUT_TEST		AT %Q* 	:INT;
+
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

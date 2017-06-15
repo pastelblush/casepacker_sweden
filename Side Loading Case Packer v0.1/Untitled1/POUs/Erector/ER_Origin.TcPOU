@@ -1,0 +1,392 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="ER_Origin" Id="{578de5d3-994e-48ec-9dca-cee263c9b3fc}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM ER_Origin
+VAR_IN_OUT
+	Station		:structStationCtrl;
+END_VAR
+VAR
+	pls_OriginSchRun: R_trig;
+	ER_CtnPresent_Origin:BOOL;
+	ER_NoCtnPresent_Origin:BOOL;
+	
+	ER_WA_Origin: BOOL;
+	ER_CtnDone_Origin: BOOL;
+	ER_Ctn_OriginState: BOOL;
+	TimeoutTrigger: BOOL;
+	TimeoutSetting: TIME;
+	Timeout:ton;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(**************************************************************************************************************)
+(* Station Width Adjust in Origin Condition *)
+(**************************************************************************************************************)
+ER_WA_Origin := fcCompareWAPos(CurrPos:= ER_WA_Srv_Var.Out_CurrPos, TargetPos:= H_ER_WA_Srv_TargetPos) ;
+
+(**************************************************************************************************************)
+(* Station Origin Condition *)
+(**************************************************************************************************************)
+
+IF Cfg_CollDircLtoR THEN
+	ER_CtnPresent_Origin := (	ER_StpR_Cyl_Var.S_WorkPos AND 
+								ER_StpL_Cyl_Var.S_WorkPos AND
+								ER_FFlapL_Cyl_Var.S_HomePos AND 
+								(*ER_RFlapL_Cyl_Var.S_HomePos AND*)
+								ER_FFlapR_Cyl_Var.S_HomePos AND 
+								(*ER_RFlapR_Cyl_Var.S_WorkPos AND*)
+								ER_TFlapClsL_Cyl_Var.S_WorkPos AND
+								ER_TFlapClsR_Cyl_Var.S_WorkPos AND
+							(*	ER_BFlapL_Vac_Var.S_Vacuum AND 
+								ER_BFlapR_Vac_Var.S_Vacuum AND*)
+								I_ER_StpL_Ctn_PE AND I_ER_StpR_Ctn_PE) 
+								OR MC.DryRun ;
+ELSE
+	ER_CtnPresent_Origin := (	ER_StpR_Cyl_Var.S_WorkPos AND 
+								ER_StpL_Cyl_Var.S_WorkPos AND
+								ER_FFlapL_Cyl_Var.S_WorkPos AND 
+								ER_RFlapL_Cyl_Var.S_WorkPos AND
+								ER_FFlapR_Cyl_Var.S_HomePos AND 
+								ER_RFlapR_Cyl_Var.S_HomePos AND
+								ER_BFlapL_Vac_Var.S_Vacuum AND 
+								(*ER_BFlapR_Vac_Var.S_Vacuum AND*)
+								ER_BFlapCloseL_Cyl_Var.S_HomePos AND 
+								ER_BFlapCloseR_Cyl_Var.S_HomePos AND
+								I_ER_StpL_Ctn_PE AND I_ER_StpR_Ctn_PE)
+								OR MC.DryRun ;
+END_IF
+
+ER_CtnDone_Origin := (	ER_StpR_Cyl_Var.S_WorkPos AND 
+						ER_StpL_Cyl_Var.S_WorkPos AND
+						ER_FFlapL_Cyl_Var.S_HomePos AND 
+						ER_RFlapL_Cyl_Var.S_WorkPos AND
+						ER_FFlapR_Cyl_Var.S_HomePos AND 
+						ER_RFlapR_Cyl_Var.S_WorkPos AND
+					(*	ER_BFlapCloseL_Cyl_Var.S_WorkPos AND 
+						ER_BFlapCloseR_Cyl_Var.S_WorkPos AND*)
+						I_ER_StpL_Ctn_PE AND I_ER_StpR_Ctn_PE) 
+						OR MC.DryRun ;
+
+
+ER_NoCtnPresent_Origin := (	ER_StpR_Cyl_Var.S_HomePos AND 
+							ER_StpL_Cyl_Var.S_HomePos AND
+							ER_FFlapL_Cyl_Var.S_HomePos AND 
+							ER_RFlapL_Cyl_Var.S_HomePos AND
+							ER_FFlapR_Cyl_Var.S_HomePos AND 
+							ER_RFlapR_Cyl_Var.S_HomePos AND
+							ER_TFlapOpnL_Cyl_var.S_HomePos AND
+							ER_TFlapClsL_Cyl_var.S_HomePos AND
+							ER_TFlapOpnR_Cyl_var.S_HomePos AND
+							ER_TFlapClsR_Cyl_var.S_HomePos AND
+							ER_CaseGuideL_Cyl_Var.S_HomePos AND
+							ER_CaseGuideR_Cyl_Var.S_HomePos AND
+							NOT I_ER_StpL_Ctn_PE AND 
+							NOT I_ER_StpR_Ctn_PE)
+							OR MC.DryRun;
+
+ER_Ctn_OriginState := 	((	H_ER_CtnRdyForPushIn OR H_ER_CtnPushInDone) OR 
+							H_ER_CtnSideFlapDone AND 
+							ER_CtnPresent_Origin) OR
+							(	NOT H_ER_CtnRdyForPushIn AND 
+								NOT H_ER_CtnPushInDone AND
+						 		NOT H_ER_CtnSideFlapDone AND 
+								ER_NoCtnPresent_Origin) OR
+							(H_ER_CtnSideFlapDone AND ER_CtnDone_Origin);
+							
+Station.Origin 	:=	(	(ER_WA_Origin OR NOT MC_WA_Run )AND
+						(	(ER_Arm_Vac_Var.S_Release AND
+							 ER_ArmTilt_Cyl_Var.S_WorkPos) OR
+							(ER_Arm_Vac_Var.S_Vacuum AND
+							 ER_ArmTilt_Cyl_Var.S_HomePos) )	AND		
+						ER_Ctn_OriginState AND
+						ER_BFlapL_Cyl_Var.S_HomePos AND 
+						ER_BFlapR_Cyl_Var.S_HomePos) AND	
+						ER_Arm_Cyl_Var.S_HomePos AND 						
+						(fcComparePos(CurrPos:= ER_Arm_Srv_Var.Out_CurrPos, TargetPos:= H_ER_Arm_Srv_CtnVacuumPos, Tolerance :=3 ) OR
+						MC_WA_Run OR Erector_SafetySensorBypass) OR
+						Station.Bypass;			
+					 		
+(**************************************************************************************************************)
+(* Station Origin Step *)
+(**************************************************************************************************************)
+
+pls_OriginSchRun(CLK:= MC.OriginSchRun OR Station.OriginSchRun);
+(*EL_EL_TapeLock_Var.In_OrgWork := ER_WA_Srv_Var.Out_Ready;*)
+
+Timeout(IN:=TimeoutTrigger, PT:=TimeoutSetting);
+IF Timeout.Q THEN
+	TimeoutTrigger := FALSE;
+END_IF
+
+IF (MC.OriginSchRun OR Station.OriginSchRun) AND NOT Station.Bypass   THEN
+	CASE Station.OriginRunStep OF
+
+	0 : 	(************* Ready To Run ****************)
+			IF NOT Station.Origin AND pls_OriginSchRun.Q THEN
+				Station.OriginRunStep := Station.OriginRunStep+10;	
+			END_IF
+
+	10 : 	(************* Check Sensors Before Homing ****************)
+			Station.Status 		:= 'Org10: Check Sensors Before Homing';
+			Station.StatusInt	:= 120;
+			
+			IF (I_ER_StpL_Ctn_PE OR I_ER_StpR_Ctn_PE) AND  
+				NOT (H_ER_CtnRdyForPushIn (*OR H_ER_CtnPushInDone OR H_ER_CtnSideFlapDone*)) THEN 	
+				Station.SeqFaultWord 	:= 100;
+				Station.SeqFaultString 	:= 'Origin: Carton on Erector is in undefined state. Remove Carton.';
+				E_CaseDetected			:= TRUE;	
+			ELSIF (I_ER_StpL_Ctn_PE AND NOT I_ER_StpR_Ctn_PE) THEN
+				Station.SeqFaultWord 		:= 101;		
+				Station.SeqFaultString 		:= 'Origin: Carton Not Detected at Right Stopper. Check Carton.';
+				E_RightStopper_NotDetect	:= TRUE;		
+			ELSIF (NOT I_ER_StpL_Ctn_PE AND I_ER_StpR_Ctn_PE) THEN
+				Station.SeqFaultWord 		:= 102;					
+				Station.SeqFaultString 		:= 'Origin: Carton Not Detected at Left Stopper. Check Carton.';
+				E_LeftStopper_NotDetect		:= TRUE;	
+			ELSIF NOT (I_ER_StpL_Ctn_PE AND I_ER_StpR_Ctn_PE) AND  
+				(H_ER_CtnRdyForPushIn (* OR H_ER_CtnPushInDone OR H_ER_CtnSideFlapDone*)) THEN 	
+				Station.SeqFaultWord 		:= 104;
+				Station.SeqFaultString 		:= 'Origin: Carton Missing or Not Properly Erected. Check Carton.';
+				E_CaseNotDetected			:= TRUE;
+			ELSIF H_ER_CtnRdyForPushIn AND   
+				NOT (ER_BFlapL_Vac_Var.S_Vacuum (*AND ER_BFlapR_Vac_Var.S_Vacuum*)) THEN
+				Station.SeqFaultWord 		:= 103;	
+				Station.SeqFaultString 		:= 'Origin: Empty Carton Not Held by Vacuum. Remove Carton';		
+				H_ER_CtnRdyForPushIn 		:= FALSE;
+				E_CaseVacuumNotDetected		:= TRUE;			 
+			ELSE
+				Station.OriginRunStep := Station.OriginRunStep+10;				
+	    	END_IF
+
+
+			
+	20 : 	(************* Release Erector Arm Vacuum ****************)
+			Station.Status 		:= 'Org20: Release Erector Arm Vacuum';
+			Station.StatusInt	:= 258;
+			
+			ER_Arm_Vac_Var.In_OrgPurge := TRUE;
+	
+			IF ER_Arm_Vac_Var.S_Release THEN
+				ER_Arm_Vac_Var.In_OrgPurge := FALSE;
+				IF ((fcComparePos(CurrPos:= ER_Arm_Srv_Var.Out_CurrPos, TargetPos:= H_ER_Arm_Srv_CtnVacuumPos, Tolerance := 0.5)) AND
+						ER_Arm_Srv_Var.Out_InPos AND ER_Arm_Srv_Var.Out_Ready) THEN
+					Station.OriginRunStep := 40;	(*Tilt Cylinders does not need to move Down*)
+				ELSE
+					Station.OriginRunStep := Station.OriginRunStep+10;					
+				END_IF
+			END_IF 
+	 			
+	30 : 	(************* Erector Arm Cylinder Down and Tilt Bwd ****************)
+			Station.Status 		:= 'Org30: Erector Arm Cylinder Down and Tilt Bwd';
+			Station.StatusInt	:= 259;
+			
+			IF ER_Arm_Srv_Var.Out_CurrPos>= H_ER_Arm_Srv_CtnVacuumPos THEN
+
+					Station.OriginRunStep := Station.OriginRunStep+10;	
+			ELSE
+				IF NOT (ER_Arm_Cyl_Var.S_WorkPos AND ER_ArmTilt_Cyl_Var.S_HomePos) THEN
+					ER_Arm_Cyl_Var.In_OrgWork 		:= TRUE;
+					ER_ArmTilt_Cyl_Var.In_OrgHome 	:= TRUE;
+				ELSE
+					ER_Arm_Cyl_Var.In_OrgWork 		:= FALSE;
+					ER_ArmTilt_Cyl_Var.In_OrgHome 	:= FALSE;
+					Station.OriginRunStep := Station.OriginRunStep+10;	
+				END_IF 
+			END_IF
+			
+	40 : 	(************* Erector Arm Servo Move to Home Pos and all cylinders Bwd ****************)
+			Station.Status 		:= 'Org40: Erector Arm Move to Home and all cylinders Bwd ';
+			Station.StatusInt	:= 260;
+			
+			ER_Arm_Srv_Var.In_PosCmd 			:= H_ER_Arm_Srv_CtnVacuumPos; 
+			ER_Arm_Srv_Var.In_VelCmd 			:= A_Srv_ErectorArmLoSpeed;
+			ER_Arm_Srv_Var.In_MoveAbs 			:= TRUE;
+			
+			IF NOT H_ER_CtnRdyForPushIn AND 		(*No Carton Origin Sequence*)
+				NOT H_ER_CtnPushInDone AND
+				NOT H_ER_CtnSideFlapDone THEN
+				ER_FFlapR_Cyl_Var.In_OrgHome 	:= TRUE;
+				ER_RFlapR_Cyl_Var.In_OrgHome 	:= TRUE;
+				ER_FFlapL_Cyl_Var.In_OrgHome 	:= TRUE;
+				ER_RFlapL_Cyl_Var.In_OrgHome 	:= TRUE;		
+				ER_BFlapL_Vac_Var.In_OrgPurge 	:= TRUE;	
+				(*ER_BFlapR_Vac_Var.In_OrgPurge 	:= TRUE;*)
+				ER_StpR_Cyl_Var.In_OrgHome 		:= TRUE;
+				ER_StpL_Cyl_Var.In_OrgHome 		:= TRUE;	
+				ER_TFlapOpnL_Cyl_var.In_OrgHome	:= TRUE;
+				ER_TFlapClsL_Cyl_var.In_OrgHome	:= TRUE;
+				ER_TFlapOpnR_Cyl_var.In_OrgHome	:= TRUE;
+				ER_TFlapClsR_Cyl_var.In_OrgHome	:= TRUE;
+				ER_CaseGuideL_Cyl_Var.In_OrgHome:= TRUE;
+				ER_CaseGuideR_Cyl_Var.In_OrgHome:= TRUE;
+				
+				
+			ELSE
+				IF (H_ER_CtnRdyForPushIn OR
+				H_ER_CtnPushInDone) AND 		(*Empty or Full Carton Origin Sequence*)
+				NOT H_ER_CtnSideFlapDone THEN
+					ER_BFlapL_Vac_Var.In_OrgVacuum 		:= TRUE;	
+					(*ER_BFlapR_Vac_Var.In_OrgVacuum 		:= TRUE;*)			
+					ER_BFlapCloseL_Cyl_Var.In_OrgHome 	:= TRUE;
+					ER_BFlapCloseR_Cyl_Var.In_OrgHome 	:= TRUE;
+					ER_StpR_Cyl_Var.In_OrgWork 			:= TRUE;
+					ER_StpL_Cyl_Var.In_OrgWork 			:= TRUE;
+					IF ER_BFlapL_Cyl_Var.S_HomePos AND
+						ER_BFlapR_Cyl_Var.S_HomePos THEN
+						IF Cfg_CollDircLtoR THEN
+							ER_FFlapR_Cyl_Var.In_OrgWork := TRUE;
+							ER_RFlapR_Cyl_Var.In_OrgWork := TRUE;	
+							ER_FFlapL_Cyl_Var.In_OrgHome := TRUE;
+							ER_RFlapL_Cyl_Var.In_OrgHome := TRUE;		
+						ELSE
+							ER_FFlapL_Cyl_Var.In_OrgWork := TRUE;
+							ER_RFlapL_Cyl_Var.In_OrgWork := TRUE;			
+							ER_FFlapR_Cyl_Var.In_OrgHome := TRUE;
+							ER_RFlapR_Cyl_Var.In_OrgHome := TRUE;
+						END_IF						
+					END_IF
+				ELSE								(*Fully closed Carton Origin Sequence*)
+					ER_StpR_Cyl_Var.In_OrgWork := TRUE;
+					ER_StpL_Cyl_Var.In_OrgWork := TRUE;		
+					ER_BFlapL_Vac_Var.In_OrgPurge := TRUE;	
+					(*ER_BFlapR_Vac_Var.In_OrgPurge := TRUE;*)	
+					IF ER_BFlapL_Cyl_Var.S_HomePos AND
+						ER_BFlapR_Cyl_Var.S_HomePos THEN
+						ER_FFlapR_Cyl_Var.In_OrgHome := TRUE;
+						ER_FFlapL_Cyl_Var.In_OrgHome := TRUE;
+						ER_RFlapR_Cyl_Var.In_OrgWork := TRUE;	
+						ER_RFlapL_Cyl_Var.In_OrgWork := TRUE;							
+					END_IF	
+					IF ER_RFlapR_Cyl_Var.S_WorkPos AND
+						ER_RFlapL_Cyl_Var.S_WorkPos THEN
+						ER_BFlapCloseL_Cyl_Var.In_OrgWork := TRUE;
+						ER_BFlapCloseR_Cyl_Var.In_OrgWork := TRUE;						
+					END_IF
+				END_IF	
+			END_IF			
+
+			ER_BFlapL_Cyl_Var.In_OrgHome := TRUE;
+			ER_BFlapR_Cyl_Var.In_OrgHome := TRUE;
+			
+			IF 	ER_Ctn_OriginState AND
+				ER_BFlapL_Cyl_Var.S_HomePos AND 
+				ER_BFlapR_Cyl_Var.S_HomePos AND	
+				(ER_RFlapL_Cyl_Var.S_HomePos OR (ER_RFlapL_Cyl_Var.In_OrgWork AND ER_RFlapL_Cyl_Var.S_WorkPos))AND 		
+				((fcComparePos(CurrPos:= ER_Arm_Srv_Var.Out_CurrPos, TargetPos:= H_ER_Arm_Srv_CtnVacuumPos, Tolerance := 0.5) AND
+				ER_Arm_Srv_Var.Out_InPos AND ER_Arm_Srv_Var.Out_Ready) OR
+				MC_WA_Run) THEN
+				ER_Arm_Srv_Var.In_MoveAbs 		:= FALSE;
+				ER_StpR_Cyl_Var.In_OrgHome 		:= FALSE;
+				ER_StpL_Cyl_Var.In_OrgHome 		:= FALSE;
+				ER_FFlapR_Cyl_Var.In_OrgHome 	:= FALSE;
+				ER_RFlapR_Cyl_Var.In_OrgHome 	:= FALSE;
+				ER_FFlapL_Cyl_Var.In_OrgHome 	:= FALSE;
+				ER_RFlapL_Cyl_Var.In_OrgHome 	:= FALSE;		
+				ER_BFlapL_Vac_Var.In_OrgPurge 	:= FALSE;	
+				(*ER_BFlapR_Vac_Var.In_OrgPurge 	:= FALSE;*)
+				ER_FFlapR_Cyl_Var.In_OrgWork 	:= FALSE;
+				ER_RFlapR_Cyl_Var.In_OrgWork 	:= FALSE;	
+				ER_FFlapL_Cyl_Var.In_OrgWork 	:= FALSE;
+				ER_RFlapL_Cyl_Var.In_OrgWork 	:= FALSE;			
+				ER_BFlapL_Vac_Var.In_OrgVacuum 	:= FALSE;	
+				(*ER_BFlapR_Vac_Var.In_OrgVacuum 	:= FALSE;*)				
+				ER_BFlapL_Cyl_Var.In_OrgHome 	:= FALSE;
+				ER_BFlapR_Cyl_Var.In_OrgHome 	:= FALSE;
+				ER_TFlapOpnL_Cyl_var.In_OrgHome	:= FALSE;
+				ER_TFlapClsL_Cyl_var.In_OrgHome	:= FALSE;
+				ER_TFlapOpnR_Cyl_var.In_OrgHome	:= FALSE;
+				ER_TFlapClsR_Cyl_var.In_OrgHome	:= FALSE;
+				ER_CaseGuideL_Cyl_Var.In_OrgHome:= FALSE;
+				ER_CaseGuideR_Cyl_Var.In_OrgHome:= FALSE;
+				Station.OriginRunStep := Station.OriginRunStep+10;	
+			END_IF
+
+	50 : 	(************* Erector Arm Cylinder Up and Tilt Fwd ****************)
+			Station.Status 		:= 'Org50: Erector Arm Cylinder Up ';
+			Station.StatusInt	:= 261;
+			
+			IF NOT ER_Arm_Cyl_Var.S_HomePos  THEN
+				ER_Arm_Cyl_Var.In_OrgHome 		:= TRUE;
+				ER_Arm_Cyl_Var.In_OrgWork 		:= FALSE;
+			ELSE
+				ER_Arm_Cyl_Var.In_OrgHome 		:= FALSE;
+				ER_Arm_Cyl_Var.In_OrgWork 		:= FALSE;
+				Station.OriginRunStep := Station.OriginRunStep+10;	
+			END_IF 
+			
+	60:		(************* and Tilt Fwd ****************)
+			Station.Status 		:= 'Org60: Tilt Fwd ';
+			Station.StatusInt	:= 261;
+			
+			IF NOT ER_ArmTilt_Cyl_Var.S_WorkPos THEN
+				ER_ArmTilt_Cyl_Var.In_OrgWork 	:= TRUE;
+				ER_ArmTilt_Cyl_Var.In_OrgHome 	:= FALSE;
+			ELSE
+				ER_ArmTilt_Cyl_Var.In_OrgWork 	:= FALSE;
+				ER_ArmTilt_Cyl_Var.In_OrgHome 	:= FALSE;
+				
+				IF NOT MC_WA_Run THEN
+					Station.OriginRunStep := 0;
+				ELSE
+					Station.OriginRunStep := 1000;	
+				END_IF	
+			END_IF 		
+	
+	1000 : 	(************* Check Sensor Before Width Adjust ****************)
+			Station.Status := 'Conveyor Run and Check Sensor Before Width Adjust';
+			
+			TimeoutTrigger := TRUE;
+			TimeoutSetting := T#5S;
+			
+			
+			IF I_ER_StpL_Ctn_PE THEN
+				Station.SeqFaultWord 	:= 150;	
+				E_CaseDetected			:=TRUE;		
+				Station.SeqFaultString 	:= 'Origin: Carton Detected on Erector Left Stopper. Remove Carton for Width Adjustment';						 			
+			ELSIF I_ER_StpR_Ctn_PE THEN
+				Station.SeqFaultWord 	:= 151;	
+				E_CaseDetected			:=TRUE;	
+				Station.SeqFaultString 	:= 'Origin: Carton Detected on Erector Right Stopper. Remove Carton for Width Adjustment';							 			
+			ELSIF  I_ER_BufferL_PE THEN
+				Station.SeqFaultWord 	:= 152;	
+				E_EmptyCaseDetected		:= TRUE;
+				Station.SeqFaultString 	:= 'Origin: Carton Detected on Left Buffer Conveyor. Remove Carton Buffer for Width Adjustment';							 			
+			ELSIF  I_ER_BufferR_PE THEN
+				Station.SeqFaultWord 	:= 153;	
+				E_EmptyCaseDetected		:= TRUE;		
+				Station.SeqFaultString 	:= 'Origin: Carton Detected on Right Buffer Conveyor. Remove Carton Buffer for Width Adjustment';					 			
+			ELSIF I_ER_RefillL_PE THEN
+				Station.SeqFaultWord 	:= 154;	
+				E_EmptyCaseDetected		:= TRUE;		
+				Station.SeqFaultString 	:= 'Origin: Carton Detected on Left Buffer Conveyor. Remove Carton Buffer for Width Adjustment';					 			
+			ELSIF Timeout.Q THEN
+				ER_BufCvL_Mtr_Var.In_OrgOn := FALSE;
+				Station.OriginRunStep := Station.OriginRunStep+10;	
+			END_IF
+	
+	1010 : 	(************* Move All Erector WA to the right width ****************)
+			
+				
+			EL_EL_TapeLock_Var.In_OrgWork		:= FALSE;
+			ER_WA_Srv_Var.In_PosCmd 			:= H_ER_WA_Srv_TargetPos;
+			ER_WA_Srv_Var.In_VelCmd 			:= A_Srv_WAOriginSpeed;
+			ER_WA_Srv_Var.In_MoveAbs 			:= TRUE;
+			Station.Status := 'Move Erector WA to the proper width';
+				
+			IF ER_WA_Origin THEN
+				ER_WA_Srv_Var.In_ServoOn 		:= FALSE;
+				ER_WA_Srv_Var.In_MoveAbs 		:= FALSE;
+				Station.OriginRunStep 			:= 0;
+			END_IF
+						
+	END_CASE
+
+ELSE
+
+	TimeoutTrigger := FALSE;
+	Station.OriginRunStep := 0;	
+	
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

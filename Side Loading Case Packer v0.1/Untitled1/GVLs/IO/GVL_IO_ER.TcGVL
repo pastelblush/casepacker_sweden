@@ -1,0 +1,193 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <GVL Name="GVL_IO_ER" Id="{d1a05a68-9d16-4d64-a821-57c13604c866}">
+    <Declaration><![CDATA[                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               VAR_GLOBAL
+
+(**************************************************************************)
+(*Erector Main COntrol Panel*)
+
+IW_41DI1					AT %IB0:WORD;
+I_Start_PB 					AT %IX0.0	:BOOL;	 (* 	START PB	*)
+I_Stop_PB					AT %IX0.1	:BOOL;	 (* 	STOP PB	*)
+I_Reset_PB					AT %IX0.2	:BOOL;	 (* 	RESET PB	*)
+I_Safety_OK					AT %IX0.3	:BOOL;	 (* 	OVERALL SAFETY OK	*)
+I_Emg_SC_OK					AT %IX0.4	:BOOL;	 (* 	EMERGENCY OK	*)
+I_Door_SC_OK				AT %IX0.5	:BOOL;	 (* 	DOOR SWITCH OK	*)
+I_Case_Infeed_Safety_Ok		AT %IX0.6	:BOOL;	 (* 	CASE INFEED SAFETY OK	*)
+I_PCUPS_OK					AT %IX0.7	:BOOL;	 (* 	PC UPS OK	*)
+					
+I_CartonCV_M1M2_OK			AT %IX1.0	:BOOL;	 (* 	CARTON CONVEYOR MOTOR 1&2 STARTER OK	*)
+I_Weighing_CV_OK			AT %IX1.1	:BOOL;	 (* 	WEIGHING CONVEYOR STARTER OK	*)
+I_IncomingPowerPhase_OK		AT %IX1.2	:BOOL;	 (* 	Incoming Power Phase OK	*)
+I_Erector_Front_Door_Sen	AT %IX1.3	:BOOL;	 (* 	Erector Front Door Sensor	*)
+I_erector_Rear_Door_Sen		AT %IX1.4	:BOOL;	 (* 	Erector Rear Door Sensor	*)
+IX15						AT %IX1.5	:BOOL;	 (* 	SPARE	*)
+IX16						AT %IX1.6	:BOOL;	 (* 	SPARE	*)
+IX17						AT %IX1.7	:BOOL;	 (* 	SPARE	*)
+
+IW_41DI2					AT %IB2:WORD;						
+I_UpStream_ExitJam			AT %IX2.0	:BOOL;	 (* 	UPSTREAM EXIT JAM	*)
+I_UpStream_InProd			AT %IX2.1	:BOOL;	 (* 	UPSTREAM IN PRODUCTION	*)
+IX22						AT %IX2.2	:BOOL;	 (* 	SPARE	*)
+IX23						AT %IX2.3	:BOOL;	 (* 	SPARE	*)
+I_DnStream_ExitJam			AT %IX2.4	:BOOL;	 (* 	DOWNSTREAM EXIT JAM	*)
+I_DnStream_InProd			AT %IX2.5	:BOOL;	 (* 	DOWNSTREAM IN PRODUCTION	*)
+IX26						AT %IX2.6	:BOOL;	 (* 	SPARE	*)
+IX27						AT %IX2.7	:BOOL;	 (* 	SPARE	*)
+						
+I_TnT_Healthy				AT %IX3.0	:BOOL;	 (* 	Track and Trace Healthy	*)
+I_TnT_LabelerINP			AT %IX3.1	:BOOL;	 (* 	Track and Trace Labeller In Position	*)
+IX32						AT %IX3.2	:BOOL;	 (* 	SPARE	*)
+IX33						AT %IX3.3	:BOOL;	 (* 	SPARE	*)
+IX34						AT %IX3.4	:BOOL;	 (* 	SPARE	*)
+IX35						AT %IX3.5	:BOOL;	 (* 	SPARE	*)
+IX36						AT %IX3.6	:BOOL;	 (* 	SPARE	*)
+I_EStop_Panel				AT %IX3.7	:BOOL;	 (* 	PANEL EMERGENCY STOP	*)
+
+QW_41DO1					AT %QB0:WORD;						
+O_Start_PL					AT %QX0.0	:BOOL;	 (* 	START PB LIGHT	*)
+O_Stop_PL					AT %QX0.1	:BOOL;	 (* 	STOP PB LIGHT	*)
+O_Reset_PL					AT %QX0.2	:BOOL;	 (* 	RESET PB LIGHT	*)
+O_Red_TL					AT %QX0.3	:BOOL;	 (* 	RED TOWER LIGHT	*)
+O_Yel_TL					AT %QX0.4	:BOOL;	 (* 	YELLOW TOWER LIGHT	*)
+O_Grn_TL					AT %QX0.5	:BOOL;	 (* 	GREEN TOWER LIGHT	*)
+O_Buz_TL					AT %QX0.6	:BOOL;	 (* 	BUZZER TOWER LIGHT	*)
+O_DoorLock					AT %QX0.7	:BOOL;	 (* 	SAFETY DOOR LOCK	*)
+
+O_Weighing_CV_ON			AT %QX1.0	:BOOL;	 (* 	WEIGHING CONVEYOR STARTER OK	*)						
+O_ER_BufCv_Mtr1_On			AT %QX1.1	:BOOL;	 (* 	CARTON CV MOTOR 1 ON	*)
+O_ER_BufCv_Mtr2_On			AT %QX1.2	:BOOL;	 (* 	CARTON CV MOTOR 2 ON	*)
+O_ER_BFlapL_Vac_On			AT %QX1.3	:BOOL;	 (* 	4Y1 - ERECTOR BOTTOM LEFT FLAP VACUUM VALVE ON	*)
+O_ER_BFlapR_Vac_On			AT %QX1.4	:BOOL;	 (* 	5Y1 - ERECTOR BOTTOM RIGHT FLAP VACUUM VALVE ON	*)
+O_ER_Arm_Vac_On				AT %QX1.5	:BOOL;	 (* 	6Y1 - ERECTOR ARM VACUUM VALVE ON	*)
+O_Nord_ValveL_On			AT %QX1.6	:BOOL;	 (* 	NORDSON LEFT DISPENSE VALVE ON	*)
+O_Nord_ValveR_On			AT %QX1.7	:BOOL;	 (* 	NORDSON RIGHT DISPENSE VALVE ON	*)
+
+QW_41DO2					AT %QB2:WORD;												
+O_TnT_CaseFormat			AT %QX2.0	:BOOL;	 (* 	Track and Trace Case Format	*)
+O_TnT_CrossPushToCase		AT %QX2.1	:BOOL;	 (* 	Track and Trace Cross Push to Case Initiated	*)
+O_TnT_CrossPushForward		AT %QX2.2	:BOOL;	 (* 	Track and Trace Cross Push Fully Forward	*)
+O_TnT_CaseIndex				AT %QX2.3	:BOOL;	 (* 	Track and Trace Case Index	*)
+O_TnT_GoodCaseDischarge		AT %QX2.4	:BOOL;	 (* 	Track and Trace Good Case Discharge	*)
+QX25						AT %QX2.5	:BOOL;	 (* 	SPARE	*)
+QX26						AT %QX2.6	:BOOL;	 (* 	SPARE	*)
+QX27						AT %QX2.7	:BOOL;	 (* 	SPARE	*)
+
+O_UpStream_ReqToStpNO		AT %QX3.0	:BOOL;	 (* 	UPSTREAM REQUEST TO STOP CLOSE=ACTIVE	*)						
+O_UpStream_ReqToStpNC		AT %QX3.1	:BOOL;	 (* 	UPSTREAM MACHINE RUNNING OPEN=ACTIVE	*)
+QX32						AT %QX3.2	:BOOL;	 (* 	SPARE	*)
+O_UpStream_ReqEmptying		AT %QX3.3	:BOOL;	 (* 	UPSTREAM REQUEST EMPTYING	*)
+O_DnStream_ReqToStpNO		AT %QX3.4	:BOOL;	 (* 	DOWNSTREAM REQUEST TO STOP OPEN=ACTIVE	*)
+O_DnStream_ReqToStpNC		AT %QX3.5	:BOOL;	 (* 	DOWNSTREAM REQUEST RUNNING CLOSE=ACTIVE	*)
+O_DnStream_Reject			AT %QX3.6	:BOOL;	 (* 	DOWNSTREAM REQUEST EMPTYING	*)
+QX37						AT %QX3.7	:BOOL;	 (* 	SPARE	*)
+
+(**************************************************************************)
+(*Erector Field IO - 60A1*)
+(*Erector Left Assembly - Carton Supply & Flap Close*)
+
+IW_60A1				AT %IB10:WORD;						
+I_ER_BufferL_PE		AT %IX10.0	:BOOL;	 (* 	ERECTOR CARTON BUFFER PRESENT (LEFT), OFF=CARTON PRESENT	*)
+I_ER_EmptyL_PE		AT %IX10.1	:BOOL;	 (* 	ERECTOR CARTON BUFFER EMPTY (LEFT)	*)
+I_ER_RefillL_PE		AT %IX10.2	:BOOL;	 (* 	ERECTOR CARTON BUFFER REFILL (LEFT)	*)
+I_EX_StpL_Dn		AT %IX10.3	:BOOL;	 (* 	EXIT STOPPER DOWN (LEFT)	*)
+I_ER_FFlapL_Fwd		AT %IX10.4	:BOOL;	 (* 	ERECTOR FRONT FLAP CLOSING CYL FWD RS (LEFT)	*)
+I_ER_FFlapL_Bwd		AT %IX10.5	:BOOL;	 (* 	ERECTOR FRONT FLAP CLOSING CYL BWD RS (LEFT)	*)
+I_ER_BFlapL_Fwd		AT %IX10.6	:BOOL;	 (* 	FLAP OPENING FORWARD BOTTOM	(LEFT)*)
+I_ER_BFlapL_Bwd		AT %IX10.7	:BOOL;	 (* 	FLAP OPENING BACKWARD BOTTOM (LEFT)*)
+
+
+(**************************************************************************)
+(*Erector Field IO - 61A1 *)
+(*Erector Left Assembly - Flap Holder & Stopper*)
+
+IW_61A1				AT %IB11:WORD;		
+I_ER_StpL_Up		AT %IX11.0	:BOOL;	 (* 	ERECTOR STOPPER CYL UP RS (LEFT)	*)
+I_ER_StpL_Dn		AT %IX11.1	:BOOL;	 (* 	ERECTOR STOPPER CYL DN RS (LEFT)	*)
+I_ER_CaseGuideL_Fwd	AT %IX11.2	:BOOL;	 (* 	ERECTOR LEFT CASE GUIDE FORWARD (LEFT)	*)	
+I_ER_CaseGuideL_Bwd	AT %IX11.3	:BOOL;	 (* 	ERECTOR LEFT CASE GUIDE BACKWARD (LEFT)	*)	
+I_ER_RFlapL_Fwd		AT %IX11.4	:BOOL;	 (* 	ERECTOR REAR FLAP CLOSE FORWARD (LEFT)	*)	
+I_ER_RFlapL_Bwd		AT %IX11.5	:BOOL;	 (* 	ERECTOR REAR FLAP CLOSE BACKWARD (LEFT)	*)	
+I_ER_BFlapL_VacSw	AT %IX11.6	:BOOL;	 (* 	ERECTOR BOTTOM FLAP HOLD VACUUM SWITCH (LEFT)	*)	
+I_ER_StpL_Ctn_PE	AT %IX11.7	:BOOL;	 (* 	ERECTOR CARTON PRESENCE AT  STOPPER (LEFT)	*)
+
+
+(**************************************************************************)
+(*Erector Field IO - 62A1 *)
+(*Erector Right Assembly - Carton Supply & Flap Close*)
+
+IW_62A1					AT %IB12:WORD;						
+I_ER_TFlapOpnL_Fwd		AT %IX12.0	:BOOL;	 (* 	ERECTOR TOP FLAP OPENING CYL FWD RS (LEFT)	*)
+I_ER_TFlapOpnL_Bwd		AT %IX12.1	:BOOL;	 (* 	ERECTOR TOP FLAP OPENING CYL BWD RS (LEFT)	*)
+I_ER_TFlapClsL_Fwd		AT %IX12.2	:BOOL;	 (* 	ERECTOR TOP FLAP CLOSING CYL FWD RS (LEFT)	*)
+I_ER_TFlapClsL_Bwd		AT %IX12.3	:BOOL;	 (* 	ERECTOR TOP FLAP CLOSING CYL BWD RS (LEFT)	*)
+I_ER_FlapHoldL_Fwd 		AT %IX12.4	:BOOL;	 (* 	EXIT FLAP HOLDER LEFT CYL FWD RS (FOR GLUE DISPENSING)	*)
+I_ER_FlapHoldL_Bwd		AT %IX12.5	:BOOL;	 (* 	EXIT FLAP HOLDER LEFT CYL BWD RS (FOR GLUE DISPENSING)	*)
+I_EX_SquarenessL_Fwd	AT %IX12.6	:BOOL;	 (* 	SQUARENESS CYL FWD RS (LEFT) 	*)
+I_EX_SquarenessL_Bwd	AT %IX12.7	:BOOL;	 (* 	SQUARENESS CYL BWD RS (LEFT)	*)
+
+(**************************************************************************)
+(*Erector Field IO - 63A1 *)
+(*Erector Right Assembly - Flap Holder & Stopper*)
+
+IW_63A1				AT %IB13:WORD;		
+I_ER_BufferR_PE		AT %IX13.0	:BOOL;	 (* 	ERECTOR CARTON BUFFER PRESENT (RIGHT), OFF=CARTON PRESENT	*)	
+I_ER_EmptyR_PE		AT %IX13.1	:BOOL;	 (* 	ERECTOR CARTON BUFFER EMPTY (RIGHT)	*)
+IX132				AT %IX13.2	:BOOL;	 (* 	SPARE	*)
+I_EX_StpR_Dn		AT %IX13.3	:BOOL;	 (* 	EXIT STOPPER DOWN (RIGHT)	*)
+I_ER_FFlapR_Fwd		AT %IX13.4	:BOOL;	 (* 	ERECTOR FRONT FLAP CLOSING CYL FWD RS (RIGHT)	*)
+I_ER_FFlapR_Bwd		AT %IX13.5	:BOOL;	 (* 	ERECTOR FRONT FLAP CLOSING CYL BWD RS (RIGHT)	*)
+I_ER_BFlapR_Fwd		AT %IX13.6	:BOOL;	 (* 	ERECTOR BOTTOM FLAP HOLD FWD RS (RIGHT)	*)
+I_ER_BFlapR_Bwd		AT %IX13.7	:BOOL;	 (* 	ERECTOR BOTTOM FLAP HOLD BWD RS (RIGHT)	*)
+				
+
+(**************************************************************************)
+(*Erector Field IO - 64A1 *)
+(*Erector Right Assembly - Flap Holder & Stopper*)
+IW_64A1				AT %IB14:WORD;	
+I_ER_StpR_Up		AT %IX14.0	:BOOL;	 (* 	ERECTOR STOPPER CYL UP RS (RIGHT)	*)
+I_ER_StpR_Dn		AT %IX14.1	:BOOL;	 (* 	ERECTOR STOPPER CYL DN RS (RIGHT)	*)
+I_ER_CaseGuideR_Fwd	AT %IX14.2	:BOOL;	 (* 	ERECTOR LEFT CASE GUIDE FORWARD (RIGHT)	*)	
+I_ER_CaseGuideR_Bwd	AT %IX14.3	:BOOL;	 (* 	ERECTOR LEFT CASE GUIDE BACKWARD (RIGHT)	*)	
+I_ER_RFlapR_Fwd		AT %IX14.4	:BOOL;	 (* 	ERECTOR REAR FLAP CLOSING CYL FWD RS (RIGHT)	*)
+I_ER_RFlapR_Bwd		AT %IX14.5	:BOOL;	 (* 	ERECTOR REAR FLAP CLOSING CYL BWD RS (RIGHT)	*)
+I_ER_BFlapR_VacSw	AT %IX14.6	:BOOL;	 (* 	ERECTOR BOTTOM FLAP HOLD VACUUM SWITCH (RIGHT)	*)
+I_ER_StpR_Ctn_PE	AT %IX14.7	:BOOL;	 (* 	ERECTOR CARTON PRESENCE AT  STOPPER (RIGHT)	*)
+
+
+(**************************************************************************)
+(*Erector Field IO - 65A1 *)
+(*Erector Right Assembly - Flap Holder & Stopper*)
+IW_65A1					AT %IB15:WORD;
+I_ER_TFlapOpnR_Fwd		AT %IX15.0	:BOOL;	 (* 	ERECTOR TOP FLAP OPENING CYL FWD RS (RIGHT)	*)
+I_ER_TFlapOpnR_Bwd		AT %IX15.1	:BOOL;	 (* 	ERECTOR TOP FLAP OPENING CYL BWD RS (RIGHT)	*)
+I_ER_TFlapClsR_Fwd		AT %IX15.2	:BOOL;	 (* 	ERECTOR TOP FLAP CLOSING CYL FWD RS (RIGHT)	*)
+I_ER_TFlapClsR_Bwd		AT %IX15.3	:BOOL;	 (* 	ERECTOR TOP FLAP CLOSING CYL BWD RS (RIGHT)	*)
+I_ER_FlapHoldR_Fwd 		AT %IX15.4	:BOOL;	 (* 	EXIT FLAP HOLDER RIGHT CYL FWD RS (FOR GLUE DISPENSING)	*)
+I_ER_FlapHoldR_Bwd		AT %IX15.5	:BOOL;	 (* 	EXIT FLAP HOLDER RIGHT CYL BWD RS (FOR GLUE DISPENSING)	*)
+I_EX_SquarenessR_Fwd	AT %IX15.6	:BOOL;	 (* 	SQUARENESS CYL FWD RS (LEFT)	*)
+I_EX_SquarenessR_Bwd	AT %IX15.7	:BOOL;	 (* 	SQUARENESS CYL BWD RS (LEFT)	*)
+
+
+(**************************************************************************)
+(*Erector Field IO - 66A1 *)
+(*Erector Arm Assembly*)
+IW_66A1					AT %IB16:WORD;
+I_ER_ArmTilt_Fwd		AT %IX16.0	:BOOL;	 (* 	ERECTOR ARM TILT CYL FWD RS	*)
+I_ER_ArmTilt_Bwd		AT %IX16.1	:BOOL;	 (* 	ERECTOR ARM TILT CYL BWD RS	*)
+I_ER_Arm_Up				AT %IX16.2	:BOOL;	 (* 	ERECTOR ARM CYL UP RS	*)
+I_ER_Arm_Dn				AT %IX16.3	:BOOL;	 (* 	ERECTOR ARM CYL DOWN RS	*)
+IX164					AT %IX16.4	:BOOL;	 (* 	SPARE	*)
+IX165					AT %IX16.5	:BOOL;	 (* 	SPARE	*)			
+I_ER_Arm_VacSw			AT %IX16.6	:BOOL;	 (* 	ERECTOR ARM VACUUM SWITCH	*)
+I_EX_Cv_Ctn_PE	 		AT %IX16.7	:BOOL;	 (* 	EXIT WEIGHT CHECKER PRODUCT PRESENCE SENSOR	*)
+
+
+
+
+I_Weighing						AT %I*		: DINT;
+I_Weighing_Status_SteadyBit		AT %I*		: BOOL;
+
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

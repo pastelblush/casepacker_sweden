@@ -1,0 +1,201 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="EX_Origin" Id="{d94e587a-1cbe-47c0-9709-30de762c603e}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM EX_Origin
+VAR_IN_OUT
+	Station		:structStationCtrl;
+END_VAR
+VAR
+	EX_WA_Origin: BOOL;
+	pls_OriginSchRun: R_trig;
+	TimeoutTrigger: BOOL;
+	TimeoutSetting: TIME;
+	Timeout:ton;
+	WidthAdjust_Tolerance	:REAL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(**************************************************************************************************************)
+(* Station Width Adjust in Origin Condition *)
+(**************************************************************************************************************)
+IF NOT MC_WA_Run THEN
+	WidthAdjust_Tolerance	:=	5;
+ELSE	
+	WidthAdjust_Tolerance	:= 	1;
+END_IF
+	
+EX_WA_Origin := 		(((fcComparePos(CurrPos:= EX_HeightL_WA_Srv_Var.Out_CurrPos, TargetPos:= H_EX_HeightL_WA_Srv_TargetPos, Tolerance := WidthAdjust_Tolerance)) AND
+							NOT EX_HeightL_WA_Srv_Var.Out_Busy) AND
+						((fcComparePos(CurrPos:= EX_HeightR_WA_Srv_Var.Out_CurrPos, TargetPos:= H_EX_HeightR_WA_Srv_TargetPos, Tolerance := WidthAdjust_Tolerance)) AND
+							NOT EX_HeightR_WA_Srv_Var.Out_Busy)) ;
+
+(**************************************************************************************************************)
+(* Station Origin Condition *)
+(**************************************************************************************************************)
+
+Station.Origin 	:=	((EX_WA_Origin OR NOT MC_WA_Run )AND
+					EX_FlapHoldL_Cyl_Var.S_HomePos AND
+					EX_FlapHoldR_Cyl_Var.S_HomePos AND
+					Ex_SquarenessCylL_Var.S_HomePos AND
+					Ex_SquarenessCylR_Var.S_HomePos )	 OR
+					Station.Bypass ;
+					 		
+(**************************************************************************************************************)
+(* Station Origin Step *)
+(**************************************************************************************************************)
+
+pls_OriginSchRun(CLK:= MC.OriginSchRun OR Station.OriginSchRun);
+
+Timeout(IN:=TimeoutTrigger, PT:=TimeoutSetting);
+IF Timeout.Q THEN
+	TimeoutTrigger := FALSE;
+END_IF
+
+IF (MC.OriginSchRun OR Station.OriginSchRun) AND NOT Station.Bypass   THEN
+	CASE Station.OriginRunStep OF
+
+	0 : 	(************* Ready To Run ****************)
+			IF NOT Station.Origin AND pls_OriginSchRun.Q THEN
+				Station.OriginRunStep := Station.OriginRunStep+10;	
+			END_IF
+
+	10 : 	(************* Flap Holder Cylinders Bwd ****************)
+			(************* Stopper Up ****************)
+			Station.Status 		:= 'Org10: Flap Holder Cylinders Bwd ';
+			Station.StatusInt	:= 320;
+			
+			WT_Mtr_Var.In_OrgOn			:=FALSE;
+
+			
+			IF 	NOT EX_FlapHoldL_Cyl_Var.S_HomePos OR
+				NOT EX_FlapHoldR_Cyl_Var.S_HomePos OR
+				NOT Ex_SquarenessCylL_Var.S_HomePos OR
+				NOT Ex_SquarenessCylR_Var.S_HomePos THEN
+				EX_FlapHoldL_Cyl_Var.In_OrgHome := TRUE;
+				EX_FlapHoldR_Cyl_Var.In_OrgHome := TRUE;
+				Ex_SquarenessCylL_Var.In_OrgHome := TRUE;
+				Ex_SquarenessCylR_Var.In_OrgHome := TRUE;
+			ELSE
+				EX_FlapHoldL_Cyl_Var.In_OrgHome := FALSE;
+				EX_FlapHoldR_Cyl_Var.In_OrgHome := FALSE;
+				Ex_SquarenessCylL_Var.In_OrgHome := FALSE;
+				Ex_SquarenessCylR_Var.In_OrgHome := FALSE;
+				
+				Station.OriginRunStep := Station.OriginRunStep +10;
+				
+
+			END_IF
+			
+	20 : 	(************* Check Sensors Before Homing ****************)
+			Station.Status 		:= 'Org20: Check Sensors Before Homing';
+			Station.StatusInt	:= 321;
+			
+			IF (H_ER_CtnRdyForGlue OR H_ER_CtnGlueDone OR H_ER_CtnWeightOK) THEN
+				WT_Mtr_Var.In_OrgOn := TRUE;
+				TimeoutTrigger := TRUE;
+				TimeoutSetting := T#5S;
+			END_IF
+			
+			IF NOT WT_Mtr_Var.In_OrgOn OR Timeout.Q THEN
+				WT_Mtr_Var.In_OrgOn := FALSE;
+				IF (H_ER_CtnRdyForGlue OR H_ER_CtnGlueDone OR H_ER_CtnWeightOK)
+					AND NOT I_EX_Cv_Ctn_PE THEN
+					Station.SeqFaultWord 	:= 100;
+					Station.SeqFaultString 	:= 'Origin: Carton Missing or Stuck on Erector Exit conveyor.';
+					E_CartonMissing			:= TRUE;
+				ELSIF NOT (H_ER_CtnRdyForGlue OR H_ER_CtnGlueDone OR H_ER_CtnWeightOK)
+					AND I_EX_Cv_Ctn_PE THEN
+					Station.SeqFaultWord 	:= 101;
+					Station.SeqFaultString 	:= 'Origin: Carton Detected on Erector Exit is in undefined state. Remove Carton.';
+					E_EX_CartonDetected		:= TRUE;
+				END_IF
+				
+				IF  NOT MC_WA_Run  THEN
+					Station.OriginRunStep := 0;
+				ELSE
+					Station.OriginRunStep := 1000;
+				END_IF
+			END_IF	
+			
+	
+
+	1000 : 	(************* Check Sensor Before Width Adjust ****************)
+			Station.Status 		:= 'Org1000: Check Sensor Before Width Adjust ';
+			Station.StatusInt	:= 321;
+			
+			IF NOT EX_WA_Origin THEN
+				IF I_EX_Cv_Ctn_PE THEN
+					(* 150 - Carton Detected on Erector Exit conveyor. Remove Carton for Width Adjustment*)
+					Station.SeqFaultWord := 150;
+					Station.SeqFaultString := 'Origin: Carton Detected on Erector Exit conveyor. Remove Carton for Width Adjustment';
+				ELSE
+					Station.OriginRunStep := Station.OriginRunStep+10;		
+				END_IF	
+			ELSE
+				Station.OriginRunStep := 0;	
+			END_IF
+			
+	1010 : 	(************* Move Erector Exit and Height WA to the right width ****************)
+			Station.Status 		:= 'Org1010: Move Erector Exit and Height WA to the right width ';
+			Station.StatusInt	:= 322;
+			(*
+			EX_WA_Srv_Var.In_PosCmd := H_EX_WA_Srv_TargetPos;
+			EX_WA_Srv_Var.In_VelCmd := A_Srv_WAOriginSpeed;
+			(*Interlock movement to avoid collision with Erector WA*)
+			IF H_EX_WA_Srv_TargetPos > EX_WA_Srv_Var.Out_CurrPos THEN	(*new width is bigger*)
+				EX_WA_Srv_Var.In_MoveAbs := TRUE;
+			ELSIF H_EX_WA_Srv_TargetPos < EX_WA_Srv_Var.Out_CurrPos AND 	(*new width is smaller*)
+				EX_WA_Srv_Var.In_MoveXLock THEN
+				EX_WA_Srv_Var.In_MoveAbs := TRUE;
+			ELSE
+				EX_WA_Srv_Var.In_MoveAbs := FALSE;
+				EX_WA_Srv_Var.In_StopMove := TRUE;
+			END_IF
+			*)
+			
+			EX_HeightL_WA_Srv_Var.In_PosCmd := H_EX_HeightL_WA_Srv_TargetPos;
+			EX_HeightL_WA_Srv_Var.In_VelCmd := A_Srv_WAOriginSpeed;
+			EX_HeightL_WA_Srv_Var.In_MoveAbs := TRUE;
+
+			EX_HeightR_WA_Srv_Var.In_PosCmd := H_EX_HeightR_WA_Srv_TargetPos;
+			EX_HeightR_WA_Srv_Var.In_VelCmd := A_Srv_WAOriginSpeed;
+			EX_HeightR_WA_Srv_Var.In_MoveAbs := TRUE;
+			
+			(*
+			EX_TopL_WA_Srv_Var.In_PosCmd := H_EX_TopL_WA_Srv_TargetPos;
+			EX_TopL_WA_Srv_Var.In_VelCmd := A_Srv_WAOriginSpeed;
+			EX_TopL_WA_Srv_Var.In_MoveAbs := TRUE;
+
+			EX_TopR_WA_Srv_Var.In_PosCmd := H_EX_TopR_WA_Srv_TargetPos;
+			EX_TopR_WA_Srv_Var.In_VelCmd := A_Srv_WAOriginSpeed;
+			EX_TopR_WA_Srv_Var.In_MoveAbs := TRUE;
+			*)
+			
+			IF 	(fcComparePos(CurrPos:= EX_HeightL_WA_Srv_Var.Out_CurrPos, TargetPos:= EX_HeightL_WA_Srv_Var.In_PosCmd, Tolerance := 0.5) AND
+						EX_HeightL_WA_Srv_Var.Out_InPos AND EX_HeightL_WA_Srv_Var.Out_Ready) AND
+				(fcComparePos(CurrPos:= EX_HeightR_WA_Srv_Var.Out_CurrPos, TargetPos:= EX_HeightR_WA_Srv_Var.In_PosCmd, Tolerance := 0.5) AND
+						EX_HeightR_WA_Srv_Var.Out_InPos AND EX_HeightR_WA_Srv_Var.Out_Ready) (*AND
+				(fcComparePos(CurrPos:= EX_TopL_WA_Srv_Var.Out_CurrPos, TargetPos:= EX_TopL_WA_Srv_Var.In_PosCmd) AND
+						EX_TopL_WA_Srv_Var.Out_InPos AND EX_TopL_WA_Srv_Var.Out_Ready) AND
+				(fcComparePos(CurrPos:= EX_TopR_WA_Srv_Var.Out_CurrPos, TargetPos:= EX_TopR_WA_Srv_Var.In_PosCmd) AND
+						EX_TopR_WA_Srv_Var.Out_InPos AND EX_TopR_WA_Srv_Var.Out_Ready)*) THEN
+
+				EX_WA_Srv_Var.In_MoveAbs := FALSE;
+				EX_HeightL_WA_Srv_Var.In_MoveAbs := FALSE;
+				EX_HeightR_WA_Srv_Var.In_MoveAbs := FALSE;
+				EX_TopL_WA_Srv_Var.In_MoveAbs := FALSE;
+				EX_TopR_WA_Srv_Var.In_MoveAbs := FALSE;
+				Station.OriginRunStep := 0;
+			END_IF
+						
+	END_CASE
+
+ELSE
+
+	Station.OriginRunStep := 0;	
+	TimeoutTrigger := FALSE;
+	
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

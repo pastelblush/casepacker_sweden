@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <DUT Name="structHMI" Id="{96599453-d191-401e-aa98-20f3070c3c1b}">
+    <Declaration><![CDATA[TYPE structHMI :
+STRUCT
+	
+	T_Auto: 			BOOL;
+	T_Manual:			BOOL;
+	T_DryRun: 			BOOL;
+	T_OriginSearch:		BOOL;
+	T_StationOriginSearch:BOOL;
+	T_Start:			BOOL;
+	T_Stop:				BOOL;
+	T_Reset :			BOOL;
+ 	T_Station_BypassP: 	ARRAY [0..50] OF BOOL;
+	T_BypassDoor: 		BOOL;
+	T_BypassBuzzer:		BOOL;
+	T_BuzzerOff :		BOOL;
+	T_AutoMsgAlarm: 	BOOL;
+	T_StatusString: 	STRING;
+	T_StatusStringInt:	INT;
+
+	T_AutoRunString:		STRING;
+
+	T_StepRun:			BOOL;
+	T_StepStop:			BOOL;
+	T_StepBwd:			BOOL;
+	T_StepFwd:			BOOL;
+	T_StationError:		BOOL;
+	T_Origin:			BOOL;
+	T_OneCycleRun:		BOOL;
+	T_ManualCycleTime:	TIME;
+	T_Curr_Step_Station: 	UINT;
+	T_EndProd:			BOOL;
+	
+	T_StepRunning:		BOOL;
+	T_OriginRunning:	BOOL;
+
+	V_StepRunCurrStation:	STRING;
+	V_StepRunStatus:		STRING;
+	V_AutorunString:		STRING;
+	V_MachineSpeed:		INT;
+	
+	T_LoadNewRecipe:BOOL;
+	T_ClearCollatorMem:BOOL;
+	T_ClearBufferMem:BOOL;
+	T_ClearErectorMem:BOOL;
+	T_ClearElevatorMem:BOOL;
+	T_ClearExitMem:BOOL;
+	T_ClearAllMem:BOOL;
+	
+	T_ResetCounters:BOOL;
+	T_ResetTotalTime:BOOL;
+	
+	T_PurgeErectorCase:BOOL;
+
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,154 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_Motor_Output" Id="{8950bf75-30ab-44e6-8793-683be886646b}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_Motor_Output
+VAR
+	Reset:BOOL;
+		
+	plsStackRelWork: R_trig;
+	plsStackRelHome: R_trig;
+	tmrStackRelHome: Ton;
+	tmrPresserHold:TOF;
+	
+	StackStopMem	:BOOL;
+	tmrStackStopDly	:Ton;
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+CO_Cv_Mtr_Var.In_MoveXLock := TRUE;
+IF HMI.V_MachineSpeed <25 THEN
+	CO_Cv_Mtr_Var.In_SpeedSel  := 0;
+ELSIF HMI.V_MachineSpeed >=25 AND HMI.V_MachineSpeed <50  THEN
+	CO_Cv_Mtr_Var.In_SpeedSel  := 1;
+ELSIF HMI.V_MachineSpeed >=50 AND HMI.V_MachineSpeed <75  THEN
+	CO_Cv_Mtr_Var.In_SpeedSel  := 2;	
+ELSIF HMI.V_MachineSpeed >=75 THEN
+	CO_Cv_Mtr_Var.In_SpeedSel  := 3;
+END_IF;
+
+CO_Cv_Mtr(
+	IN_DevName:= 'COLLATOR INFEED CV', 
+	In_Enable:= TRUE, 
+	In_Reset:= MC.ResetPressed, 
+	In_InvRdy := I_CO_Cv_InvRdy, 
+	Out_InvRun => O_CO_CV_Mtr_Run, 
+	Out_InvDirc => O_CO_CV_Mtr_Dirc, 
+	Out_InvSpdBit0 => O_CO_CV_Mtr_Spd1, 
+	Out_InvSpdBit1 => O_CO_CV_Mtr_Spd2, 
+	MotorVar:= CO_Cv_Mtr_Var,
+	Station			:= SC[0]);
+
+//***************************************************************************************
+
+CO_UpStreamCv_Mtr_Var.In_MoveXLock	:= TRUE;
+	
+CO_UpStreamCv_Mtr(
+	IN_DevName:= 'COLLATOR UPSTREAM CV', 
+	In_Enable:= Cfg_Upstream_Conveyor, 
+	In_Reset:= MC.ResetPressed, 
+	In_InvRdy := I_UpStreamInfeedRdy	, 
+	Out_InvRun => O_UpStreamInfeedCv, 
+	Out_InvDirc => , 
+	Out_InvSpdBit0 => , 
+	Out_InvSpdBit1 => , 
+	MotorVar:= CO_UpStreamCv_Mtr_Var,
+	Station			:= SC[0]);	
+	
+
+//**********************************************************************************
+
+tmr_CoStkMtrStop(IN:= I_CO_Stk_Mtr_HomePos, PT:= T#5MS);
+pls_CoStkMtrStop(CLK:= tmr_CoStkMtrStop.Q);
+
+IF I_CO_Stk_Mtr_UpPos AND O_CO_Stk_Mtr_Run THEN
+	StackStopMem := TRUE;
+END_IF
+
+tmrStackStopDly(IN:= StackStopMem , PT:= T#300MS);
+
+IF tmrStackStopDly.Q OR (StackStopMem AND I_CO_Stk_Mtr_HomePos)  THEN
+	CO_Stk_Mtr_Var.T_ManOff 	:= TRUE;
+	CO_Stk_Mtr_Var.T_ManOn		:= FALSE;
+	CO_Stk_Mtr_Var.In_AutoON 	:= FALSE;
+	CO_Stk_Mtr_Var.In_OrgOn		:= FALSE;
+	StackStopMem				:= FALSE;
+ELSIF NOT O_CO_Stk_Mtr_Run THEN
+	CO_Stk_Mtr_Var.T_ManOff := FALSE;
+END_IF	
+CO_Stk_Mtr_Var.In_MoveXLock := I_CO_Bdl_DoorSwitch;
+
+(*
+(*================== Option for Non CAM stacker =============================*)
+tmrPresserHold(IN:= I_CO_Stk_Mtr_UpPos AND O_CO_Stk_Mtr_Run  , PT:=T#0.1S , Q=> , ET=> );
+O_CO_HolderON	:= tmrPresserHold.Q;
+*)
+CO_Stk_Mtr_Var.In_SpeedSel  := 3;
+	
+CO_Stk_Mtr(
+	IN_DevName:= 'STACKING CAM', 
+	In_Enable:= TRUE, 
+	In_Reset:= MC.ResetPressed, 
+	In_InvRdy := I_CO_Stk_InvRdy, 
+	Out_InvRun => O_CO_Stk_Mtr_Run, 
+	Out_InvDirc => O_CO_Stk_Mtr_Dirc, 
+	Out_InvSpdBit0 => O_CO_Stk_Mtr_Spd1, 
+	Out_InvSpdBit1 => O_CO_Stk_Mtr_Spd2, 
+	MotorVar:= CO_Stk_Mtr_Var,
+	Station			:= SC[0]);
+	
+IF NOT O_CO_Stk_Mtr_Run AND I_CO_Stk_Mtr_HomePos THEN	
+O_CO_Stk_Mtr_ClutchBrake :=	FALSE;
+END_IF
+
+IF O_CO_Stk_Mtr_Run THEN
+O_CO_Stk_Mtr_ClutchBrake :=	TRUE;	
+END_IF
+
+
+
+
+
+
+
+
+
+
+
+
+(*
+IF ER.AutoRun OR EL.AutoRun OR
+	ER.M_Step OR EL.M_Step OR
+	MC.AutoMode THEN
+	ER_VacPump_Mtr_Var.In_AutoON := TRUE;
+ELSE
+	ER_VacPump_Mtr_Var.In_AutoON := FALSE;
+END_IF
+
+ER_VacPump_Mtr_Var.In_MoveXLock := TRUE;
+
+ER_VacPump_Mtr(
+	IN_DevName:= 'VACUUM PUMP', 
+	In_Enable:= TRUE, 
+	In_Reset:= MC.ResetPressed, 
+	In_StarterOK:= I_VacPump_OK, 
+	Out_MotorOn=> O_VacPump_On, 
+	MotorVar:= ER_VacPump_Mtr_Var,
+	Station			:= SC[0]);	
+*)	
+(*	
+CO_Brake_Clutch_Var.In_MoveXLock := TRUE;
+
+CO_Brake_Clutch(
+	IN_DevName:= 'BRAKE CLUTCH', 
+	In_Enable:= TRUE, 
+	In_Reset:= MC.ResetPressed, 
+	In_StarterOK:= TRUE, 
+	Out_MotorOn=> O_CO_Stk_Mtr_ClutchBrake, 
+	MotorVar:= CO_Brake_Clutch_Var,
+	Station			:= SC[0]);		
+*)	]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

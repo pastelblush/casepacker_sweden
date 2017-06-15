@@ -1,0 +1,128 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="EX_Servo_Output" Id="{0f4d02fb-21bd-4b4d-b92e-beccb6b09144}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM EX_Servo_Output
+VAR
+	Reset:BOOL;
+	EL_M2_Drive: INT;
+	plsStopMove: R_trig;
+	bEnable: BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF (MC.AutoMode OR SC[4].M_Step) AND NOT EX.Bypass THEN
+	EX_HeightL_WA_Srv_Var.In_ServoOn := FALSE;
+	EX_HeightR_WA_Srv_Var.In_ServoOn := FALSE;
+	EX_TopL_WA_Srv_Var.In_ServoOn := FALSE;
+	EX_TopR_WA_Srv_Var.In_ServoOn := FALSE;
+	EX_WA_Srv_Var.In_ServoOn := FALSE;
+END_IF
+
+IF EX.OriginSchRun OR MC.OriginSchRun THEN
+	EX_HeightL_WA_Srv_Var.In_ServoOn := TRUE;
+	EX_HeightR_WA_Srv_Var.In_ServoOn := TRUE;
+	EX_TopL_WA_Srv_Var.In_ServoOn := TRUE;
+	EX_TopR_WA_Srv_Var.In_ServoOn := TRUE;
+	EX_WA_Srv_Var.In_ServoOn := TRUE;
+END_IF
+
+(*plsStopMove(CLK:= NOT (SC[4].OriginSchRun OR MC.OriginSchRun OR SC[4].AutoRun));
+IF plsStopMove.Q THEN
+	EX_HeightL_WA_Srv_Var.In_StopMove := TRUE;
+	EX_HeightR_WA_Srv_Var.In_StopMove := TRUE;
+	EX_TopL_WA_Srv_Var.In_StopMove := TRUE;
+	EX_TopR_WA_Srv_Var.In_StopMove := TRUE;
+	EX_WA_Srv_Var.In_StopMove := TRUE;
+END_IF*)
+
+bEnable := NOT (SC[4].MajorFault OR SC[4].MinorFault OR SC[4].DeviceFault OR MC.Trouble);
+
+EX_HeightL_WA_Srv_Var.In_MoveXLock := EX_FlapHoldL_Cyl_Var.S_HomePos;
+
+(*EX_WA_M1 Exit Left Height Width Adjust Motor - 112M1*)
+EX_HeightL_WA_Srv_Drive(
+	In_Enable:= TRUE (*Cfg_EnbAutoWA AND bEnable*), 
+	In_Reset := MC.ResetPressed,
+	In_AbsEncoder:= TRUE, 
+	In_DriveInput:= EX_HeightL_WA_Srv_Input, 
+	In_CommState:= EX_HeightL_WA_Srv_State, 
+	Out_DriveOutput=> EX_HeightL_WA_Srv_Output, 
+	Out_DriveFeedRateOverride=> (*EX_HeightL_WA_Srv_Feedrate*), 
+	DriveVar:= EX_HeightL_WA_Srv_Var,
+	Station			:= SC[4]);
+
+	IF mc.ManualMode THEN	
+		EX_HeightL_WA_Srv_Feedrate := 10000;
+	ELSE
+		EX_HeightL_WA_Srv_Feedrate :=    INT_TO_UINT(hmi.V_MachineSpeed * 100);
+	END_IF
+	
+EX_HeightR_WA_Srv_Var.In_MoveXLock := EX_FlapHoldR_Cyl_Var.S_HomePos;
+	
+(*EX_WA_M2 Exit Right Height Width Adjust Motor - 113M1*)
+EX_HeightR_WA_Srv_Drive(
+	In_Enable:= TRUE(*Cfg_EnbAutoWA AND bEnable*), 
+	In_Reset := MC.ResetPressed,
+	In_AbsEncoder:= TRUE, 
+	In_DriveInput:= EX_HeightR_WA_Srv_Input, 
+	In_CommState:= 8(*EX_HeightR_WA_Srv_State*), 
+	Out_DriveOutput=> EX_HeightR_WA_Srv_Output, 
+	Out_DriveFeedRateOverride=> (*EX_HeightR_WA_Srv_Feedrate*), 
+	DriveVar:= EX_HeightR_WA_Srv_Var,
+	Station			:= SC[4]);
+	
+	IF mc.ManualMode THEN	
+		EX_HeightR_WA_Srv_Feedrate := 10000;
+	ELSE
+		EX_HeightR_WA_Srv_Feedrate :=    INT_TO_UINT(hmi.V_MachineSpeed * 100);
+	END_IF
+(*
+EX_TopL_WA_Srv_Var.In_MoveXLock := EX_FlapHoldL_Cyl_Var.S_HomePos;
+	
+(*EX_WA_M3 Exit Left Top Guide Adjust Motor - 124M1*)
+EX_TopL_WA_Srv_Drive(
+	In_Enable:= Cfg_EnbAutoWA AND bEnable, 
+	In_Reset := MC.ResetPressed,
+	In_AbsEncoder:= TRUE, 
+	In_DriveInput:= EX_TopL_WA_Srv_Input, 
+	In_CommState:= EX_TopL_WA_Srv_State, 
+	Out_DriveOutput=> EX_TopL_WA_Srv_Output, 
+	Out_DriveFeedRateOverride=> EX_TopL_WA_Srv_Feedrate, 
+	DriveVar:= EX_TopL_WA_Srv_Var,
+	Station			:= SC[4]);
+
+EX_TopR_WA_Srv_Var.In_MoveXLock := EX_FlapHoldR_Cyl_Var.S_HomePos;
+
+(*EX_WA_M5 Exit Right Top Guide Adjust Motor - 125M1*)
+EX_TopR_WA_Srv_Drive(
+	In_Enable:= Cfg_EnbAutoWA AND bEnable, 
+	In_Reset := MC.ResetPressed,
+	In_AbsEncoder:= TRUE, 
+	In_DriveInput:= EX_TopR_WA_Srv_Input, 
+	In_CommState:= EX_TopR_WA_Srv_State, 
+	Out_DriveOutput=> EX_TopR_WA_Srv_Output, 
+	Out_DriveFeedRateOverride=> EX_TopR_WA_Srv_Feedrate, 
+	DriveVar:= EX_TopR_WA_Srv_Var,
+	Station			:= SC[4]);
+
+EX_WA_Srv_Var.In_MoveXLock := NOT I_EX_Cv_Ctn_PE AND 
+								((EX_WA_Srv_Var.Out_CurrPos >= (ER_WA_Srv_Var.Out_CurrPos-20)) OR
+								EX_WA_Srv_Var.Out_PosDirc);
+	
+(*EX_WA_M4 Erector Exit Width Adjust Motor - 114M1*)
+EX_WA_Srv_Drive(
+	In_Enable:= Cfg_EnbAutoWA AND bEnable AND FALSE (*debug due to mechanical*), 
+	In_Reset := MC.ResetPressed,
+	In_AbsEncoder:= TRUE, 
+	In_DriveInput:= EX_WA_Srv_Input, 
+	In_CommState:= EX_WA_Srv_State, 
+	Out_DriveOutput=> EX_WA_Srv_Output, 
+	
+	Out_DriveFeedRateOverride=> EX_WA_Srv_Feedrate, 
+	DriveVar:= EX_WA_Srv_Var,
+	Station			:= SC[4]);
+*)
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

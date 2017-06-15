@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <DUT Name="structMotorInverter" Id="{fce0af1f-04ad-4889-9e47-3209e4cbf08f}">
+    <Declaration><![CDATA[TYPE structMotorInverter :
+STRUCT
+	
+	IN_DevName:STRING;
+
+	(* Trigger*)
+	T_ManOn:BOOL;
+	T_ManOff:BOOL;
+	In_AutoON:BOOL;
+	In_OrgOn:BOOL;
+	
+	In_SpeedSel:INT;	(*Speed Selection 0-3*)
+	In_Dirc:BOOL;		(*Direction Selection*)
+	
+	In_MoveXLock:BOOL;	(*Mechanical Interlock*)
+	
+	E_OnErr:BOOL;
+	S_InvRdy:BOOL;
+	S_Running:BOOL;
+
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

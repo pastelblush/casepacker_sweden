@@ -1,0 +1,144 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_Cylinder_Output" Id="{4cb7cf31-bd8b-4239-baa2-2b94d43b8e4e}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_Cylinder_Output
+VAR
+	Reset:BOOL;
+	bEnable:BOOL;
+	
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[bEnable := NOT MC.Trouble;
+
+(*Refer to FastTask Folder for Stack Release Cylinder Control*)
+
+CO_Brdg_Cyl_Var.In_HomeXLock := TRUE;
+CO_Brdg_Cyl_Var.In_WorkXLock := (NOT ER_Arm_Srv_Var.Out_Busy OR NOT ER_Arm_Vac_Var.S_Vacuum) AND
+								ER_RFlapL_Cyl_Var.S_HomePos	;
+	
+CO_Brdg_Cyl(				
+	IN_CylName		:='3Y3 PUSHER BRIDGE', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_CO_Brdg_Fwd, 	
+	In_HomeRS		:= I_CO_Brdg_Bwd, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_CO_Brdg_Fwd, 	
+	Out_HomeSV		=> O_CO_Brdg_Bwd, 	
+	CylVar			:= CO_Brdg_Cyl_Var,
+	Station			:= SC[2]);
+
+CO_FlapGuide_Cyl_Var.In_HomeXLock := TRUE;
+CO_FlapGuide_Cyl_Var.In_WorkXLock := TRUE;
+
+CO_FlapGuide_Cyl(				
+	IN_CylName		:='3Y4/5 PUSHER FLAP GUIDE', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_CO_RFlapGuide_Fwd AND I_CO_FFlapGuide_Fwd, 	
+	In_HomeRS		:= I_CO_RFlapGuide_Bwd AND I_CO_FFlapGuide_Bwd, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_CO_RFlapGuide_Fwd, 	
+	Out_HomeSV		=> O_CO_RFlapGuide_Bwd, 	
+	CylVar			:= CO_FlapGuide_Cyl_Var,
+	Station			:= SC[2]);
+
+	O_CO_FFlapBrdg_Fwd:=O_CO_RFlapGuide_Fwd;
+	O_CO_FFlapBrdg_Bwd:=O_CO_RFlapGuide_Bwd;
+	
+CO_YPush_Strk_Cyl_Var.In_HomeXLock := TRUE;
+CO_YPush_Strk_Cyl_Var.In_WorkXLock := CO_YPush_Cyl_Var.S_HomePos;
+
+CO_YPush_Strk_Cyl(				
+	IN_CylName		:='3Y2 Y PUSHER STROKE', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_CO_YPush_Strk_Fwd, 	
+	In_HomeRS		:= I_CO_YPush_Strk_Bwd, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_CO_YPush_Strk_Fwd, 	
+	Out_HomeSV		=> O_CO_YPush_Strk_Bwd, 	
+	CylVar			:= CO_YPush_Strk_Cyl_Var,
+	Station			:= SC[2]);
+
+CO_YPush_Cyl_Var.In_HomeXLock := TRUE ;
+CO_YPush_Cyl_Var.In_WorkXLock := CO_YPush_Srv_Var.Out_CurrPos <= H_CO_YPush_Srv_SafePosition + 1 ;
+
+CO_YPush_Cyl(				
+	IN_CylName		:='3Y1 Y PUSHER', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_CO_YPush_Up, 	
+	In_HomeRS		:= I_CO_YPush_Dn, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_CO_YPush_Up, 	
+	Out_HomeSV		=> O_CO_YPush_Dn, 	
+	CylVar			:= CO_YPush_Cyl_Var,
+Station			:= SC[2]);
+
+CO_PalletLoc_Cyl_Var.In_HomeXLock := TRUE;
+CO_PalletLoc_Cyl_Var.In_WorkXLock := TRUE;
+	
+CO_PalletLoc_Cyl(				
+	IN_CylName		:='3Y2 Y PALLET LOCATING', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_CO_PalletLocating_Fwd, 	
+	In_HomeRS		:= I_CO_PalletLocating_Bwd, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_CO_PalletLocating_Fwd, 	
+	Out_HomeSV		=> O_CO_PalletLocating_Bwd, 	
+	CylVar			:= CO_PalletLoc_Cyl_Var,
+	Station			:= SC[2]);
+
+CO_Sing1_Cyl_Var.In_HomeXLock := TRUE;
+CO_Sing1_Cyl_Var.In_WorkXLock := TRUE;
+CO_Sing1_Cyl(				
+	IN_CylName		:='3Y2 Singulator 1', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_CO_Sing1_Fwd, 	
+	In_HomeRS		:= I_CO_Sing1_Bwd, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_CO_Sing1_Fwd, 	
+	Out_HomeSV		=> O_CO_Sing1_Bwd, 	
+	CylVar			:= CO_Sing1_Cyl_Var,
+	Station			:= SC[2]);
+
+CO_Sing2_Cyl_Var.In_HomeXLock := TRUE;
+CO_Sing2_Cyl_Var.In_WorkXLock := TRUE;	
+CO_Sing2_Cyl(				
+	IN_CylName		:='3Y2 Singulator 1', 	
+	In_Enable		:= bEnable, 	
+	In_Reset		:= MC.ResetPressed, 	
+	In_WorkRS		:= I_CO_Sing2_Fwd, 	
+	In_HomeRS		:= I_CO_Sing2_Bwd, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
+	in_Timeout		:= TP_Cyl_Timeout, 	
+	Out_WorkSV		=> O_CO_Sing2_Fwd, 	
+	Out_HomeSV		=> O_CO_Sing2_Bwd, 	
+	CylVar			:= CO_Sing2_Cyl_Var,
+	Station			:= SC[2]);
+
+			
+
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

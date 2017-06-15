@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <DUT Name="structStationCtrl" Id="{652ec04f-a56f-49af-9f66-9a984ee07551}">
+    <Declaration><![CDATA[TYPE structStationCtrl :
+STRUCT
+
+	AutoRun				:BOOL;
+	Running				:BOOL;
+	Origin				:BOOL;  (* Station Already Origin *)
+	Rdy					:BOOL;	(* Station Ready *)
+	NoWP 				:BOOL;
+	Bypass				:BOOL;	(* Station Bypass *)
+
+	RunStep				:INT;
+	RunReq				:BOOL;	(*Station Start Work Request*)
+	Done				:BOOL;	(*Station Work Complete*)
+	RunCond				:BOOL;	(* Conditions to Start Auto Sequence*)
+	
+	Run_NextStepPls		:BOOL;	
+	Run_PrevStepPls		:BOOL;
+	M_Step				:BOOL;
+	M_OneCycle			:BOOL;
+	
+	T_OriginSearch		:BOOL;	(*Station Origin Run Trigger Button*)
+	OriginSchRun		:BOOL;	(*Station in Origin Search Running*)
+	OriginRunStep		:INT;
+	
+	Name				:STRING;
+	Status				:STRING;
+	StatusInt			:INT;
+	CycleTime			:TIME;
+	CycleTimeSec		:REAL;	(*Station cycle time in Seconds*)
+	IdleTimeSec			:REAL;	(*Station idle time in Seconds*)
+	CycleTimeSecAvg		:REAL;	(*Station average cycle time in Seconds*)
+	IdleTimeSecAvg		:REAL;	(*Station average idle time in Seconds*)
+
+	MajorFault			:BOOL;	(* Station Major Error, Stop Machine Immediately *)
+	MinorFault			:BOOL;	(* Station Minor Error / Fault, Stop after all process done *)
+	DeviceFault			:BOOL;	(* Station Device Error*)
+	SeqFaultWord		:INT;	(* Sequence Error Word Code	*)
+	SeqFaultString		:STRING;	(*Sequence Error String Display*)
+	Warning				:BOOL;	(* Station Warning *)
+
+	
+END_STRUCT
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

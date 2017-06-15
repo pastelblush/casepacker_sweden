@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <DUT Name="structStatistic" Id="{919740be-09ba-4f8b-a020-078da40a5a5a}">
+    <Declaration><![CDATA[TYPE structStatistic :
+STRUCT
+		RecipeName				:STRING;
+		ShiftInformation		:STRING;
+		
+		RejectLeftTape			:DINT;
+		RejectRightTape			:DINT;
+		RejectUnderWeight		:DINT;
+		RejectOverWeight		:DINT;
+		RejectCaseRemoved		:DINT;
+		GoodCase				:DINT;
+		
+		Production_Percentage	:REAL;
+		Reject_Percentage		:REAL;
+		Net_Efficiency			:REAL;
+		OEE						:REAL;
+		
+		RunTime_Second			:DINT;
+		ExternalStop_Second		:DINT;
+		InternalStop_Second		:DINT;
+		WaitingTime_Second		:DINT;
+		
+		ServiceStop_Number		:DINT;	
+		ServiceStop_Second		:DINT;
+		StackerFault_Number		:DINT;
+		StackerFault_Second		:DINT;
+		XPusherFault_Number		:DINT;
+		XPusherFault_Second		:DINT;
+		YPusherFault_Number		:DINT;
+		YPusherFault_Second		:DINT;
+		ErectorFault_Number		:DINT;
+		ErectorFault_Second		:DINT;
+		ExitFault_Number		:DINT;
+		ExitFault_Second		:DINT;
+		HorizontalFault_Number	:DINT;
+		HorizontalFault_Second	:DINT;
+		MajorFault_Number		:DINT;
+		MajorFault_Second		:DINT;
+		
+		
+		GlueLeft_Number			:DINT;
+		GlueRight_Number		:DINT;		
+		TapeLeft_Number			:DINT;
+		TapeRight_Number		:DINT;		
+		
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

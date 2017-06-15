@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <POU Name="EL_Motor_Output" Id="{4d7d8404-f347-4dfc-aa1b-f5327a3736c0}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM EL_Motor_Output
+VAR
+		Reset:BOOL;
+	bEnable: BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[bEnable := NOT MC.Trouble AND Cfg_VerticalExit;
+
+EL_BotCv_Mtr_Var.In_MoveXLock := TRUE;
+
+EL_BotCv_Mtr(
+	IN_DevName:= 'ELEV. BOTTOM CV', 
+	In_Enable:= bEnable, 
+	In_Reset:= MC.ResetPressed, 
+	In_StarterOK:= TRUE, 
+	Out_MotorOn=> O_EL_BotCV_Mtr_On, 
+	MotorVar:= EL_BotCv_Mtr_Var,
+	Station			:= SC[5]);
+
+EL_TopCv_Mtr_Var.In_MoveXLock := TRUE;
+	
+EL_TopCv_Mtr(
+	IN_DevName:= 'ELEV. TOP CV', 
+	In_Enable:= bEnable, 
+	In_Reset:= MC.ResetPressed, 
+	In_StarterOK:= TRUE, 
+	Out_MotorOn=> O_EL_TopCV_Mtr_On, 
+	MotorVar:= EL_TopCv_Mtr_Var,
+	Station			:= SC[5]);
+	
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

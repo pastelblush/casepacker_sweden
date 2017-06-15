@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_Main" Id="{dfef7af5-9502-4c87-8b57-05735d447264}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_Main
+VAR
+	i: INT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF Cfg_BypassCollator THEN
+	HMI.T_Station_BypassP[0] := TRUE;
+	HMI.T_Station_BypassP[1] := TRUE;
+	HMI.T_Station_BypassP[2] := TRUE;
+ELSE
+	HMI.T_Station_BypassP[0] := FALSE;
+	HMI.T_Station_BypassP[1] := FALSE;
+	HMI.T_Station_BypassP[2] := FALSE;
+END_IF
+
+I_CO_YPush_Gap_PE := TRUE;	(*Simulate Gap Sensor, No Hardware sensor*)
+
+CO_Timers();
+(* Previously known as stacker *)
+sc[0].Origin	:= TRUE;
+sc[0].Name		:= 'Spare Station';
+
+(* Previously known as XPusher *)
+sc[1].Origin	:= TRUE;
+sc[1].Name		:= 'Spare Station';
+
+CO_YPush_Error	(Station:= SC[2]);
+CO_YPush_Auto	(Station:= SC[2]);
+CO_YPush_Origin	(Station:= SC[2]);
+SC[2].T_OriginSearch := CO_YPush.T_OriginSearch;
+CO_YPush := SC[2];
+
+CO_Cylinder_Output();
+CO_Servo_Output();
+CO_Nordson();
+
+(* CO Structure is only for displaying on HMI*)
+CO.Origin := SC[0].Origin AND SC[1].Origin AND SC[2].Origin;
+CO.MajorFault := SC[0].MajorFault OR SC[1].MajorFault OR SC[2].MajorFault;
+CO.MinorFault := SC[0].MinorFault OR SC[1].MinorFault OR SC[2].MinorFault;
+CO.Warning := SC[0].Warning OR SC[1].Warning OR SC[2].Warning;
+CO.AutoRun := SC[0].AutoRun OR SC[1].AutoRun OR SC[2].AutoRun;
+CO.Running := SC[0].Running OR SC[1].Running OR SC[2].Running;
+CO.OriginSchRun := SC[0].OriginSchRun OR SC[1].OriginSchRun OR SC[2].OriginSchRun;
+
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

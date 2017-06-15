@@ -1,0 +1,256 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_XPush_Auto" Id="{3f856255-da8c-40de-b8c1-65204ad7293d}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_XPush_Auto
+VAR_IN_OUT
+	Station		:structStationCtrl;
+END_VAR
+VAR
+	Timeout	:TON;	
+	ManualInit_TOn:Ton;
+	TimeoutTrigger: BOOL;
+	TimeoutSetting: TIME;
+	ServoTargetPos: REAL;
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*
+
+(**************************************************************************************************************)
+(* Bundle Counting Sequance*)
+(**************************************************************************************************************)
+
+IF 	Station.AutoRun AND 
+	(H_CO_Bdl_StkZ_Count = CurrRecipe.iStackZ) AND 
+	((I_CO_Bdl_ZFull_PE AND NOT I_CO_Bdl_ZLimit_PE ) OR mc.DryRun) THEN
+	H_CO_StkRdyForXPush := TRUE;
+END_IF
+
+(**************************************************************************************************************)
+(* GENERAL STATION MAPPING  *)
+(**************************************************************************************************************)
+Station.Name			:=	'COLLATOR X PUSHER';
+Station.Rdy 			:= 	Station.Origin;
+Station.AutoRun 		:=	(MC.AutoRunning OR Station.M_Step) AND 
+							NOT (Station.Bypass OR Station.MajorFault OR Station.MinorFault);
+Station.RunReq			:= 	(H_CO_StkRdyForXPush AND
+							NOT (H_CO_StkRdyForYPush OR I_CO_YStk_AtBuf1_PE)) 
+							OR Station.M_Step;
+Station.RunCond			:=	NOT CO_Stack.Running AND	(*Conveyor Stacking Not Running*)
+							NOT CO_YPush.Running AND	(*Y Pusher Not Running*)
+							CO_YPush.Origin AND			(*Y Pusher In Origin*)
+							CO_STACK_AUTO.StackOverflow_TOFF.Q AND
+							NOT (Station.Done OR MC.StopPressed);
+Station.Run_NextStepPls	:=	(Station.AutoRun AND NOT Station.M_Step) OR 
+							(Station.M_Step AND M_StepFwdPls) OR HMI.T_OneCycleRun;
+Station.Run_PrevStepPls	:=	(Station.M_Step AND M_StepBwdPls);
+
+(**************************************************************************************************************)
+(*	Initial Device	*)
+(**************************************************************************************************************)
+ManualInit_TOn (in:= mc.ManualMode AND NOT mc.OriginSchRun, pt:= T#1S);
+
+IF mc.ManualMode AND NOT mc.OriginSchRun AND NOT ManualInit_TOn.Q THEN
+	CO_XPush_Srv_Var.In_MoveAbs := FALSE;
+END_IF
+
+(**************************************************************************************************************)
+(* Auto Sequance*)
+(**************************************************************************************************************)
+
+TimeoutSetting	:= T#30S;
+Timeout(IN:=TimeoutTrigger, PT:=TimeoutSetting);
+IF Timeout.Q THEN
+	TimeoutTrigger := FALSE;
+END_IF
+
+IF Station.AutoRun OR Station.M_Step THEN
+	
+	CASE Station.RunStep OF
+
+	0 : 	(************* Ready To Run ****************)
+			TimeoutTrigger 				:=FALSE;
+			
+			IF 	Station.RunCond AND Station.RunReq AND Station.Rdy THEN
+				IF	NOT  I_CO_PTC_PE1 AND 
+					NOT I_CO_PTC_PE2 AND 
+					NOT I_CO_PTC_PE3 AND 
+					NOT I_CO_PTC_PE4 AND 
+					NOT I_CO_PTC_PE5 AND 
+					NOT I_CO_PTC_PE6 AND 
+					NOT I_CO_PTC_PE7 AND 
+					NOT I_CO_PTC_PE8 THEN
+					Station.RunStep := Station.RunStep + 10;
+				ELSE
+					E_PTC_BundleNOK			:= TRUE;
+					Station.SeqFaultString 	:= 'Auto: Part Transfer Confirmation Sensor is ON';	
+				END_IF
+				
+			ELSIF NOT Station.RunCond THEN
+				Station.Status 		:= '0: Station Waiting for Run Conditions';
+				Station.StatusInt	:= 1;
+			ELSIF NOT Station.RunReq THEN
+				Station.Status 		:= '0: Station Waiting for Run Request';
+				Station.StatusInt	:= 2;
+			ELSE 
+				Station.Status 		:= '0: Station Not Ready';
+				Station.StatusInt	:= 3;				
+			END_IF
+	
+	10 : 	(************* Move X Pusher To Push Stack into Buffer Area 1 ****************)
+			Station.Status 		:= '10: Move X Pusher To Push Stack into Buffer Area 1';
+			Station.StatusInt	:= 101;
+			
+			CO_XPush_Srv_Var.In_PosCmd 	:= H_CO_XPush_Srv_EndDatumPos-((CurrRecipe.rBundleW * CurrRecipe.iStackX)-200);
+			CO_XPush_Srv_Var.In_VelCmd 	:= A_Srv_XPusherHiSpeed;
+			CO_XPush_Srv_Var.In_MoveAbs := TRUE;
+			TimeoutTrigger 				:= TRUE;
+			ServoTargetPos 				:= CO_XPush_Srv_Var.In_PosCmd - 100;
+			
+			IF NOT I_CO_YStk_AtBuf1_PE  AND Timeout.Q AND NOT MC.DryRun THEN			(*Make sure No Bundle Left on Stacking Area after Push*)
+				Station.SeqFaultWord 	:= 210;
+				E_Buff1_BundleNotDetect	:= TRUE;	
+				Station.SeqFaultString 	:= 'Auto: Bundle Not Detect at Buffer 1';	
+			END_IF		
+			
+			IF 	CO_XPush_Srv_Var.Out_CurrPos >= ServoTargetPos AND
+				(I_CO_YStk_AtBuf1_PE OR mc.DryRun) THEN	
+				CO_XPush_Srv_Var.In_MoveAbs := FALSE;		
+				H_CO_Bdl_StkZ_Count := 0;
+				H_CO_Bdl_StkY_Count := H_CO_Bdl_StkY_Count + 1;
+				Station.RunStep 	:= Station.RunStep + 5;						
+			END_IF
+
+	15 : 	(************* Wait X Pusher To Reach End Position ****************)
+			Station.Status 		:= '15: X Pusher Move at Low Speed To End Position';
+			Station.StatusInt	:= 102;
+			CO_XPush_Srv_Var.In_VelCmd := A_Srv_XPusherLoSpeed;
+			CO_XPush_Srv_Var.In_MoveAbs := TRUE;
+			
+			IF fcComparePos(CurrPos:= CO_XPush_Srv_Var.Out_CurrPos, TargetPos:= CO_XPush_Srv_Var.In_PosCmd, Tolerance := 1) AND
+				I_CO_Bdl_ZFull_PE THEN
+						Station.SeqFaultWord 	:= 213;
+						E_Stack_Full			:= TRUE;
+						Station.SeqFaultString 	:= 'Auto: Z-Axis Full Sensor Detected Bundle.';	
+			END_IF
+						
+			IF ((fcComparePos(CurrPos:= CO_XPush_Srv_Var.Out_CurrPos, TargetPos:= CO_XPush_Srv_Var.In_PosCmd, Tolerance := 0.5)) AND
+							CO_XPush_Srv_Var.Out_InPos) AND
+				NOT I_CO_Bdl_ZFull_PE AND 			
+				Station.Run_NextStepPls THEN			
+				CO_XPush_Srv_Var.In_MoveAbs := FALSE;
+				H_CO_StkRdyForXPush 		:= FALSE;
+				H_CO_StkRdyForYPush 		:= TRUE;
+				CO_XPush_Srv_Var.In_PosCmd := CO_XPush_Srv_Var.Out_CurrPos- 15;
+				Station.RunStep := Station.RunStep + 1;						
+			END_IF
+
+	16 : 	(************* Wait X Pusher Away from Bundle ****************)
+			Station.Status 		:= '16: X Pusher Move Away from Bundle';
+			Station.StatusInt	:= 103;
+			CO_XPush_Srv_Var.In_VelCmd := A_Srv_XPusherLoSpeed;
+			CO_XPush_Srv_Var.In_MoveAbs := TRUE;
+			
+			IF ((fcComparePos(CurrPos:= CO_XPush_Srv_Var.Out_CurrPos, TargetPos:= CO_XPush_Srv_Var.In_PosCmd, Tolerance := 0.5)) AND
+							CO_XPush_Srv_Var.Out_InPos) AND
+				Station.Run_NextStepPls THEN			
+				CO_XPush_Srv_Var.In_MoveAbs := FALSE;
+				Station.RunStep := Station.RunStep + 4;						
+			END_IF
+		
+	20 : 	(************* X Pusher Cylinder Up ****************)
+			Station.Status 		:= '20: X Pusher Cylinder Up';
+			Station.StatusInt	:= 104;
+			
+			CO_XPush_Cyl_Var.In_AutoWork := TRUE;
+			CO_XPush_Cyl_Var.In_AutoHome := FALSE;
+	
+			IF CO_XPush_Cyl_Var.S_WorkPos AND
+				Station.Run_NextStepPls THEN
+				CO_XPush_Cyl_Var.In_AutoWork := FALSE;
+				Station.RunStep := Station.RunStep + 10;
+			END_IF
+
+	30 : 	(************* Check Stack Sensors After Push ****************)
+			Station.Status 		:= '30: Check Stack Sensors After Push';
+			Station.StatusInt	:= 105;
+			
+			(*debug*)
+			(*IF I_CO_Bdl_Stack_PE AND H_CO_Bdl_StkZ_Count =0  AND NOT MC.DryRun THEN			(*Make sure No Bundle Left on Stacking Area after Push*)
+				Station.SeqFaultWord 	:= 200;	
+				E_BundleJam_atStaker	:= TRUE;
+				Station.SeqFaultString 	:= 'Auto: Bundle Stuck at Stacking Area after Push Error';	*)									
+			IF NOT CO_Stk_AtBuf_TON.Q AND NOT MC.DryRun THEN	(*Make sure Stack At Buffer Sensor Detect*)
+				Station.SeqFaultWord 	:= 201;	
+				E_Buff1_BundleNotDetect	:= TRUE;
+				Station.SeqFaultString 	:= 'Auto: Buffer Area 1 Sensor Failed to Detect Stack After Push';	
+			ELSE
+				CO_XPush_Cyl_Var.In_AutoWork := FALSE;
+				Station.RunStep := 100;		(*Collator Stacking can continue to run after this step*)
+			END_IF
+			
+	100 : 	(************* Move X Pusher Back To Home Position  ****************)
+			Station.Status 		:= '100: Move X Pusher Back To Home Position';
+			Station.StatusInt	:= 106;
+			
+			CO_XPush_Srv_Var.In_PosCmd := H_CO_XPush_Srv_CurrStandbyPos;
+			CO_XPush_Srv_Var.In_VelCmd := A_Srv_XPusherHiSpeed;
+			CO_XPush_Srv_Var.In_MoveAbs := TRUE;
+			
+			IF ((fcComparePos(CurrPos:= CO_XPush_Srv_Var.Out_CurrPos, TargetPos:= CO_XPush_Srv_Var.In_PosCmd, Tolerance := 0.5)) AND
+							CO_XPush_Srv_Var.Out_InPos) AND
+				Station.Run_NextStepPls THEN			
+				CO_XPush_Srv_Var.In_MoveAbs := FALSE;
+				Station.RunStep := Station.RunStep + 10;	
+			END_IF
+
+	110 : 	(************* X Pusher Cylinder Down ****************)
+			Station.Status 		:= '110: X Pusher Cylinder Down';
+			Station.StatusInt	:= 107;
+			
+			CO_XPush_Cyl_Var.In_AutoWork := FALSE;
+			CO_XPush_Cyl_Var.In_AutoHome := TRUE;
+			
+			IF CO_XPush_Cyl_Var.S_HomePos THEN
+				CO_XPush_Cyl_Var.In_AutoHome := FALSE;
+				Station.RunStep := 1000;
+			END_IF
+
+	1000 : 	(************* Process Done ****************)
+			Station.Status 		:= '1000: Process Done';
+			Station.StatusInt	:= 499;
+			M_StepRun 			:= FALSE;
+			Station.RunStep 	:= 0;			
+
+	END_CASE
+
+
+ELSE
+	Station.RunStep := 0;
+	
+	IF Station.MajorFault OR Station.MinorFault THEN
+		Station.Status 		:= 'Station Error';
+		Station.StatusInt	:= 4;
+	ELSIF Station.Origin THEN
+		Station.Status 		:= 'Station In Origin';
+		Station.StatusInt	:= 5;
+	ELSIF NOT Station.OriginSchRun AND NOT MC.OriginSchRun THEN
+		Station.Status := 'Station Not In Origin';
+		Station.StatusInt	:= 6;
+	END_IF
+END_IF
+
+Station.Running := (Station.RunStep>0);
+
+*)
+
+
+
+
+
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

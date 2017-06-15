@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <GVL Name="GVL_Vacuum" Id="{fffa6ef7-f30b-4b54-b7ee-40d574057bb2}">
+    <Declaration><![CDATA[VAR_GLOBAL
+	
+ER_BFlapL_Vac	:fbVacuumValveCtrl;	 (* 	4Y1 - ERECTOR LEFT FLAP VACUUM VALVE ON	*)
+ER_BFlapL_Vac_Var	:structVacuum;	 (* 	4Y1 - ERECTOR FRONT FLAP CLOSING CYL SV (LEFT)	*)
+ER_BFlapR_Vac	:fbVacuumValveCtrl;	 (* 	5Y1 - ERECTOR RIGHT FLAP VACUUM VALVE ON	*)
+ER_BFlapR_Vac_Var	:structVacuum;	 (* 	5Y1 - ERECTOR RIGHT FLAP VACUUM VALVE ON	*)
+ER_Arm_Vac	:fbVacuumValveCtrl;	 (* 	6Y1 - ERECTOR ARM VACUUM VALVE ON	*)
+ER_Arm_Vac_Var	:structVacuum;	 (* 	6Y1 - ERECTOR ARM VACUUM VALVE ON	*)
+EL_Tilt_Vac	:fbVacuumValveCtrl;	 (* 	7Y1 - EXIT TILT UNIT VACUUM VALVE ON	*)
+EL_Tilt_Vac_Var	:structVacuum;	 (* 	7Y1 - EXIT TILT UNIT VACUUM VALVE ON	*)
+EL_Center_Vac	:fbVacuumValveCtrl;	 (* 	10Y1 - ELEVATOR CARTON CENTERING VACUUM ON	*)
+EL_Center_Vac_Var	:structVacuum;	 (* 	10Y1 - ELEVATOR CARTON CENTERING VACUUM ON	*)
+
+
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

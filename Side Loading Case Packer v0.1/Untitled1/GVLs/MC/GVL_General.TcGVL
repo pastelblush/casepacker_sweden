@@ -1,0 +1,92 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <GVL Name="GVL_General" Id="{0b21d6d5-299a-44cd-b6bc-7356a72aa853}">
+    <Declaration><![CDATA[{attribute 'Tc2GvlVarNames'}
+VAR_GLOBAL
+(**************************************************************************************************************)
+(* System Bit *)
+(**************************************************************************************************************)
+
+	OFF_50ms		: BOOL;
+	ON_50ms			: BOOL;
+	Clock50msOnPls	: BOOL;
+	OFF_100ms		: BOOL;
+	ON_100ms		: BOOL;
+	Clock100msOnPls	: BOOL;
+	OFF_500ms		: BOOL;
+	ON_500ms		: BOOL;
+	Clock500msOnPls	: BOOL;
+	OFF_1s			: BOOL;
+	ON_1s			: BOOL;
+	Clock1sOnPls	: BOOL;
+	Always_ON		: BOOL;
+	Always_Off		: BOOL;
+	Debug			: BOOL := TRUE;
+	TestSequence	: BOOL;
+
+	
+(**************************************************************************************************************)
+(* Machine Standard Word *)
+(**************************************************************************************************************)
+
+	ErrorDWord 			AT %MB1000:  ARRAY [0..20,1..10] OF DWORD;
+	WarningDWord		AT %MB2000: ARRAY [0..20,1..10] OF DWORD;
+	AutoDWord 			AT %MB3000:  ARRAY [0..20,1..10] OF DWORD;
+	OriginDWord 		AT %MB4000:  ARRAY [0..20,1..10] OF DWORD;
+
+	InputByte			AT %IB0: ARRAY [0..500] OF BYTE;
+	OutputByte			AT %QB0: ARRAY [0..500] OF BYTE;
+
+(**************************************************************************************************************)
+(* Machine and Station Control *)
+(**************************************************************************************************************)
+	MC:structMachineCtrl;
+	MC_Ctrl:fbMachineCtrl;
+
+	SC :ARRAY[0..6] OF structStationCtrl;
+	
+	CO	:structStationCtrl;				(*Structure only used for display and read only*)
+	CO_Stack :structStationCtrl;		(*Structure only used for display and read only*)
+	CO_XPush :structStationCtrl;		(*Structure only used for display and read only*)
+	CO_YPush :structStationCtrl;		(*Structure only used for display and read only*)
+	ER	:structStationCtrl;				(*Structure only used for display and read only*)
+	EX	:structStationCtrl;				(*Structure only used for display and read only*)
+	EL	:structStationCtrl;				(*Structure only used for display and read only*)
+	HOR	:structStationCtrl;				(*Structure only used for display and read only*)
+	ER_FixedFlap :structStationCtrl;	(*Structure only used for display and read only*)
+	
+(**************************************************************************************************************)
+(* Manual Control *)
+(**************************************************************************************************************)
+	ManualSafetyOK		:BOOL;
+	M_StepFwdPls		:BOOL;
+	M_StepBwdPls		:BOOL;
+	M_StepRun			:BOOL;
+
+(**************************************************************************************************************)
+(* Input/Output *)
+(**************************************************************************************************************)
+	(*InputWord			AT%IB0	:ARRAY [0..100] OF BOOL;*)
+
+(**************************************************************************************************************)
+(* Light Curtain Muting Control *)
+(**************************************************************************************************************)
+
+	HOR_LC_Muting	:BOOL;	(*Control Bit to mute Horizontal light curtain*)
+	EL_LC_Muting	:BOOL;	(*Control Bit to mute Elevator light curtain*)
+
+(**************************************************************************************************************)
+(* To Bypass The Erector Safety Sensor *)
+(**************************************************************************************************************)	
+	Erector_SafetySensorBypass	:BOOL;
+	
+END_VAR
+
+VAR_GLOBAL CONSTANT
+
+	Number_of_Station:INT:=6;	(*Note: SC Array Dimension cannot be smaller than this value*)	
+
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

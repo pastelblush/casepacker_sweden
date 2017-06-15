@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="HOR_Servo_Output" Id="{e63672c6-d958-4ce0-8eaf-bf5905abbe14}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM HOR_Servo_Output
+VAR
+	Reset:BOOL;
+	bEnable:BOOL;
+	plsStopMove: R_trig;
+	debugcode: INT;
+	debugcode2: INT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF (MC.AutoMode OR SC[6].M_Step) THEN
+	EX_Tilt_Srv_Var.In_ServoOn := TRUE;
+END_IF
+
+IF HOR.OriginSchRun OR MC.OriginSchRun OR mc.AutoMode OR (mc.ResetPressed AND NOT mc.Trouble) THEN
+	EX_Tilt_Srv_Var.In_ServoOn := TRUE;
+END_IF
+
+bEnable := NOT (SC[6].MajorFault OR MC.Trouble);
+
+EX_Tilt_Srv_Var.In_MoveXLock := TRUE ;
+EX_Tilt_Srv_Input.wSignalstatuswort.13	:= TRUE;
+EX_Tilt_Srv_Input.wSignalstatuswort.14	:= TRUE;
+
+
+EX_Tilt_Srv_Drive(
+	In_Enable:= bEnable, 
+	In_Reset := MC.ResetPressed,
+	In_AbsEncoder:= FALSE, 
+	In_DriveInput:= EX_Tilt_Srv_Input, 
+	In_CommState:= EX_Tilt_Srv_State, 
+	Out_DriveOutput=> EX_Tilt_Srv_Output, 
+	Out_DriveFeedRateOverride=> , 
+	DriveVar:= EX_Tilt_Srv_Var,
+	Station			:= SC[6]);
+	
+IF mc.ManualMode THEN	
+	EX_Tilt_Srv_Feedrate := 10000;
+ELSE
+	EX_Tilt_Srv_Feedrate :=    INT_TO_UINT(hmi.V_MachineSpeed * 100);
+END_IF
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,271 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <GVL Name="GVL_IO_CO" Id="{1c19ef5e-b7cb-4502-957c-a6655b0561ea}">
+    <Declaration><![CDATA[VAR_GLOBAL
+	
+(**************************************************************************)
+(*Collator & Exit Main COntrol Panel*)
+
+IW_141DI1					AT %IB100:WORD;
+I_CO_Cv_InvRdy				AT %IX100.0	:BOOL;	 (* 	COLLATOR INFEED CONVEYOR INVERTER READY	*)
+I_CO_Stk_InvRdy				AT %IX100.1	:BOOL;	 (* 	COLLATOR STACKING INVERTER READY	*)
+I_VacPump_OK				AT %IX100.2	:BOOL;	 (* 	VACUUM PUMP STARTER OK	*)
+I_Nord_Rdy					AT %IX100.3	:BOOL;	 (* 	NORDSON DISPENSER READY	*)
+I_Nord_Alm					AT %IX100.4	:BOOL;	 (* 	NORDSON DISPENSER FAULT	*)
+I_Nord_TankLow				AT %IX100.5	:BOOL;	 (* 	NORSON TANK LOW SIGNAL	*)
+IX1006						AT %IX100.6	:BOOL;	 (* 	SPARE	*)
+I_PressSw_OK				AT %IX100.7	:BOOL;	 (* 	INCOMING AIR PRESSURE SWITCH OK	*)
+
+I_Pneumatic_Sup1_ON			AT %IX101.0	:BOOL;	 (* 	Compress Air Supply Coil 1 ON Feedback	*)
+I_Pneumatic_Sup2_ON			AT %IX101.1	:BOOL;	 (* 	Compress Air Supply Coil 2 ON feedback	*)
+I_COL_Front_Door_Sen		AT %IX101.2	:BOOL;	 (* 	Collator Front Door Sensor	*)
+I_COL_Rear_Door_Sen			AT %IX101.3	:BOOL;	 (* 	Collator Rear Door Sensor	*)
+IX1014						AT %IX101.4	:BOOL;	 (* 	SPARE	*)
+IX1015						AT %IX101.5	:BOOL;	 (* 	SPARE	*)
+IX1016						AT %IX101.6	:BOOL;	 (* 	SPARE	*)
+IX1017						AT %IX101.7	:BOOL;	 (* 	SPARE	*)
+
+QW_141DO1					AT %QB100:WORD;						    						
+O_CO_CV_Mtr_Run				AT %QX100.0	:BOOL;	 (* 	COLLATOR INFEED CONVEYOR INVERTER RUN	*)
+O_CO_CV_Mtr_Dirc			AT %QX100.1	:BOOL;	 (* 	COLLATOR INFEED CONVEYOR INVERTER DIRECTION	*)
+O_CO_CV_Mtr_Spd1			AT %QX100.2	:BOOL;	 (* 	COLLATOR INFEED CONVEYOR SPEED BIT1	*)
+O_CO_CV_Mtr_Spd2			AT %QX100.3	:BOOL;	 (* 	COLLATOR INFEED CONVEYOR SPEED BIT2	*)
+O_CO_Stk_Mtr_Run			AT %QX100.4	:BOOL;	 (* 	COLLATOR STACKING INVERTER RUN	*)
+O_CO_Stk_Mtr_Dirc			AT %QX100.5	:BOOL;	 (* 	COLLATOR STACKING INVERTER DIRECTION	*)
+O_CO_Stk_Mtr_Spd1			AT %QX100.6	:BOOL;	 (* 	COLLATOR STACKING SPEED BIT1	*)
+O_CO_Stk_Mtr_Spd2			AT %QX100.7	:BOOL;	 (* 	COLLATOR STACKING SPEED BIT2	*)
+						
+O_CO_Stk_Mtr_ClutchBrake	AT %QX101.0	:BOOL;	 (* 	COLLATOR STACKING CLUTCH & BRAKE	*)
+O_VacPump_On				AT %QX101.1	:BOOL;	 (* 	VACUUM PUMP ON	*)
+O_Nord_Auto					AT %QX101.2	:BOOL;	 (* 	NORDSON DISPENSER AUTO STANDBY	*)
+O_Nord_Standby				AT %QX101.3	:BOOL;	 (* 	NORDSON DISPENSER STANDBY ON	*)
+O_Nord_HeaterOn				AT %QX101.4 :BOOL;	 (* 	NORDSON HEATER ON	*)
+QX1015						AT %QX101.5	:BOOL;	 (* 	SAPRE	*)
+QX1016						AT %QX101.6	:BOOL;	 (* 	SAPRE	*)
+QX1017						AT %QX101.7	:BOOL;	 (* 	SAPRE	*)
+
+(**************************************************************************)
+(*Collactor Field IO - 160A1*)
+(*Collator Assembly - Valve Reed Switch*)
+
+IW_160A1					AT %IB110:WORD;
+I_CO_XPush_Up	 			AT %IX110.0	:BOOL;	 (* 	COLLATOR X PUSHER CYL UP RS	*)
+I_CO_XPush_Dn				AT %IX110.1	:BOOL;	 (* 	COLLATOR X PUSHER CYL DN RS	*)
+I_CO_YPush_Strk_Fwd			AT %IX110.2	:BOOL;	 (* 	COLLATOR Y PUSHER STROKE CYL FWD RS	*)
+I_CO_YPush_Strk_Bwd			AT %IX110.3	:BOOL;	 (* 	COLLATOR Y PUSHER STROKE CYL BWD RS	*)
+I_CO_Brdg_Fwd				AT %IX110.4	:BOOL;	 (* 	COLLATOR PUSHER BRIDGE CYL FWD RS	*)
+I_CO_Brdg_Bwd				AT %IX110.5	:BOOL;	 (* 	COLLATOR PUSHER BRIDGE CYL BWD RS	*)
+I_CO_FFlapGuide_Fwd			AT %IX110.6	:BOOL;	 (* 	COLLATOR PUSHER FRONT GUIDE FLAP CYL FWD RS	*)
+I_CO_FFlapGuide_Bwd			AT %IX110.7	:BOOL;	 (* 	COLLATOR PUSHER FRONT GUIDE FLAP CYL BWD RS	*)
+
+
+(**************************************************************************)
+(*Collactor Field IO - 161A1*)
+(*Collator Assembly - Valve Reed Switch & Sensors*)
+
+IW_161A1					AT %IB111:WORD;
+I_CO_RFlapGuide_Fwd			AT %IX111.0	:BOOL;	 (* 	COLLATOR PUSHER REAR GUIDE FLAP CYL FWD RS	*)
+I_CO_RFlapGuide_Bwd			AT %IX111.1	:BOOL;	 (* 	COLLATOR PUSHER REAR GUIDE FLAP CYL BWD RS	*)
+IX1112						AT %IX111.2	:BOOL;	 (* 	SPARE	*)
+IX1113						AT %IX111.3	:BOOL;	 (* 	SPARE	*)
+I_CO_YStk_AtBuf1_PE			AT %IX111.4	:BOOL;	 (* 	STACK PRESENCE AT PUSHER BUFFER AREA 1 SENSOR	*)
+I_CO_YStk_AtBuf2_PE			AT %IX111.5	:BOOL;	 (* 	STACK PRESENCE AT PUSHER BUFFER AREA 2 SENSOR	*)
+I_CO_Stk_Mtr_HomePos		AT %IX111.6	:BOOL;	 (* 	STACK MOTOR HOME SENSOR	*)
+I_CO_Stk_Mtr_UpPos			AT %IX111.7	:BOOL;	 (* 	STACK MOTOR UP POSITION SENSOR	*)
+(*
+I_CO_CAM_Sensor				AT %IX111.6	:BOOL;	 (* 	STACK MOTOR CAM SENSOR	*)
+I_CO_Torque_Limiter			AT %IX111.7	:BOOL;	 (* 	STACK MOTOR TORQUE LIMITER	*)
+*)
+(**************************************************************************)
+(*Collactor Field IO - 162A1*)
+(*Collator Assembly - Stacking Module*)
+
+IW_162A1					AT %IB112:WORD;
+I_CO_Bdl_PE1				AT %IX112.0	:BOOL;	 (* 	COLLATOR BUNDLE INFEED COUNTING SENSOR 1	*)
+I_CO_Bdl_PE2				AT %IX112.1	:BOOL;	 (* 	COLLATOR BUNDLE INFEED COUNTING SENSOR 2	*)
+I_CO_Bdl_PE3				AT %IX112.2	:BOOL;	 (* 	COLLATOR BUNDLE INFEED COUNTING SENSOR 3	*)
+I_CO_Bdl_PE4				AT %IX112.3	:BOOL;	 (* 	COLLATOR BUNDLE INFEED COUNTING SENSOR 4	*)
+I_CO_Bdl_PE5				AT %IX112.4	:BOOL;	 (* 	COLLATOR BUNDLE INFEED COUNTING SENSOR 5	*)
+I_CO_Bdl_PE6				AT %IX112.5	:BOOL;	 (* 	COLLATOR BUNDLE INFEED COUNTING SENSOR 6	*)
+I_CO_Bdl_PE7				AT %IX112.6	:BOOL;	 (* 	COLLATOR BUNDLE INFEED COUNTING SENSOR 7	*)
+I_CO_Bdl_PE8				AT %IX112.7	:BOOL;	 (* 	COLLATOR BUNDLE INFEED COUNTING SENSOR 8	*)
+
+(**************************************************************************)
+(*Collactor Field IO - 163A1*)
+(*Collator Assembly - Stacking Module*)
+
+IW_163A1					AT %IB113:WORD;
+I_CO_Bdl_ZFull_PE			AT %IX113.0	:BOOL;	 (* 	COLLATOR BUNDLE Z-AXIS STACK FULL SENSOR	*)
+I_CO_Bdl_ZLimit_PE			AT %IX113.1	:BOOL;	 (* 	COLLATOR BUNDLE Z-AXIS STACK LIMIT (OVERFLOW) SENSOR	*)
+I_CO_Bdl_Stack_PE			AT %IX113.2	:BOOL;	 (* 	COLLATOR BUNDLE AT STACKED UP SENSOR	*)
+I_CO_Bdl_DoorSwitch			AT %IX113.3	:BOOL;	 (* 	COLLATOR BUNDLE DOOR SWITCH	*)
+IX1134						AT %IX113.4	:BOOL;	 (* 	SPARE	*)
+IX1135						AT %IX113.5	:BOOL;	 (* 	SPARE	*)
+IX1136						AT %IX113.6	:BOOL;	 (* 	SPARE	*)
+IX1137						AT %IX113.7	:BOOL;	 (* 	SPARE	*)
+
+
+
+
+
+
+
+I_CO_FxStp_Up				AT %IX110.0	:BOOL;	 (* 	COLLATOR FIXED RAIL CV STOPPER CYL UP RS	*)
+I_CO_FxStp_Dn				AT %IX110.1	:BOOL;	 (* 	COLLATOR FIXED RAIL CV STOPPER CYL DN RS	*)
+
+
+I_CO_Bdl_StackRel_PE		AT %IX110.5	:BOOL;	 (* 	COLLATOR BUNDLE AT STACK RELEASE POSITION SENSOR	*)
+I_CO_FxStkRel_Fwd			AT %IX110.6	:BOOL;	 (*		COLLATOR FIXED RAIL STACK RELEASE CYLINDER FWD RS*)
+I_CO_FxStkRel_Bwd			AT %IX110.7	:BOOL;	 (*		COLLATOR FIXED RAIL STACK RELEASE CYLINDER BWD RS*) 
+
+
+
+
+
+
+
+
+
+
+O_EL_BotCV_Mtr_On			AT %QX901.1	:BOOL;	 (* 	ELEVATOR BOTTOM EXIT CV STARTER ON	*)
+O_EL_TopCV_Mtr_On			AT %QX901.2	:BOOL;	 (* 	ELEVATOR TOP EXIT CV STARTER ON	*)
+O_EX_BotCV_Mtr_On			AT %QX901.3	:BOOL;	 (* 	HORIZONTAL BOTTOM EXIT CV 1 STARTER ON	*)
+O_EX_TopCV_Mtr_On			AT %QX901.4	:BOOL;	 (* 	HORIZONTAL TOP EXIT CV 2 STARTER ON	*)
+
+
+
+
+
+IX1005		AT %IX100.5	:BOOL;	 (* 	SPARE	*)
+
+						
+
+I_EL_FlapHoldR_Fwd		AT %IX101.2	:BOOL;	 (* 	ELEVATOR FLAP HOLDING CYLINDER RIGHT FWD RS	*)
+I_EL_FlapHoldR_Bwd		AT %IX101.3	:BOOL;	 (* 	ELEVATOR FLAP HOLDING CYLINDER RIGHT BWD RS	*)
+I_EL_FlapHoldL_Fwd		AT %IX101.4	:BOOL;	 (* 	ELEVATOR FLAP HOLDING CYLINDER LEFT FWD RS	*)
+I_EL_FlapHoldL_Bwd		AT %IX101.5	:BOOL;	 (* 	ELEVATOR FLAP HOLDING CYLINDER LEFT BWD RS	*)
+
+
+
+
+
+
+
+
+
+
+I_CO_MvStp_Up		AT %IX111.0	:BOOL;	 (* 	COLLATOR MOVING RAIL CV STOPPER CYL UP RS	*)
+I_CO_MvStp_Dn		AT %IX111.1	:BOOL;	 (* 	COLLATOR MOVING RAIL CV STOPPER CYL DN RS	*)
+
+IX1114		AT %IX111.4	:BOOL;	 (* 	SPARE	*)
+I_CO_Bdl_Count_PE2		AT %IX111.5	:BOOL;	 (* 	SPARE	*)
+I_CO_MvStkRel_Fwd				AT %IX111.6	:BOOL;	 (*		COLLATOR MOVING RAIL STACK RELEASE CYLINDER FWD RS*)
+I_CO_MvStkRel_Bwd				AT %IX111.7	:BOOL;	 (*		COLLATOR MOVING RAIL STACK RELEASE CYLINDER BWD RS*) 
+
+
+
+
+
+
+I_CO_Stk_UpPos		AT %IX112.4	:BOOL;	 (* 	COLLATOR STACKING CAM MODULE AT UP POSITION	*)
+I_CO_Stk_DnPos		AT %IX112.5	:BOOL;	 (* 	COLLATOR STACKING CAM MODULE AT DOWN POSITION	*)
+IX1126		AT %IX112.6	:BOOL;	 (* 	SPARE	*)
+IX1127		AT %IX112.7	:BOOL;	 (* 	SPARE	*)
+
+
+
+
+I_EL_TapeL_Up		AT %IX113.4	:BOOL;	 (* 	EXIT TAPE EXCHANGE LEFT CYL UP RS	*)
+I_EL_TapeL_Dn		AT %IX113.5	:BOOL;	 (* 	EXIT TAPE EXCHANGE LEFT CYL DN RS	*)
+
+
+
+
+(**************************************************************************)
+(*Erector Field IO - 164A1*)
+(*Exit Assembly - REAR FLAP CLOSE RIGHT ASSEMBLY*)
+
+IW_164A1				AT %IB114:WORD;
+
+
+I_EL_TapeR_Up		AT %IX114.4	:BOOL;	 (* 	EXIT TAPE EXCHANGE RIGHT CYL UP RS	*)
+I_EL_TapeR_Dn		AT %IX114.5	:BOOL;	 (* 	EXIT TAPE EXCHANGE RIGHT CYL DN RS	*)
+
+IX1147		AT %IX114.7	:BOOL;	 (* 	SPARE	*)
+
+(**************************************************************************)
+(*Erector Field IO - 165A1*)
+(*Exit Assembly - WEIGHT CHECK & TILT UNIT*)
+
+IW_165A1				AT %IB115:WORD;
+
+
+I_EL_TiltLift_Fwd		AT %IX115.3	:BOOL;	 (* 	VERTICAL EXIT TILT LIFT CYL FWD RS	*)
+I_EL_TiltLift_Bwd		AT %IX115.4	:BOOL;	 (* 	VERTICAL EXIT TILT LIFT CYL BWD RS	*)
+
+IX1156		AT %IX115.6	:BOOL;	 (* 	SPARE	*)
+IX1157		AT %IX115.7	:BOOL;	 (* 	SPARE	*)
+
+(**************************************************************************)
+(*Erector Field IO - 166A1*)
+(*Exit Assembly - ELEVATOR MODULE*)
+
+
+
+IX1164		AT %IX116.4	:BOOL;	 (* 	SPARE	*)
+IX1165		AT %IX116.5	:BOOL;	 (* 	SPARE	*)
+IX1166		AT %IX116.6	:BOOL;	 (* 	SPARE	*)
+IX1167		AT %IX116.7	:BOOL;	 (* 	SPARE	*)
+
+
+(**************************************************************************)
+(*Erector Field IO - 167A1*)
+(*Exit Assembly - ELEVATOR MODULE*)
+
+QW_167A1				AT %QB110:WORD;
+
+
+
+QX1104		AT %QX110.4	:BOOL;	 (* 	SPARE	*)
+QX1105		AT %QX110.5	:BOOL;	 (* 	SPARE	*)
+QX1106		AT %QX110.6	:BOOL;	 (* 	SPARE	*)
+QX1107		AT %QX110.7	:BOOL;	 (* 	SPARE	*)
+
+(**************************************************************************)
+(*Erector Field IO - 168A1*)
+(*Collator Assembly - Pusher Bridge & Rear Flap Guide*)
+
+IW_168A1				AT %IB117:WORD;
+
+
+
+IX1176		AT %IX117.6	:BOOL;	 (* 	SPARE	*)
+IX1177		AT %IX117.7	:BOOL;	 (* 	SPARE	*)
+
+(**************************************************************************)
+(*Erector Field IO - 169A1*)
+(*Collator Assembly - Pusher Bridge & Rear Flap Guide*)
+
+IW_169A1				AT %IB118:WORD;
+
+I_CO_FFlapBrdg_Fwd		AT %IX118.2	:BOOL;	 (* 	COLLATOR PUSHER FRONT GUIDE FLAP BRIDGE CYL FWD RS	*)
+I_CO_FFlapBrdg_Bwd		AT %IX118.3	:BOOL;	 (* 	COLLATOR PUSHER FRONT GUIDE FLAP BRIDGE CYL BWD RS	*)
+
+I_CO_Bdl_XFull_PE		AT %IX118.6	:BOOL;	 (* 	COLLATOR BUNDLE X-AXIS STACK FULL SENSOR	*)
+I_CO_Bdl_XLimit_PE		AT %IX118.7	:BOOL;	 (* 	COLLATOR BUNDLE X-AXIS STACK LIMIT (OVERFLOW) SENSOR	*)
+
+I_CO_YPush_Gap_PE :BOOL;	(*spare for gap sensor*)
+
+
+
+QW119				AT %IB119:WORD;
+QX1190				AT %IX119.0	:BOOL;	 
+
+
+
+
+
+
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

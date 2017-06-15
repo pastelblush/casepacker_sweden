@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_BdlCount_Auto" Id="{7a7b0913-c342-498c-97e6-954bdbf7d8ce}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_BdlCount_Auto
+VAR
+		pls_CO_Bdl_Count: R_trig;
+
+	CO_StpUp_TON: Ton;
+	CO_Cv_Run_TON: Ton;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(**************************************************************************************************************)
+(* Bundle Counting Sequance*)
+(**************************************************************************************************************)
+
+CO_Cv_Run_TON (IN:= O_CO_CV_Mtr_Run, pt:=T#1S );
+
+CO_Bdl_Count_TON (IN := I_CO_Bdl_Count_PE AND I_CO_Bdl_Reach_PE AND
+					 	CO_Cv_Run_TON.Q , pt := T#200MS);
+
+pls_CO_Bdl_Count(CLK:= CO_Bdl_Count_TON.Q);
+
+(*IF (MC.AutoMode OR CO_Stack.M_Step) AND pls_CO_Bdl_Count.Q THEN
+	H_CO_Bdl_StkX_Count := H_CO_Bdl_StkX_Count + 1;
+END_IF*)
+
+H_CO_Bdl_StkX_Full := CO_Bdl_Count_TON.Q	(*(H_CO_Bdl_StkX_Count = CurrRecipe.iStackX) debug*);
+H_CO_Bdl_StkZ_Full := (H_CO_Bdl_StkZ_Count = CurrRecipe.iStackZ);
+
+(**************************************************************************************************************)
+(* Conveyor Stopper Sequance*)
+(**************************************************************************************************************)
+CO_StpUp_TON(IN := (H_CO_Bdl_StkX_Count >= CurrRecipe.iStackX), pt := T#15MS);
+
+IF (MC.AutoMode OR SC[0].M_Step) AND NOT SC[0].Bypass THEN
+	
+	IF 	CO_Stp_Cyl_Var.S_HomePos AND
+		((H_CO_Bdl_StkX_Count >= CurrRecipe.iStackX) OR HMI.T_EndProd) AND 
+		CO_StpUp_TON.Q THEN
+		
+		CO_Stp_Cyl_Var.In_AutoWork := TRUE;
+		CO_Stp_Cyl_Var.In_AutoHome := FALSE;
+	
+	END_IF
+
+END_IF
+
+CO_Stp_Cyl_Var.In_HomeXLock := TRUE;
+CO_Stp_Cyl_Var.In_WorkXLock := TRUE;
+
+CO_Stp_Cyl(
+	IN_CylName		:='2Y1 COL. CV STOPPER', 
+	In_Enable		:= NOT MC.Trouble, 
+	In_Reset		:= MC.ResetPressed, 
+	In_WorkRS		:=	CO_Stp_Cyl.Out_WorkSV(* I_CO_FxStp_Up AND I_CO_MvStp_Up*), 	
+	In_HomeRS		:= 	CO_Stp_Cyl.Out_HomeSV(*I_CO_FxStp_Dn AND I_CO_MvStp_Dn*),  
+	In_WorkTON		:= T#100MS, 
+	In_HomeTON		:= T#100MS, 
+	in_Timeout		:= TP_Cyl_Timeout, 
+	Out_WorkSV		=> , 
+	Out_HomeSV		=> , 
+	CylVar			:= CO_Stp_Cyl_Var,
+	Station			:= SC[0]);
+
+	O_CO_StpL_Up := TRUE;
+	O_CO_StpR_Up := O_CO_StpL_Up;
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

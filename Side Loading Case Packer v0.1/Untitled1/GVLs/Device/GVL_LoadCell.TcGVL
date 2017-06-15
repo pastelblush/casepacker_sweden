@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <GVL Name="GVL_LoadCell" Id="{56592926-0278-4d03-ad64-2d5eb601d62e}">
+    <Declaration><![CDATA[VAR_GLOBAL
+
+	EX_LoadCell	: fbHBMSerialCtrl;
+	EX_LoadCellVar:	structHBMSerialCtrl;	
+
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

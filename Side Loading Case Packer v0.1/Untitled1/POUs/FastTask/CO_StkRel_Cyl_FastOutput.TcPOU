@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_StkRel_Cyl_FastOutput" Id="{eb48ee97-6742-444d-8344-7502d674a186}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_StkRel_Cyl_FastOutput
+VAR
+	plsStackRelWork: R_trig;
+	plsStackRelHome: R_trig;
+	tmrStackRelHome: Ton;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[plsStackRelWork(CLK:=I_CO_Bdl_StackRel_PE2 AND O_CO_Stk_Mtr_Run);
+tmrStackRelHome(IN:= O_CO_StkRel_Bwd, PT:= T#150MS);
+plsStackRelHome(CLK:= I_CO_Stk_UpPos2);
+tmr_CoStkMtrStop(IN:= I_CO_Stk_UpPos2, PT:= T#20MS);
+pls_CoStkMtrStop(CLK:= tmr_CoStkMtrStop.Q);
+
+IF pls_CoStkMtrStop.Q THEN
+	CO_Stk_Mtr_Var.T_ManOff := TRUE;
+	CO_Stk_Mtr_Var.In_AutoON := FALSE;
+ELSIF NOT O_CO_Stk_Mtr_Run THEN
+	CO_Stk_Mtr_Var.T_ManOff := FALSE;
+END_IF
+
+(*
+(* Control Stack Release Cylinder Immediate Response to avoid bundle collision*) 
+(*IF NOT I_CO_Stk_DnPos THEN*)
+	IF plsStackRelWork.Q THEN	(*Retract Cylinder to allow bundle stack up*)
+		IF (MC.OriginSchRun OR SC[0].OriginSchRun) THEN
+			CO_StkRel_Cyl_Var.In_OrgWork := TRUE;
+			CO_StkRel_Cyl_Var.In_OrgHome := FALSE;
+		ELSIF SC[0].AutoRun OR SC[0].M_Step THEN
+			CO_StkRel_Cyl_Var.In_AutoWork := TRUE;
+			CO_StkRel_Cyl_Var.In_AutoHome := FALSE;	
+		ELSE
+			CO_StkRel_Cyl_Var.T_ManWork := TRUE;
+			CO_StkRel_Cyl_Var.T_ManHome := FALSE;			
+		END_IF
+	ELSIF plsStackRelHome.Q OR MC.OriginSchRun OR SC[0].OriginSchRun OR
+		SC[0].RunStep > 40 THEN	(*Extend Cylinder to hold bundle stack*)
+		IF (MC.OriginSchRun OR SC[0].OriginSchRun) THEN
+			CO_StkRel_Cyl_Var.In_OrgWork := FALSE;
+			CO_StkRel_Cyl_Var.In_OrgHome := TRUE;
+		ELSIF SC[0].AutoRun OR SC[0].M_Step THEN
+			CO_StkRel_Cyl_Var.In_AutoWork := FALSE;
+			CO_StkRel_Cyl_Var.In_AutoHome := TRUE;	
+		ELSE
+			CO_StkRel_Cyl_Var.T_ManWork := FALSE;
+			CO_StkRel_Cyl_Var.T_ManHome := TRUE;			
+		END_IF
+	END_IF
+(*END_IF*)
+
+CO_StkRel_Cyl_Var.In_HomeXLock := TRUE (* NOT I_CO_Bdl_StackRel_PE  debug*);
+CO_StkRel_Cyl_Var.In_WorkXLock := true (* NOT I_CO_Bdl_Stack_PE OR I_CO_Stk_UpPos debug*);
+
+CO_StkRel_Cyl(
+	IN_CylName		:='2Y2 COL. CV STACK RELEASE', 
+	In_Enable		:= NOT MC.Trouble AND FALSE (*debug*), 
+	In_Reset		:= MC.ResetPressed, 
+	In_WorkRS		:= I_CO_FxStkRel_Bwd AND I_CO_MvStkRel_Bwd, 	
+	In_HomeRS		:= I_CO_FxStkRel_Fwd AND I_CO_MvStkRel_Fwd, 
+	In_WorkTON		:= T#0MS, 
+	In_HomeTON		:= T#0MS, 
+	in_Timeout		:= TP_Cyl_Timeout, 
+	Out_WorkSV		=> O_CO_StkRel_Bwd, 
+	Out_HomeSV		=> O_CO_StkRel_Fwd, 
+	CylVar			:= CO_StkRel_Cyl_Var,
+	Station			:= SC[0]);
+	
+
+*)]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

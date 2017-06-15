@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_Nordson" Id="{c4436f60-06ec-42a0-9933-73379f159f7e}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_Nordson
+VAR
+	PumpOnOff	: fbOnOffDevCtrl;
+	Standby		: fbOnOffDevCtrl;
+	HeaterOn	: fbOnOffDevCtrl;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+
+PumpOnOff(
+	IN_DevName:= 'Pump OnOff', 
+	In_Enable:= TRUE, 
+	In_Reset:= MC.ResetPressed, 
+	In_AutoON:= ER_Nordson_PumpOnOff_Var.In_AutoON , 
+	In_OrgON:= ER_Nordson_PumpOnOff_Var.In_OrgOn , 
+	In_OnXLock:= TRUE, 
+	In_ONSig:=PumpOnOff.Out_OnSV , 
+	In_OnTON:= , 
+	in_Timeout:= T#1S, 
+	Out_OnSV=> O_Nord_Auto , 
+	E_OnErr=> , 
+	S_OnSig=> );
+	
+Standby(
+	IN_DevName:= 'Standby', 
+	In_Enable:= TRUE, 
+	In_Reset:= MC.ResetPressed, 
+	In_AutoON:= ER_Nordson_Standby_Var.In_AutoON , 
+	In_OrgON:= ER_Nordson_Standby_Var.In_OrgOn, 
+	In_OnXLock:= TRUE , 
+	In_ONSig:= Standby.Out_OnSV, 
+	In_OnTON:= , 
+	in_Timeout:= T#1S, 
+	Out_OnSV=> O_Nord_Standby , 
+	E_OnErr=> , 
+	S_OnSig=> );	
+	
+HeaterOn(
+	IN_DevName:= 'Heater On', 
+	In_Enable:= TRUE, 
+	In_Reset:= MC.ResetPressed, 
+	In_AutoON:= ER_Nordson_HeaterOn_Var.In_AutoON  , 
+	In_OrgON:= ER_Nordson_HeaterOn_Var.In_OrgOn, 
+	In_OnXLock:= TRUE , 
+	In_ONSig:= HeaterOn.Out_OnSV, 
+	In_OnTON:= , 
+	in_Timeout:= T#1S, 
+	Out_OnSV=> O_Nord_HeaterOn , 
+	E_OnErr=> , 
+	S_OnSig=> );	]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

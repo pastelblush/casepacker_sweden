@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <DUT Name="structRecipe" Id="{0340f97a-1671-48ea-af65-86ebe95ca168}">
+    <Declaration><![CDATA[TYPE structRecipe :
+STRUCT
+
+	rCaseA	:REAL;	(*	Min 200mm Max 640mm	*)
+	rCaseB	:REAL;	(*	Min 150mm Max 500mm	*)
+	rCaseC	:REAL;	(*	Min 180mm Max 640mm	*)
+	
+	rBundleW	:REAL;	(*	Min 20mm Max 300mm	*)
+	rBundleL	:REAL;	(*	Min 70mm Max 320mm	*)
+	rBundleH	:REAL;	(*	Min 15mm Max 150mm	*)
+	
+	iStackX		:INT;	(*	Stack Count in X Direction	*)
+	iStackY		:INT;	(*	Stack Count in Y Direction	*)
+	iStackZ		:INT;	(*	Stack Count in Z Direction	*)
+			
+						(*	Note: All Flap Width must be Case B/2	*)
+	
+	rWeightTarget	:REAL;	(*	Target Weight for Carton in kg	*)
+	rWeightTol		:REAL;	(*	Weight Tolerance for Carton in kg	*)
+
+	sDescription	:STRING; (*Recipe Description *)
+	
+	rGlue_Distance_Fr_Edge			:REAL;
+	rGlue_Length					:REAL;	
+	
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

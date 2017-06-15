@@ -1,0 +1,88 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="ER_Servo_Output" Id="{fcc06e98-3bc6-4a4d-9842-1782512a4c65}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM ER_Servo_Output
+VAR
+	Reset:BOOL;
+	bEnable:BOOL;
+	plsStopMove: R_trig;
+	debugcode: INT;
+	debugcode2: INT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF (MC.AutoMode OR SC[3].M_Step) AND NOT ER.Bypass THEN
+	ER_Arm_Srv_Var.In_ServoOn := TRUE;
+	ER_WA_Srv_Var.In_ServoOn := FALSE;
+END_IF
+
+IF ER.OriginSchRun OR MC.OriginSchRun OR mc.AutoMode OR (mc.ResetPressed AND NOT mc.Trouble) THEN
+	ER_Arm_Srv_Var.In_ServoOn := TRUE;
+	ER_WA_Srv_Var.In_ServoOn := TRUE;
+END_IF
+
+(*plsStopMove(CLK:= NOT (SC[3].OriginSchRun OR MC.OriginSchRun OR SC[3].AutoRun));
+IF plsStopMove.Q THEN
+	ER_Arm_Srv_Var.In_StopMove := TRUE;
+	ER_BufCvL_WA_Srv_Var.In_StopMove := TRUE;
+	ER_FlapL_WA_Srv_Var.In_StopMove := TRUE;
+	ER_BufCvR_WA_Srv_Var.In_StopMove := TRUE;
+	ER_FlapR_WA_Srv_Var.In_StopMove := TRUE;
+	ER_WA_Srv_Var.In_StopMove := TRUE;
+END_IF*)
+
+bEnable := NOT (SC[3].MajorFault or MC.Trouble);
+
+ER_Arm_Srv_Var.In_MoveXLock := TRUE OR (*(CO_FFlapBrdg_Cyl_Var.S_HomePos AND
+								CO_Brdg_Cyl_Var.S_HomePos AND
+								CO_YPush_Srv_Var.Out_CurrPos <= H_CO_YPush_Srv_CtnFinalPos - 100) OR  debug*)
+								SC[2].Bypass;
+
+(*ER_Arm_Srv Erector Arm Motor - 10M1*)
+ER_Arm_Srv_Drive(
+	In_Enable:= bEnable AND NOT MC_WA_Run AND NOT Erector_SafetySensorBypass AND NOT E_Case_Infeed_Safety_NOk, 
+	In_Reset := MC.ResetPressed,
+	In_AbsEncoder:= TRUE, 
+	In_DriveInput:= ER_Arm_Srv_Input, 
+	In_CommState:= ER_Arm_Srv_State, 
+	Out_DriveOutput=> ER_Arm_Srv_Output, 
+	Out_DriveFeedRateOverride=> , 
+	DriveVar:= ER_Arm_Srv_Var,
+	Station			:= SC[3]);
+IF (SC[3].MajorFault OR MC.Trouble)OR ER_Arm_Srv_State<>8 THEN
+	debugcode := debugcode + 1;
+END_IF
+IF NOT ER_Arm_Srv_Drive.In_Enable THEN
+	debugcode2 := debugcode2 + 1;
+END_IF	
+IF mc.ManualMode THEN	
+	ER_Arm_Srv_Feedrate := 10000;
+ELSE
+	ER_Arm_Srv_Feedrate :=    INT_TO_UINT(hmi.V_MachineSpeed * 100);
+END_IF
+
+
+	
+ER_WA_Srv_Var.In_MoveXLock := TRUE;
+	
+(*ER_WA_M5 Erector Width Adjust Motor 1 - 11M1*)
+ER_WA_Srv_Drive(
+	In_Enable:= bEnable, 
+	In_Reset := MC.ResetPressed,
+	In_AbsEncoder:= TRUE, 
+	In_DriveInput:= ER_WA_Srv_Input, 
+	In_CommState:= ER_WA_Srv_State, 
+	Out_DriveOutput=> ER_WA_Srv_Output, 
+	Out_DriveFeedRateOverride=> , 
+	DriveVar:= ER_WA_Srv_Var,
+	Station			:= SC[3]);
+
+
+	IF mc.ManualMode THEN	
+		ER_WA_Srv_Feedrate := 10000;
+	ELSE
+		ER_WA_Srv_Feedrate :=    INT_TO_UINT(hmi.V_MachineSpeed * 100);
+	END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

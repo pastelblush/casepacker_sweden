@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="ER_Glue" Id="{5279b6ce-dce8-4a6e-930f-18ac76cfb2c4}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM ER_Glue
+VAR_IN_OUT
+	Station		:structStationCtrl;
+END_VAR
+VAR
+	GlueStart1 				:BOOL;
+	GlueStart2 				:BOOL;
+	DistanceAdvanceForGlue	:REAL;
+	CartonPreAtStopper		:BOOL;
+	tmrNordsonNotRdy		:Ton;
+	tmrNordsonOffDly		:Ton;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[DistanceAdvanceForGlue	:=	(A_Srv_ErectorArmHiSpeed/60)*0.07;
+				
+H_ER_1St_GlueStartPos	:=	H_ER_ValveOffset + 
+							CurrRecipe.rCaseA - 
+							CurrRecipe.rGlue_Distance_Fr_Edge + DistanceAdvanceForGlue;
+
+H_ER_1St_GlueStopPos	:=	H_ER_ValveOffset + 
+							CurrRecipe.rCaseA - 
+							CurrRecipe.rGlue_Distance_Fr_Edge -
+							CurrRecipe.rGlue_Length + DistanceAdvanceForGlue;			
+
+H_ER_2nd_GlueStartPos	:=	H_ER_ValveOffset + 
+							CurrRecipe.rGlue_Distance_Fr_Edge + 
+							CurrRecipe.rGlue_Length + DistanceAdvanceForGlue;
+
+H_ER_2nd_GlueStopPos	:=	H_ER_ValveOffset + 
+							CurrRecipe.rGlue_Distance_Fr_Edge +DistanceAdvanceForGlue;			
+
+(**************** Glue Auto Sequence ****************************)
+IF 	T_GlueEnable AND NOT mc.DryRun AND mc.AutoMode AND NOT tmrNordsonNotRdy.Q  THEN
+	ER_Nordson_PumpOnOff_Var.In_AutoON	:=TRUE;
+	ER_Nordson_HeaterOn_Var.In_AutoON	:=TRUE;
+ELSE
+	ER_Nordson_PumpOnOff_Var.In_AutoON	:=FALSE;
+	ER_Nordson_HeaterOn_Var.In_AutoON	:=FALSE;
+END_IF	
+
+tmrNordsonNotRdy	(In:= NOT I_Nord_Rdy AND NOT tmrNordsonOffDly.Q, PT:= T#10S );
+tmrNordsonOffDly	(In:= tmrNordsonNotRdy.Q, pt:= T#0.5S);
+
+
+(********************* Glue Sequence Start ********************************)							
+												
+IF  (Station.RunStep  >= 0) AND
+	(Station.RunStep  <= 20) AND
+	I_ER_StpL_Ctn_PE AND
+	I_ER_StpR_Ctn_PE THEN		
+	CartonPreAtStopper	:=TRUE;
+
+ELSIF Station.RunStep  >= 40 OR Station.RunStep  = 0	THEN
+	CartonPreAtStopper	:=FALSE;
+	
+END_IF
+
+GlueStart1	:= 	(ER_Arm_Srv_Var.Out_CurrPos 	<=	H_ER_1St_GlueStartPos )	AND				
+				(ER_Arm_Srv_Var.Out_CurrPos 	>=	H_ER_1St_GlueStopPos );
+GlueStart2	:= 	(ER_Arm_Srv_Var.Out_CurrPos 	<=	H_ER_2nd_GlueStartPos )	AND				
+				(ER_Arm_Srv_Var.Out_CurrPos 	>=	H_ER_2nd_GlueStopPos );			
+							
+IF  (Station.RunStep  >= 20) AND
+	(Station.RunStep <= 30)	AND		
+	( GlueStart1 OR GlueStart2 ) AND
+	CartonPreAtStopper AND
+	T_GlueEnable	AND 
+	(Station.AutoRun OR Station.M_Step) AND
+	NOT mc.DryRun	THEN
+
+ER_NordsonL_Cyl_var.In_AutoWork 	:=TRUE;
+ER_NordsonL_Cyl_var.In_AutoHome 	:=FALSE;
+ER_NordsonR_Cyl_var.In_AutoWork 	:=TRUE;
+ER_NordsonR_Cyl_var.In_AutoHome 	:=FALSE;	
+
+ELSE
+
+ER_NordsonL_Cyl_var.In_AutoWork 	:=FALSE;
+ER_NordsonL_Cyl_var.In_AutoHome 	:=TRUE;
+ER_NordsonR_Cyl_var.In_AutoWork 	:=FALSE;
+ER_NordsonR_Cyl_var.In_AutoHome 	:=TRUE;
+	
+END_IF								
+
+(********************* Glue Sequence End ********************************)
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

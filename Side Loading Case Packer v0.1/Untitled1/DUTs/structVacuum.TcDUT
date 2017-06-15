@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <DUT Name="structVacuum" Id="{ba0b7f77-61cd-4da8-8e79-553e34e3a903}">
+    <Declaration><![CDATA[TYPE structVacuum :
+STRUCT
+	
+	IN_Name:				STRING;
+	(*Trigger*)
+	T_ManVacuum:			BOOL;
+	T_ManPurge:				BOOL;
+
+	(*Mechanical Interlock*)
+	In_VacuumX:				BOOL;
+	In_PurgeX:				BOOL;
+	In_AutoVacuum:			BOOL;
+	In_AutoPurge:				BOOL;
+	In_OrgVacuum:			BOOL;
+	In_OrgPurge:				BOOL;
+
+	E_VacuumErr:			BOOL;
+	E_PurgeErr:				BOOL;
+	S_Vacuum:				BOOL;
+	S_Release:				BOOL;
+
+
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

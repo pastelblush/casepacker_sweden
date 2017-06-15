@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <DUT Name="structMachineCtrl" Id="{1e38a768-645e-4972-8d0e-d1d343e8412c}">
+    <Declaration><![CDATA[TYPE structMachineCtrl :
+STRUCT
+(* Mode Bit*)
+	AutoMode		:BOOL;
+	ManualMode		:BOOL;
+
+(* Status Bit*)
+	DryRun			:BOOL;
+	Stop			:BOOL;
+	AutoRunning		:BOOL;
+	StopPressed		:BOOL;
+	IdleState		:BOOL;
+	
+	ResetPressed	:BOOL;
+
+	StationStopErr 	:BOOL;
+	Warning			:BOOL;
+	WarningBuzzer	:BOOL;
+	Trouble			:BOOL;
+	ErrDetection		:BOOL;
+
+	OriginSchRun		:BOOL;
+	InxOrigin			:BOOL;
+	AllOrigin			:BOOL;
+	AllStationRdy		:BOOL;
+	AllStationNoWP 		:BOOL;
+	
+	E_EmgStop			: BOOL;
+	E_LightCurtain		: BOOL;
+	E_AirLow 			: BOOL;
+	E_SafetyDoorOpen	: BOOL;
+	E_Communication		: BOOL;
+	E_IncomingPowerPhase: BOOL;
+		
+	
+	
+END_STRUCT
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

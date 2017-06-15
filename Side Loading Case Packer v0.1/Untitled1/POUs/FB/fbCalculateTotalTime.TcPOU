@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="fbCalculateTotalTime" Id="{82207258-ad02-4e25-ba16-455408e814b3}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK fbCalculateTotalTime
+VAR_INPUT
+	In_EnableCount:BOOL;
+	In_ResetCount:BOOL;
+END_VAR
+VAR_OUTPUT
+	TotalHour	:DWORD;
+	TotalMin	:INT;
+	TotalSec	:INT;
+END_VAR
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+IF In_EnableCount THEN
+	TotalSec := TotalSec + 1;
+	IF TotalSec >= 60 THEN
+		TotalMin := TotalMin + 1;
+		TotalSec := 0;
+		IF TotalMin >= 60 THEN
+			TotalHour := TotalHour + 1;
+			TotalMin := 0;
+		END_IF
+	END_IF
+END_IF
+
+IF In_ResetCount THEN
+	TotalHour	:=0;
+	TotalMin	:=0;
+	TotalSec	:=0;
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

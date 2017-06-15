@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <GVL Name="GVL_Timer" Id="{d372f7c0-be6b-4990-98f0-d9093988e620}">
+    <Declaration><![CDATA[VAR_GLOBAL
+	
+	CO_Stk_Up_TON: Ton;
+	CO_Stk_Dn_TON: Ton;
+	CO_Bdl_Count_TON: Ton;
+	CO_Bdl_Reach_TON: Ton;
+	CO_Bdl_Stack_TON: Ton;
+	CO_Bdl_Count_TOFF: Ton;
+	CO_Stk_AtBuf_TON: Ton;
+
+	ER_BufCv_Ctn_TON:ton;
+	ER_BufCvL_Ctn_TON:ton;
+	ER_BufCvR_Ctn_TON:ton;
+
+	TP_Cyl_Timeout: TIME := T#5S;
+	
+	EL_Ctn_TON: Ton;
+	EL_Ctn_TOFF: Ton;
+	EL_TopCv_Ctn_TON: Ton;
+	EL_TopCv_Ctn_TOFF: Ton;
+	EL_BotCv_Ctn_TON: Ton;
+	EL_BotCv_Ctn_TOFF: Ton;
+	
+	CO_Bdl_ZFull_TON: Ton;
+	CO_Bdl_XFull_TON: Ton;
+	CO_Bdl_ZFull_TOFF: Ton;
+	
+	pls_CoStkMtrStop: R_trig;
+	tmr_CoStkMtrStop: Ton;
+
+	EL_LC_Safety_TON: Ton;
+	
+	HOR_Ctn_TON: Ton;
+	HOR_Ctn_TOFF: Ton;
+	HOR_DnStream_TOFF: Ton;
+	HOR_TopCv_Ctn_TON: Ton;
+	HOR_TopCv_Ctn_TOFF: Ton;
+	HOR_BotCv_Ctn_TON: Ton;
+	HOR_BotCv_Ctn_TOFF: Ton;
+	
+	HOR_LC_Safety_TON: Ton;
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

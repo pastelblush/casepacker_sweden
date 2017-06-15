@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <GVL Name="GVL_Nordson" Id="{d19b9e14-cf23-4391-8fe9-25eabe6b38c2}">
+    <Declaration><![CDATA[VAR_GLOBAL
+	ER_Nordson_PumpOnOff_Var			:structMotorDirect;	 (* 	 NORDSON PUMP OFF	*)
+	ER_Nordson_Standby_Var				:structMotorDirect;	 (* 	 NORDSON PUMP OFF	*)
+	ER_Nordson_HeaterOn_Var				:structMotorDirect;	 (* 	 NORDSON PUMP OFF	*)
+	
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

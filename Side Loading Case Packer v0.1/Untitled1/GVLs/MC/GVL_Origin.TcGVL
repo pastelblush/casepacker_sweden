@@ -1,0 +1,83 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+  <GVL Name="GVL_Origin" Id="{77557ebc-0551-4891-b195-49df021af22d}">
+    <Declaration><![CDATA[{attribute 'Tc2GvlVarNames'}
+VAR_GLOBAL
+
+(**************************************************************************************************************)
+(*----------   P0 - COLLATOR   ----------*)
+(* All P0 control bits and words must be within address MD4000~MD4039*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+
+	AO0_RunStep					AT %MW4000:INT;
+
+(**************************************************************************************************************)
+(*----------   P1 - ERECTOR   ----------*)
+(* All P1 control bits and words must be within address MD4040~MD4079*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+
+	AO1_RunStep 				AT %MW4040:INT;
+	
+(**************************************************************************************************************)
+(*---------- P2 - EXIT ----------*)
+(* All P2 control bits and words must be within address MD4080~MD4119*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+	AO2_RunStep 			AT %MW4080:INT;
+
+(**************************************************************************************************************)
+(*---------- P3 - ELEVATOR ----------*)
+(* All P3 control bits and words must be within address MD4120~MD4159*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+
+	AO3_RunStep 			AT %MW4120:INT;
+
+(**************************************************************************************************************)
+(*---------- P4 HORIZONTAL----------*)
+(* All P4 control bits and words must be within address MD4160~MD4199*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+
+	AO4_RunStep 			AT %MW4160 :INT;
+
+(**************************************************************************************************************)
+(*---------- P5 SPARE----------*)
+(* All P5 control bits and words must be within address MD4200~MD4239*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+
+	AO5_RunStep 			AT %MW4200:INT;
+
+(**************************************************************************************************************)
+(*---------- P6 SPARE----------*)
+(* All P6 control bits and words must be within address MD4240~MD4279*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+
+	AO6_RunStep  			AT %MW4240 :INT;
+
+(**************************************************************************************************************)
+(*---------- P7 SPARE----------*)
+(* All P7 control bits and words must be within address MD4280~MD4319*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+
+	AO7_RunStep 			AT %MW4280:INT;
+
+(**************************************************************************************************************)
+(*---------- P8 SPARE ----------*)
+(* All P8 control bits and words must be within address MD4320~MD4359*)
+(* All bits and words within the address will be reset when not in autorun mode*)
+(**************************************************************************************************************)
+
+	AO8_RunStep 			AT %MW4320:INT;
+
+	
+
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

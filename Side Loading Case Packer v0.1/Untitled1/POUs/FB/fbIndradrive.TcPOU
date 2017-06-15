@@ -1,0 +1,412 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="fbIndradrive" Id="{ea010212-030f-4a27-bd28-260f46e533bc}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK PUBLIC fbIndradrive
+VAR_INPUT
+	In_Enable:BOOL;			(*1=Enable Drive, 0=Disable and ignore error*)
+	In_Reset:BOOL;
+	In_AbsEncoder:BOOL;		(*1=Absolute Encoder, 0=Incremental Encoder*)
+	In_DriveInput:st_Indradrive_DCP_input ;		(*Indradrive Input Words via Ethercat*)
+	In_CommState:UINT ;		(*Ethercat Slave State, 8=OK*)
+	plsResetMode: R_trig;
+END_VAR
+VAR_OUTPUT
+	Out_DriveOutput: st_Indradrive_DCP_output;	(*Indradrive Output Words via Ethercat*)
+	Out_DriveFeedRateOverride: UINT;			(*Indradrive Output for Feedrate override, keep at 100%*)
+END_VAR
+VAR_IN_OUT
+	DriveVar:structIndradrive;	(*Local Data structure to handle Indradrive variables*)
+	Station:structStationCtrl;
+END_VAR
+VAR
+	Drive: FB_Indradrive_DCP;	(*Standard Function Block Provided by Bosch*)
+	tmrDriveEnableTOUT:TON;
+	tmrHomingTOUT:TON;
+	tmrMovePosTOUT:TON;
+	tmrMajorErrorRecovery:Tof;
+	diPosCmd:DINT;
+	diVelCmd:DINT;
+	DriveStatus:INT;
+	plsInPos: R_TRIG;
+	plsLimitTriggered: R_trig;
+	plsMoveRel: R_trig;
+	plsStopMove: R_TRIG;
+	plsEMGReset: R_trig;
+	ServoBusy:BOOL;
+	plsMoveAbs: R_trig;
+	plsStopMove2: R_trig;
+	plsHomed: R_TRIG;
+END_VAR
+VAR CONSTANT
+	FACTOR_DINT_REAL : INT := 10000;
+	FACTOR_VEL_DINT_REAL : INT := 1000;
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* convert DINT values from FB to REAL values for the user program and vise versa*)
+(* used only for trace purpose *)
+DriveVar.Out_CurrPos := DINT_TO_REAL(Drive.diPOS_ACT) / FACTOR_DINT_REAL;
+DriveVar.Out_CurrVel := DINT_TO_REAL(Drive.diVEL_ACT) / FACTOR_VEL_DINT_REAL;
+
+(* REAL variables can be used for commanding instead of DINT variable used in the sample code *)
+Drive.diPOS_CMD := REAL_TO_DINT (DriveVar.In_PosCmd * FACTOR_DINT_REAL);
+Drive.diVEL_CMD := REAL_TO_DINT (DriveVar.In_VelCmd * FACTOR_VEL_DINT_REAL);
+
+(*
+(*Force Slow Speed in Manual Mode When close to Negative Limit For Accurate Referencing*)
+IF DriveVar.Out_CurrPos <= 20 AND DriveVar.In_JogBwd THEN
+	Drive.diVEL_CMD := 100 * FACTOR_VEL_DINT_REAL;
+END_IF
+*)
+
+IF mc.ManualMode AND DriveVar.In_VelCmd > 1000 THEN
+	DriveVar.In_VelCmd := 1000;
+END_IF
+
+Out_DriveFeedRateOverride := 100;
+
+(***********************************************************************************************)
+(*Servo Controller Status*)
+
+IF NOT In_DriveInput.wSignalstatuswort.11 AND NOT In_DriveInput.wSignalstatuswort.12 THEN
+	DriveStatus := 0;	(* Control section and power section not ready for operation (e.g., drive error or phase 2)*)
+ELSIF NOT In_DriveInput.wSignalstatuswort.11 AND In_DriveInput.wSignalstatuswort.12 THEN
+	DriveStatus := 1;	(* Control section ready for operation (bb)*)
+ELSIF In_DriveInput.wSignalstatuswort.11 AND NOT In_DriveInput.wSignalstatuswort.12 THEN
+	DriveStatus := 2;	(* Control section and power section ready for operation (Ab)*)
+ELSIF In_DriveInput.wSignalstatuswort.11 AND In_DriveInput.wSignalstatuswort.12 THEN
+	DriveStatus := 3;	(* Drive with torque (AF)*)
+END_IF
+
+(***********************************************************************************************)
+(*Servo Limit Sensors Status*)
+DriveVar.Out_PosLimit := In_DriveInput.wSignalstatuswort.13;
+DriveVar.Out_NegLimit := In_DriveInput.wSignalstatuswort.14;
+
+(***********************************************************************************************)
+(*Error Handling*)
+
+IF In_Reset THEN
+	DriveVar.Out_ErrorWord := 0;
+END_IF
+
+Drive.bRESET := In_Reset;
+
+(*Servo is in Alarm State Error*) 
+IF Drive.bERROR AND In_Enable  THEN 
+	DriveVar.Out_ErrorWord := 11;
+END_IF
+
+(*Servo Control and Power Section Not Ready Error*) 
+IF DriveStatus = 0 AND In_Enable  THEN 
+	DriveVar.Out_ErrorWord := 12;
+END_IF
+
+(*Servo Enable Timeout Error*) 
+tmrDriveEnableTOUT(IN:= Drive.bDRIVE_ENABLE AND NOT (Drive.bQ_DRIVE_ENABLE AND Drive.bQ_MAIN_MODE),PT:=T#5S);
+IF tmrDriveEnableTOUT.Q AND In_Enable THEN 
+	DriveVar.Out_ErrorWord := 13;
+END_IF
+
+(*Servo Not Referenced Error*)
+IF Drive.bQ_DRIVE_ENABLE AND NOT Drive.bIN_REFERENCE AND In_AbsEncoder AND In_Enable  THEN 
+	DriveVar.Out_ErrorWord := 20;
+END_IF
+
+(*Servo Homing Timeout Error*) 
+tmrHomingTOUT(IN:= Drive.bHOMING,PT:=T#300S);
+IF tmrHomingTOUT.Q THEN 
+	DriveVar.Out_ErrorWord := 21;
+	Drive.bHOMING := FALSE;
+END_IF
+
+(*Servo Move Position Timeout Error*) 
+tmrMovePosTOUT(IN:= (DriveVar.In_MoveAbs OR ServoBusy OR
+					DriveVar.In_MoveRel) AND NOT DriveVar.Out_InPos,PT:=T#90S);
+IF tmrMovePosTOUT.Q THEN 
+	DriveVar.Out_ErrorWord := 22;
+	ServoBusy := FALSE;
+	DriveVar.In_MoveAbs := FALSE;
+	DriveVar.In_MoveRel := FALSE;
+END_IF
+
+(*Servo Move Position Limit Error*) 
+IF ServoBusy AND
+	(((DriveVar.In_PosCmd < DriveVar.Out_CurrPos) AND NOT DriveVar.Out_NegLimit) 
+	OR ((DriveVar.In_PosCmd > DriveVar.Out_CurrPos) AND NOT DriveVar.Out_PosLimit)) THEN 
+	DriveVar.Out_ErrorWord := 23;
+	ServoBusy := FALSE;
+	DriveVar.In_MoveAbs := FALSE;
+	DriveVar.In_MoveRel := FALSE;
+END_IF
+
+(*Servo Communication Error*) 
+IF In_CommState <> 8 AND In_Enable  THEN
+	DriveVar.Out_ErrorWord := 10;
+END_IF
+
+IF DriveVar.Out_ErrorWord > 1 THEN
+	DriveVar.Out_Error := TRUE;
+ELSE
+	IF NOT DriveVar.In_MoveXLock THEN
+		DriveVar.Out_ErrorWord := 0;
+	ELSE
+		DriveVar.Out_ErrorWord := 1;
+	END_IF
+	DriveVar.Out_Error := FALSE;
+END_IF
+(*Warning*)
+DriveVar.Out_Warning := Drive.bWARNING;
+
+(***********************************************************************************************)
+(*Servo Enable*)
+
+plsLimitTriggered(CLK:=NOT (DriveVar.Out_NegLimit AND DriveVar.Out_PosLimit));
+
+IF plsLimitTriggered.Q THEN
+	DriveVar.In_ServoOn := FALSE;
+END_IF
+
+IF In_Enable AND DriveVar.In_ServoOn AND NOT DriveVar.Out_Error
+	AND DriveStatus >= 1 AND NOT Station.MinorFault  THEN
+	(* drive enable and drive on commands *)
+	Drive.bDRIVE_ENABLE:= TRUE;
+	Drive.bDRIVE_START:= TRUE;
+ELSE
+	(* drive enable and drive on commands *)
+	Drive.bDRIVE_ENABLE:= FALSE;
+	Drive.bDRIVE_START:= FALSE;		
+	DriveVar.Out_Busy := FALSE;
+	DriveVar.In_JogBwd := FALSE;
+	DriveVar.In_JogFwd := FALSE;
+	DriveVar.In_MoveAbs := FALSE;
+	DriveVar.In_MoveHome := FALSE;
+	DriveVar.In_MoveRel := FALSE;
+	DriveVar.In_ServoOn := FALSE;
+END_IF
+
+Drive.bIMMEDIATE_CHANGE := TRUE;
+	
+(***********************************************************************************************)
+(*Servo Movement Control*)
+(***********************************************************************************************)
+
+(*Force Stop Command When Mode Changes*)
+plsResetMode(CLK:= NOT MC.AutoMode);
+
+plsStopMove(CLK:= NOT (Station.OriginSchRun OR MC.OriginSchRun OR 
+						Station.AutoRun OR Station.M_Step));
+
+plsStopMove2(CLK:= (Station.OriginSchRun OR MC.OriginSchRun OR
+						Station.M_Step OR MC.AutoMode));
+						
+IF plsStopMove.Q AND plsStopMove2.Q OR plsResetMode.Q THEN
+	DriveVar.In_StopMove := TRUE;
+	DriveVar.In_MoveAbs := FALSE;
+	DriveVar.In_MoveHome := FALSE;
+	DriveVar.In_MoveRel := FALSE;
+END_IF
+
+(*Check New Move Command Direction for Interlocking Purpose*)
+IF DriveVar.In_JogFwd OR 
+	((DriveVar.In_PosCmd > DriveVar.Out_CurrPos) AND
+		DriveVar.In_MoveAbs) OR
+	((DriveVar.In_PosCmd > 0) AND
+		DriveVar.In_MoveRel) THEN
+	DriveVar.Out_PosDirc := TRUE;
+	DriveVar.Out_NegDirc := FALSE;
+ELSIF DriveVar.In_JogBwd OR 
+	((DriveVar.In_PosCmd < DriveVar.Out_CurrPos) AND
+		DriveVar.In_MoveAbs) OR
+	((DriveVar.In_PosCmd < 0) AND
+		DriveVar.In_MoveRel) THEN	
+	DriveVar.Out_PosDirc := FALSE;
+	DriveVar.Out_NegDirc := TRUE;
+ELSE
+	DriveVar.Out_PosDirc := FALSE;
+	DriveVar.Out_NegDirc := FALSE;		
+END_IF
+
+IF Drive.bQ_DRIVE_ENABLE AND Drive.bQ_MAIN_MODE AND DriveStatus = 3 THEN
+	DriveVar.Out_Ready := TRUE;
+	
+	(* Origin Search for Incremental Encoder Servo*)
+	IF NOT In_AbsEncoder THEN		
+		IF DriveVar.In_MoveHome AND NOT Drive.bIN_REFERENCE AND NOT DriveVar.Out_Busy
+		AND Drive.diVEL_CMD > 0 THEN
+			Drive.bHOMING := TRUE;
+		END_IF
+		IF Drive.bIN_REFERENCE THEN
+			Drive.bHOMING := FALSE;
+		END_IF
+	END_IF
+	
+	(*Jog Command*)
+	IF MC.ManualMode AND NOT Station.M_Step THEN
+		IF DriveVar.In_JogFwd AND NOT DriveVar.In_JogBwd AND DriveVar.In_MoveXLock THEN
+			(* Jog Positive command *)
+			Drive.bJOG_FORWARD := TRUE;
+			Drive.bJOG_BACKWARD := FALSE;
+		ELSIF NOT DriveVar.In_JogFwd AND DriveVar.In_JogBwd AND DriveVar.In_MoveXLock THEN
+			(* Jog Negative  command *)
+			Drive.bJOG_FORWARD := FALSE;
+			Drive.bJOG_BACKWARD := TRUE;
+		ELSE
+			(* Stop Jogging *)
+			Drive.bJOG_FORWARD := FALSE;
+			Drive.bJOG_BACKWARD := FALSE;
+		END_IF
+	ELSE
+		DriveVar.In_JogFwd := FALSE;
+		DriveVar.In_JogBwd := FALSE;
+	END_IF
+	
+	IF Drive.bIN_REFERENCE THEN
+		IF DriveVar.In_MoveXLock THEN
+			(* Start Absolute move *)
+			plsMoveAbs(CLK:=DriveVar.In_MoveAbs);
+			IF DriveVar.In_MoveAbs AND Drive.bNEW_VALUE_POSSIBLE THEN
+				ServoBusy := TRUE;
+				(*DriveVar.In_MoveAbs := FALSE;*)
+				IF Drive.diPOS_CMD <> Drive.diPOS_ACT AND Drive.diVEL_CMD <> 0 THEN
+					DriveVar.Out_InPos := FALSE;
+					Drive.bABS_REL := FALSE;       				(* False --> Absolute command *)
+					IF Drive.bNEW_VALUE THEN
+						Drive.bNEW_VALUE := FALSE;
+					ELSE
+						Drive.bNEW_VALUE := TRUE;
+					END_IF
+				END_IF
+			END_IF
+			(* Start Relative move *)
+			plsMoveRel(CLK:=DriveVar.In_MoveRel);
+			IF plsMoveRel.Q AND Drive.bNEW_VALUE_POSSIBLE AND 
+				NOT ServoBusy  THEN
+				ServoBusy := TRUE;
+				DriveVar.In_MoveRel := FALSE;
+				IF Drive.diPOS_CMD <> 0 AND Drive.diVEL_CMD <> 0 THEN
+					DriveVar.Out_InPos := FALSE;
+					Drive.bABS_REL := TRUE;       				(* True  --> Relative  command *)
+					IF Drive.bNEW_VALUE THEN
+						Drive.bNEW_VALUE := FALSE;
+					ELSE
+						Drive.bNEW_VALUE := TRUE;
+					END_IF
+				END_IF
+			END_IF
+		END_IF
+	ELSE
+		DriveVar.Out_InPos := FALSE;
+	END_IF
+	
+	(*Set Servo Busy Status*)	
+	DriveVar.Out_Busy := NOT Drive.bIN_STANDSTILL;
+	IF DriveVar.Out_Busy THEN
+		DriveVar.Out_InPos := FALSE; 
+	END_IF
+	
+ELSE
+
+	ServoBusy := FALSE;
+	DriveVar.In_MoveAbs := FALSE;
+	DriveVar.In_MoveRel := FALSE;
+	DriveVar.Out_Ready := FALSE;
+	DriveVar.In_JogBwd := FALSE;
+	DriveVar.In_JogFwd := FALSE;
+	DriveVar.In_MoveHome := FALSE;
+	Drive.bJOG_FORWARD := FALSE;
+	Drive.bJOG_BACKWARD := FALSE;
+	Drive.bHOMING := FALSE;
+	
+END_IF
+
+(* wait for InPos *)
+plsInPos(CLK:= Drive.bPOS_OK);
+plsEMGReset(CLK:= NOT MC.Trouble );
+IF Drive.bPOS_OK AND 
+	fcComparePos(CurrPos:= DriveVar.In_PosCmd, TargetPos:= DriveVar.Out_CurrPos, Tolerance := 0.5)
+	AND Drive.bIN_STANDSTILL AND Drive.bNEW_VALUE_POSSIBLE  THEN
+	DriveVar.Out_InPos := TRUE;
+	DriveVar.In_MoveAbs := FALSE;
+	DriveVar.In_MoveRel := FALSE;
+	ServoBusy := FALSE;
+END_IF
+
+IF plsEMGReset.Q AND Drive.bIN_STANDSTILL AND Drive.bIN_REFERENCE AND
+	Drive.bNEW_VALUE_POSSIBLE THEN
+	DriveVar.Out_InPos := TRUE;
+	ServoBusy := FALSE;
+END_IF
+
+IF DriveVar.In_StopMove THEN
+	DriveVar.In_MoveAbs := FALSE;
+	DriveVar.In_MoveHome := FALSE;
+	DriveVar.In_MoveRel := FALSE;
+	DriveVar.In_JogBwd := FALSE;
+	DriveVar.In_JogFwd := FALSE;
+	DriveVar.In_StopMove := FALSE;
+	(* Stop Movement *)
+	Drive.bJOG_FORWARD := TRUE;
+	Drive.bJOG_BACKWARD := TRUE;
+	ServoBusy := FALSE;
+
+ELSIF 	Drive.bJOG_FORWARD AND Drive.bJOG_BACKWARD AND MC.AutoMode THEN
+	Drive.bJOG_FORWARD 	:= FALSE;
+	Drive.bJOG_BACKWARD := FALSE;
+END_IF
+
+
+(***********************************************************************************************)
+(*Servo Function Block*)
+Drive(
+	stEK_IN:= In_DriveInput, 
+	bSTATUS_MESSAGE=> , 
+	bWARNING=> , 
+	bERROR=> , 
+	dwDRIVE_DIAGNOSIS=> , 
+	stEK_OUT=> Out_DriveOutput );
+
+	
+	Out_DriveOutput.wSignalsteuerwort.6 := drive.bJOG_FORWARD;
+	Out_DriveOutput.wSignalsteuerwort.7 := drive.bJOG_BACKWARD;
+	
+(***********************************************************************************************)
+(*Set Reference Point for Absulute Encoder Servo*)
+plsHomed(CLK :=Drive.bIN_REFERENCE);
+	
+IF In_AbsEncoder THEN
+	Out_DriveOutput.wSignalsteuerwort.1 := DriveVar.In_SetAbsRef;
+	
+	IF Drive.bIN_REFERENCE THEN
+		DriveVar.Out_Referenced := TRUE;
+	ELSE
+		DriveVar.Out_Referenced := FALSE;	
+	END_IF
+ELSE
+	Out_DriveOutput.wSignalsteuerwort.8 := DriveVar.In_SetAbsRef;
+	DriveVar.Out_Referenced := In_DriveInput.wSignalstatuswort.2;	
+	IF plsHomed.Q THEN
+		DriveVar.In_SetAbsRef := FALSE;
+	END_IF
+END_IF
+
+
+	
+(***********************************************************************************************)
+(*Set Station Error Bit if Servo has error*)
+tmrMajorErrorRecovery (IN := mc.E_EmgStop OR mc.E_LightCurtain OR mc.E_SafetyDoorOpen OR mc_ctrl.In_OtherTrouble OR Guard_Door.Guard_Door_Fault, pt:=T#2S);
+
+IF tmrMajorErrorRecovery.Q THEN
+	DriveVar.Out_ErrorWord	:= 0;
+END_IF
+IF DriveVar.Out_Error THEN 
+	DriveVar.In_MoveAbs	:= FALSE;	
+END_IF
+
+Station.DeviceFault := DriveVar.Out_Error OR Station.DeviceFault;
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

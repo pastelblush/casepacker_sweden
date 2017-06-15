@@ -1,0 +1,187 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <GVL Name="GVL_Error" Id="{19d330c4-7580-4f46-bd17-0cbfbbe5d5c0}">
+    <Declaration><![CDATA[{attribute 'Tc2GvlVarNames'}
+VAR_GLOBAL
+	
+(**************************************************************************************************************)
+(* warning Flag *)
+(**************************************************************************************************************)
+W_ER_BufRefill		AT %MX2000.0:BOOL;
+W_EX_TapeLRefill	AT %MX2000.1:BOOL;
+W_EX_TapeRRefill	AT %MX2000.2:BOOL;
+W_CO_IncomingEmpty	AT %MX2000.3:BOOL;
+W_HOR_TapeLRefill	AT %MX2001.1:BOOL;
+W_HOR_TapeRRefill	AT %MX2001.2:BOOL;
+W_HOR_Conv_Full		AT %MX2001.3:BOOL;
+W_Glue_Low_Level	AT %MX2001.4:BOOL;
+W_Glue_is_Empty		AT %MX2001.5:BOOL;
+W_CaseBuffer_is_Empty	AT %MX2001.6:BOOL;
+W_ServiceStop		AT %MX2001.7:BOOL;
+W_Hor_TapeLowL		AT %MX2002.0:BOOL;
+W_Hor_TapeLowR		AT %MX2002.1:BOOL;
+
+(**************************************************************************************************************)
+(*General  Error Flag *)
+(**************************************************************************************************************)
+
+E_AutorunDataNG :STRING;
+E_Erector_FrontDoor_Opn		:BOOL;
+E_Erector_RearDoor_Opn		:BOOL;
+E_Collator_FrontDoor_Opn	:BOOL;
+E_Collator_RearDoor_Opn		:BOOL;
+E_Elevator_LeftTopDoor_Opn	:BOOL;
+E_Elevator_LeftBtmDoor_Opn	:BOOL;
+E_Elevator_RightDoor_Opn	:BOOL;
+E_Horizontal_LeftDoor_Opn	:BOOL;
+E_Horizontal_RightDoor_Opn	:BOOL;
+E_Door_SafetyBroken			:BOOL;
+E_Estop_Panel				:BOOL;
+E_Estop_Collator			:BOOL;
+E_Estop_HorLeft				:BOOL;
+E_Estop_HorRight			:BOOL;
+E_Estop_HorExit				:BOOL;
+E_EStop_SafetyBroken		:BOOL;
+E_X_Axis_BundleStackCount	:BOOL;
+E_Y_Axis_BundleStackCount	:BOOL;
+E_Z_Axis_BundleStackCount	:BOOL;
+E_Recipe_H_OutOfTolerance	:BOOL;
+E_Recipe_L_OutOfTolerance	:BOOL;
+E_Recipe_W_OutOfTolerance	:BOOL;
+E_Recipe_A_OutOfTolerance	:BOOL;
+E_Recipe_B_OutOfTolerance	:BOOL;
+E_Recipe_C_OutOfTolerance	:BOOL;
+E_Recipe_A_SmallerThan_W	:BOOL;
+E_Recipe_C_SmallerThan_L	:BOOL;
+E_Recipe_B_SmallerThan_H	:BOOL;
+	
+(**************************************************************************************************************)
+(*P0  Error Flag *)
+(* All P0 control bits and words must be within address MD1000~MD1039*)
+(* All bits and words within the address will be reset when error reset*)
+(**************************************************************************************************************)
+	
+	E_Stack_Overflow 						:BOOL;
+	E_Stack_Full			AT %MX1000.1	:BOOL;
+	E_Door_Open				AT %MX1000.2	:BOOL;
+	E_Bundle_Stuck_on_Infeed AT %MX1000.3	:BOOL;
+	E_Bundle_Full			AT %MX1000.4	:BOOL;
+	E_CAM_Up_Timeout		AT %MX1000.5	:BOOL;
+	E_BundleJam_AfterStack	AT %MX1000.6	:BOOL;
+	E_BundleJam_atRelease	AT %MX1000.7	:BOOL;	
+	E_CAM_Down_Timeout		AT %MX1001.0	:BOOL;
+	E_Stack_Full_ON			AT %MX1001.1	:BOOL;
+	E_BundleDetected		AT %MX1001.2	:BOOL;
+	E_Bundle_Stack_Sensor	AT %MX1001.3	:BOOL;
+	E_BundleDetect_Sensor1	AT %MX1002.0	:BOOL;
+	E_BundleDetect_Sensor2	AT %MX1002.1	:BOOL;
+	E_BundleDetect_Sensor3	AT %MX1002.2	:BOOL;
+	E_BundleDetect_Sensor4	AT %MX1002.3	:BOOL;
+	E_BundleDetect_Sensor5	AT %MX1002.4	:BOOL;
+	E_BundleDetect_Sensor6	AT %MX1002.5	:BOOL;
+	E_BundleDetect_Sensor7	AT %MX1002.6	:BOOL;
+	E_BundleDetect_Sensor8	AT %MX1002.7	:BOOL;
+	
+	
+(**************************************************************************************************************)
+(*P1  Error Flag *)
+(* All P1 control bits and words must be within address MD1040~MD1079*)
+(* All bits and words within the address will be reset when error reset*)
+(**************************************************************************************************************)
+
+	E_Buff1_BundleNotDetect	AT %MX1040.0	:BOOL;
+	E_BundleJam_atStaker	AT %MX1040.1	:BOOL;
+
+
+(**************************************************************************************************************)
+(*P2  Error Flag *)
+(* All P2 control bits and words must be within address MD1080~MD1119*)
+(* All bits and words within the address will be reset when error reset*)
+(**************************************************************************************************************)
+
+	E_Buf1_BundleMissing	AT %MX1080.0	:BOOL;	
+	E_Buf1_BundleJam		AT %MX1080.1	:BOOL;
+	E_GapSensor				AT %MX1080.2	:BOOL;
+	E_BundleDetectedinBuf1	AT %MX1080.3	:BOOL;
+	E_BundleDetectedinBuf2	AT %MX1080.4	:BOOL;
+	E_GapSensorError		AT %MX1080.5	:BOOL;
+	E_PTC_BundleNOK			AT %MX1080.6	:BOOL;
+	E_Buf1_Sensor			AT %MX1080.7	:BOOL;
+	E_Buf2_Sensor			AT %MX1081.0	:BOOL;
+	
+(**************************************************************************************************************)
+(*P3  Error Flag *)
+(* All P3 control bits and words must be within addres MD1120~MD1159*)
+(* All bits and words within the address will be reset when error reset*)
+(**************************************************************************************************************)
+
+	E_NoGapAtStoper				AT %MX1120.0	:BOOL;	
+	E_LeftStopper_NotDetect		AT %MX1120.1	:BOOL;	
+	E_RightStopper_NotDetect 	AT %MX1120.2	:BOOL;		
+	E_ER_BufRefill				AT %MX1120.3	:BOOL;
+	E_CaseDetected				AT %MX1120.4	:BOOL;
+	E_CaseNotDetected			AT %MX1120.5	:BOOL;
+	E_CaseVacuumNotDetected		AT %MX1120.6	:BOOL;
+	E_Nordson_Alarm				AT %MX1120.7	:BOOL;
+	E_EmptyCaseDetected			AT %MX1121.0	:BOOL;
+	E_CaseBufferAlignment_Err	AT %MX1121.1	:BOOL;
+	E_CaseBuffer_Not_Ready		AT %MX1121.2	:BOOL;
+	E_CaseBuffer_EmptySensors	AT %MX1121.3	:BOOL;
+	E_Case_Infeed_Safety_NOk	AT %MX1121.4	:BOOL;
+	E_ER_EmptyL_PE				AT %MX1121.5	:BOOL;
+	E_ER_BufferL_PE				AT %MX1121.6	:BOOL;
+	E_ER_EmptyR_PE				AT %MX1121.7	:BOOL;
+	E_ER_BufferR_PE				AT %MX1122.0	:BOOL;
+	
+(**************************************************************************************************************)
+(*P4  Error Flag *)
+(* All P4 control bits and words must be within address MD1160~MD1199*)
+(* All bits and words within the address will be reset when error reset*)
+(**************************************************************************************************************)
+	E_WT_Conv_Jam				AT %MX1160.0	:BOOL;	
+	E_CartonMissing				AT %MX1160.1	:BOOL;
+	E_EX_CartonDetected			AT %MX1160.2	:BOOL;
+
+(**************************************************************************************************************)
+(*P5  Error Flag *)
+(* All P5 control bits and words must be within address MD1200~MD1239*)
+(* All bits and words within the address will be reset when error reset*)
+(**************************************************************************************************************)
+	E_BeltTension_Right_NOK		AT %MX1200.0	:BOOL;
+	E_BeltTension_Left_NOK		AT %MX1200.1	:BOOL;
+	E_DriveBeltTension_NOK		AT %MX1200.2	:BOOL;
+	E_Weight_CV_CartonNotDetect AT %MX1200.3	:BOOL;
+	E_Weight_CV_CartonDetect	AT %MX1200.4	:BOOL;
+	E_EL_CartonNotDetect		AT %MX1200.5	:BOOL;
+	E_Weigh_ReadingErr			AT %MX1200.6	:BOOL;
+	E_Weigh_ConsecutiveErr		AT %MX1200.7	:BOOL;
+
+	E_CartonTapingErrL							:BOOL;
+	E_CartonTapingErrR							:BOOL;
+(**************************************************************************************************************)
+(*P6  Error Flag *)
+(* All P6 control bits and words must be within address MD1240~MD1279*)
+(* All bits and words within the address will be reset when error reset*)
+(**************************************************************************************************************)
+	E_Top_Conv_Jam				AT %MX1240.0	:BOOL;
+	E_Bottom_Conv_Jam			AT %MX1240.1	:BOOL;
+	E_Hor_Entry_Sensor			AT %MX1240.2	:BOOL;
+	E_Hor_Exit_Sensor			AT %MX1240.3	:BOOL;
+	
+(**************************************************************************************************************)
+(*P7  Error Flag *)
+(* All P7 control bits and words must be within address MD1280~MD1319*)
+(* All bits and words within the address will be reset when error reset*)
+(**************************************************************************************************************)
+
+(**************************************************************************************************************)
+(*P8  Error Flag *)
+(* All P8 control bits and words must be within address MD1320~MD1359*)
+(* All bits and words within the address will be reset when error reset*)
+(**************************************************************************************************************)
+
+
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

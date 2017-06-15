@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="EX_Main" Id="{cf926a8c-d960-4571-ab6d-39b1ba743c35}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM EX_Main
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF Cfg_BypassErector THEN
+	HMI.T_Station_BypassP[4] := TRUE;
+ELSE
+	HMI.T_Station_BypassP[4] := FALSE;
+END_IF
+
+EX_Error	(Station:= SC[4]);
+EX_Auto		(Station:= SC[4]);
+EX_Origin	(Station:= SC[4]);
+
+EX_Cylinder_Output();
+EX_Servo_Output();
+EX_Motor_Output();
+EX_LoadCell_Output();
+
+(* EX Structure is only for displaying on HMI*)
+SC[4].T_OriginSearch := EX.T_OriginSearch;
+EX := SC[4];
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

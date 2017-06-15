@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="EX_Motor_Output" Id="{dc17def3-80b6-4ee1-9250-4c3288f34320}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM EX_Motor_Output
+VAR
+	Reset:BOOL;
+	bEnable: BOOL;
+	tmrWTCvMtr	:ton;
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(******************** Error Stop ***********************)
+IF E_WT_Conv_Jam THEN
+	WT_Mtr_Var.E_OnErr	:= TRUE;
+END_IF
+(********************************************************)
+
+bEnable := NOT MC.Trouble;
+
+WT_Mtr_Var.In_MoveXLock := TRUE;
+
+WT_Mtr(
+	IN_DevName:= 'WEIGHT CHECKING CV', 
+	In_Enable:= bEnable, 
+	In_Reset:= MC.ResetPressed, 
+	In_StarterOK:= I_Weighing_CV_OK, 
+	Out_MotorOn=> O_Weighing_CV_ON, 
+	MotorVar:= WT_Mtr_Var,
+	Station			:= SC[4]);
+	
+	
+tmrWTCvMtr(In:= O_Weighing_CV_ON AND (I_HOR_Entry_Cv_Present OR I_EX_Cv_Ctn_PE), PT:=T#30S);
+E_WT_Conv_Jam := tmrWTCvMtr.Q;	
+	
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

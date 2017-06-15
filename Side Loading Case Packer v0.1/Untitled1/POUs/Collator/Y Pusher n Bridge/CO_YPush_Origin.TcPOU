@@ -1,0 +1,202 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <POU Name="CO_YPush_Origin" Id="{7c9d805a-c8f0-414a-9143-34752b498fe1}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CO_YPush_Origin
+VAR_IN_OUT
+	Station		:structStationCtrl;
+END_VAR
+VAR
+	CO_YPush_WA_Origin: BOOL;
+	pls_OriginSchRun: R_trig;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(**************************************************************************************************************)
+(* Station Width Adjust in Origin Condition *)
+(**************************************************************************************************************)
+CO_YPush_WA_Origin := TRUE;
+
+(**************************************************************************************************************)
+(* Station Origin Condition *)
+(**************************************************************************************************************)
+
+H_CO_YPush_Srv_CurrStandbyPos := H_CO_YPush_Srv_HomePos;
+					(*offset 200.0 because box size of 200 is used during teaching*)
+
+Station.Origin 	:=	(CO_YPush_WA_Origin 			AND 
+					CO_YPush_Strk_Cyl_Var.S_HomePos AND
+					CO_YPush_Cyl_Var.S_HomePos 		AND
+					(((fcComparePos(CurrPos:= CO_YPush_Srv_Var.Out_CurrPos, TargetPos:= H_CO_YPush_Srv_CurrStandbyPos, Tolerance := 0.5)) AND
+							CO_YPush_Srv_Var.Out_InPos AND CO_YPush_Srv_Var.Out_Ready)) AND
+					CO_Brdg_Cyl_Var.S_HomePos AND 
+					CO_FlapGuide_Cyl_Var.S_HomePos) OR
+					Station.Bypass
+					;
+					 		
+(**************************************************************************************************************)
+(* Station Origin Step *)
+(**************************************************************************************************************)
+
+pls_OriginSchRun(CLK:= (MC.OriginSchRun OR Station.OriginSchRun) );
+
+IF (MC.OriginSchRun OR Station.OriginSchRun) AND NOT Station.Bypass   THEN
+	CASE Station.OriginRunStep OF
+
+	0 : 	(************* Ready To Run ****************)
+			IF NOT Station.Origin AND pls_OriginSchRun.Q THEN
+				Station.OriginRunStep := Station.OriginRunStep+10;	
+			END_IF
+
+	10 : 	(************* Check Sensors Before Homing ****************)
+			Station.Status 		:= 'Org10: Check Sensors Before Homing';
+			Station.StatusInt	:= 120;
+			
+			Station.OriginRunStep 	:= 20;	
+
+	20	:	(********** Origin Condition Check ****************)
+			IF  CO_FlapGuide_Cyl_Var.S_WorkPos AND CO_Brdg_Cyl_Var.S_WorkPos AND
+				(H_ER_CtnRdyForPushIn AND NOT H_ER_CtnPushInDone) THEN
+				Station.OriginRunStep 		:= Station.OriginRunStep + 10;				
+			ELSE
+				Station.OriginRunStep 		:= 100;
+			END_IF
+		
+	30 : 	(************* Bridge Cylinder, Flap Guides Forward ****************)
+		
+			CO_Brdg_Cyl_Var.In_OrgWork 		:= TRUE;
+			CO_Brdg_Cyl_Var.In_OrgHome 		:= FALSE;
+			CO_FlapGuide_Cyl_Var.In_OrgWork := TRUE;
+			CO_FlapGuide_Cyl_Var.In_OrgHome := FALSE;
+			
+			CO_YPush_Srv_Var.In_PosCmd := H_CO_YPush_Srv_CtnFinalPos;
+			CO_YPush_Srv_Var.In_VelCmd := A_Srv_YPusherLoSpeed;
+			IF CO_YPush_Srv_Var.In_MoveXLock AND CO_Brdg_Cyl_Var.In_WorkXLock THEN
+				CO_YPush_Srv_Var.In_MoveAbs := TRUE;
+			END_IF
+		
+			IF CO_Brdg_Cyl_Var.S_WorkPos AND 
+				CO_FlapGuide_Cyl_Var.S_WorkPos THEN
+				CO_YPush_Srv_Var.In_MoveAbs 		:= FALSE;
+				CO_Brdg_Cyl_Var.In_AutoWork 		:= FALSE;
+				CO_FFlapBrdg_Cyl_Var.In_OrgWork 	:= FALSE;
+				CO_FlapGuide_Cyl_Var.In_OrgWork 	:= FALSE;
+				Station.OriginRunStep  				:= Station.OriginRunStep  + 10;
+			END_IF		
+			
+	40 : 	(************* Move Y Pusher To Push Stack into Carton  ****************)	
+			CO_YPush_Srv_Var.In_PosCmd := H_CO_YPush_Srv_CtnFinalPos;
+			CO_YPush_Srv_Var.In_VelCmd := A_Srv_YPusherLoSpeed;
+			CO_YPush_Srv_Var.In_MoveAbs := TRUE;
+
+			IF 	CO_YPush_Srv_Var.Out_CurrPos >= (CO_YPush_Srv_Var.In_PosCmd - 100) THEN
+				CO_YPush_Strk_Cyl_Var.In_OrgWork := TRUE;
+				CO_YPush_Strk_Cyl_Var.In_OrgHome := FALSE;
+			END_IF
+			
+			IF ((fcComparePos(CurrPos:= CO_YPush_Srv_Var.Out_CurrPos, TargetPos:= CO_YPush_Srv_Var.In_PosCmd, Tolerance := 0.5)) AND
+							CO_YPush_Srv_Var.Out_InPos) AND
+				CO_YPush_Strk_Cyl_Var.S_WorkPos THEN	
+				H_CO_StkRdyForYPush 				:= FALSE;	
+				H_CO_Bdl_StkY_Count 				:= 0;	
+				CO_YPush_Srv_Var.In_MoveAbs 		:= FALSE;
+				CO_YPush_Strk_Cyl_Var.In_OrgWork 	:= FALSE;
+				Station.OriginRunStep 				:= 50;
+				
+				IF NOT Cfg_BypassErector AND H_ER_CtnRdyForPushIn THEN
+					H_ER_CtnPushInDone := TRUE;
+				END_IF
+					H_ER_CtnRdyForPushIn := FALSE;
+				
+			END_IF
+			
+	50 : 	(************* push into box  after y push  ****************)
+			Station.Status 		:= '120: Push into box';
+			Station.StatusInt	:= 151;
+			
+			CO_YPush_Cyl_Var.In_OrgWork := TRUE;
+			CO_YPush_Cyl_Var.In_OrgHome := FALSE;
+			
+			IF  CO_YPush_Cyl_Var.S_HomePos THEN
+				CO_YPush_Cyl_Var.In_AutoWork := TRUE;
+				CO_YPush_Cyl_Var.In_AutoHome := FALSE;			
+				CO_YPush_Srv_Var.In_MoveAbs := FALSE; 
+				Station.RunStep := 100;			
+			END_IF
+			
+	
+			
+	100 : 	(************* Y Pusher Servo Move to Safe Pos ****************)
+			Station.Status 		:= 'Org30: Y Pusher Servo Move to Safe Pos ';
+			Station.StatusInt	:= 172;
+			CO_YPush_Strk_Cyl_Var.In_OrgHome 	:= NOT CO_YPush_Strk_Cyl_Var.S_HomePos;	
+			
+		IF CO_YPush_Srv_Var.Out_CurrPos > H_CO_YPush_Srv_SafePosition THEN
+			CO_YPush_Srv_Var.In_PosCmd := H_CO_YPush_Srv_SafePosition; 
+			CO_YPush_Srv_Var.In_VelCmd := A_Srv_BeltAutoHiSpeed;
+			CO_YPush_Srv_Var.In_MoveAbs := TRUE;
+		ELSE
+			CO_YPush_Srv_Var.In_MoveAbs := FALSE;
+			Station.OriginRunStep := Station.OriginRunStep+5;	
+		END_IF
+				
+			IF ((fcComparePos(CurrPos:= CO_YPush_Srv_Var.Out_CurrPos, TargetPos:= H_CO_YPush_Srv_SafePosition,  Tolerance := 0.5)) AND
+				CO_YPush_Srv_Var.Out_InPos) THEN
+				CO_YPush_Srv_Var.In_MoveAbs := FALSE;
+				Station.OriginRunStep := Station.OriginRunStep+5;	
+			END_IF
+			
+	105:	(************* Y Pusher Servo Move to Standby Pos ****************)			
+			CO_YPush_Cyl_Var.In_OrgWork := TRUE;
+			CO_YPush_Cyl_Var.In_OrgHome := FALSE;
+			
+			IF CO_YPush_Cyl_Var.S_WorkPos THEN
+				CO_YPush_Srv_Var.In_PosCmd := H_CO_YPush_Srv_CurrStandbyPos; 
+				CO_YPush_Srv_Var.In_VelCmd := A_Srv_BeltAutoHiSpeed;
+				CO_YPush_Srv_Var.In_MoveAbs := TRUE;
+			END_IF
+			
+			IF ((fcComparePos(CurrPos:= CO_YPush_Srv_Var.Out_CurrPos, TargetPos:= H_CO_YPush_Srv_CurrStandbyPos, Tolerance := 0.5)) AND
+							CO_YPush_Srv_Var.Out_InPos) THEN
+				CO_YPush_Srv_Var.In_MoveAbs := FALSE;
+			Station.OriginRunStep := Station.OriginRunStep+5;	
+			END_IF
+			
+	110 : 	(************* All Cylinders Home ****************)
+			Station.Status 		:= 'Org40: All Cylinders Home';
+			Station.StatusInt	:= 173;
+			
+			
+			CO_Brdg_Cyl_Var.In_OrgHome 			:= NOT CO_Brdg_Cyl_Var.S_HomePos;
+			CO_Brdg_Cyl_Var.In_OrgWORK			:= FALSE;	
+			CO_FlapGuide_Cyl_Var.In_OrgHome 	:= NOT CO_FlapGuide_Cyl_Var.S_HomePos;				
+			CO_YPush_Cyl_Var.In_OrgWork 		:= FALSE;
+			CO_YPush_Cyl_Var.In_OrgHome 		:= TRUE;
+
+
+			IF  CO_YPush_Strk_Cyl_Var.S_HomePos AND
+				CO_Brdg_Cyl_Var.S_HomePos 		AND
+				CO_FlapGuide_Cyl_Var.S_HomePos 	AND
+				CO_YPush_Cyl_Var.S_HomePos		THEN
+				CO_YPush_Strk_Cyl_Var.In_OrgHome 	:= FALSE;	
+				CO_Brdg_Cyl_Var.In_OrgHome 			:= FALSE;	
+				CO_FlapGuide_Cyl_Var.In_OrgHome 	:= FALSE;
+				CO_YPush_Cyl_Var.In_OrgWork 		:= FALSE;
+				CO_YPush_Cyl_Var.In_OrgHome 		:= FALSE;
+
+				IF CO_YPush_WA_Origin THEN
+					Station.OriginRunStep := 0;	
+				END_IF	
+			END_IF
+		
+
+
+					
+	END_CASE
+
+ELSE
+
+	Station.OriginRunStep := 0;	
+	
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

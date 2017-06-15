@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
+  <GVL Name="GVL_Servo" Id="{82666bc6-960e-4845-9182-6e794944458c}">
+    <Declaration><![CDATA[VAR_GLOBAL
+
+	(*ER_M3 Erector Arm Motor - 10M1*)
+	ER_Arm_Srv_Input AT %I*:st_Indradrive_DCP_input ;
+	ER_Arm_Srv_State AT %I*:UINT ;
+	ER_Arm_Srv_Output AT %Q*: st_Indradrive_DCP_output;
+	ER_Arm_Srv_Feedrate AT %Q*: UINT;
+	ER_Arm_Srv_Drive: fbIndradrive;
+	ER_Arm_Srv_Var:structIndradrive;
+
+	(*ER_WA_M5 Erector Width Adjust Motor 1 - 11M1*)
+	ER_WA_Srv_Input AT %I*:st_Indradrive_DCP_input ;
+	ER_WA_Srv_State AT %I*:UINT ;
+	ER_WA_Srv_Output AT %Q*: st_Indradrive_DCP_output;
+	ER_WA_Srv_Feedrate AT %Q*: UINT;
+	ER_WA_Srv_Drive: fbIndradrive;
+	ER_WA_Srv_Var:structIndradrive;
+
+	(*CO_M5 Collator Y Pusher Motor- 111M1*)
+	CO_YPush_Srv_Input AT %I*:st_Indradrive_DCP_input ;
+	CO_YPush_Srv_State AT %I*:UINT ;
+	CO_YPush_Srv_Output AT %Q*: st_Indradrive_DCP_output;
+	CO_YPush_Srv_Feedrate AT %Q*: UINT;
+	CO_YPush_Srv_Drive: fbIndradrive;
+	CO_YPush_Srv_Var:structIndradrive;
+
+	(*EX_WA_M1 Exit Left Height Width Adjust Motor - 12M1*)
+	EX_HeightL_WA_Srv_Input AT %I*:st_Indradrive_DCP_input ;
+	EX_HeightL_WA_Srv_State AT %I*:UINT ;
+	EX_HeightL_WA_Srv_Output AT %Q*: st_Indradrive_DCP_output;
+	EX_HeightL_WA_Srv_Feedrate AT %Q*: UINT;
+	EX_HeightL_WA_Srv_Drive: fbIndradrive;
+	EX_HeightL_WA_Srv_Var:structIndradrive;
+
+	(*EX_WA_M2 Exit Right Height Width Adjust Motor - 13M1*)
+	EX_HeightR_WA_Srv_Input AT %I*:st_Indradrive_DCP_input ;
+	EX_HeightR_WA_Srv_State AT %I*:UINT ;
+	EX_HeightR_WA_Srv_Output AT %Q*: st_Indradrive_DCP_output;
+	EX_HeightR_WA_Srv_Feedrate AT %Q*: UINT;
+	EX_HeightR_WA_Srv_Drive: fbIndradrive;
+	EX_HeightR_WA_Srv_Var:structIndradrive;
+
+	(*EX_WA_M4 Erector Exit Width Adjust Motor - 114M1*)
+	EX_WA_Srv_Input AT %I*:st_Indradrive_DCP_input ;
+	EX_WA_Srv_State AT %I*:UINT ;
+	EX_WA_Srv_Output AT %Q*: st_Indradrive_DCP_output;
+	EX_WA_Srv_Feedrate AT %Q*: UINT;
+	EX_WA_Srv_Drive: fbIndradrive;
+	EX_WA_Srv_Var:structIndradrive;
+
+
+	(*EX_WA_M3 Exit Left Top Guide Adjust Motor - 124M1*)
+	EX_TopL_WA_Srv_Input AT %I*:st_Indradrive_DCP_input ;
+	EX_TopL_WA_Srv_State AT %I*:UINT ;
+	EX_TopL_WA_Srv_Output AT %Q*: st_Indradrive_DCP_output;
+	EX_TopL_WA_Srv_Feedrate AT %Q*: UINT;
+	EX_TopL_WA_Srv_Drive: fbIndradrive;
+	EX_TopL_WA_Srv_Var:structIndradrive;
+
+	(*EX_WA_M5 Exit Right Top Guide Adjust Motor - 125M1*)
+	EX_TopR_WA_Srv_Input AT %I*:st_Indradrive_DCP_input ;
+	EX_TopR_WA_Srv_State AT %I*:UINT ;
+	EX_TopR_WA_Srv_Output AT %Q*: st_Indradrive_DCP_output;
+	EX_TopR_WA_Srv_Feedrate AT %Q*: UINT;
+	EX_TopR_WA_Srv_Drive: fbIndradrive;
+	EX_TopR_WA_Srv_Var:structIndradrive;
+
+
+	(*Tilt Servo*)
+	EX_Tilt_Srv_Input AT %I*:st_Indradrive_DCP_input ;
+	EX_Tilt_Srv_State AT %I*:UINT ;
+	EX_Tilt_Srv_Output AT %Q*: st_Indradrive_DCP_output;
+	EX_Tilt_Srv_Feedrate AT %Q*: UINT;
+	EX_Tilt_Srv_Drive: fbIndradrive;
+	EX_Tilt_Srv_Var:structIndradrive;
+	
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>
