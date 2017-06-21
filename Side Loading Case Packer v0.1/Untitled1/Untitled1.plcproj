@@ -487,6 +487,11 @@
       <DependentUpon>Visualization Manager.TcVMO</DependentUpon>
       <ObjectProtection>00000000-0000-0000-0000-000000000000</ObjectProtection>
     </Compile>
+    <Compile Include="VISUs\Prog\resetbtn.TcVIS">
+      <SubType>Code</SubType>
+      <DependentUpon>Visualization Manager.TcVMO</DependentUpon>
+      <ObjectProtection>00000000-0000-0000-0000-000000000000</ObjectProtection>
+    </Compile>
     <Compile Include="VISUs\Prog\Std_NewPassWord.TcVIS">
       <SubType>Code</SubType>
       <DependentUpon>Visualization Manager.TcVMO</DependentUpon>
@@ -677,13 +682,15 @@
           <v n="Name">"{C70B7845-2722-4a9b-A0EA-88C877A4B36F}"</v>
           <d n="SubKeys" t="Hashtable" />
           <d n="Values" t="Hashtable" ckt="String">
+            <v>EnableMaxAuthenticationTrials</v>
+            <v>true</v>
             <v>MaxAuthenticationTrials</v>
             <v>3</v>
             <v>UserList</v>
             <o t="UserList">
               <a n="Users" cet="User">
                 <o>
-                  <v n="Id">{fdf1a24d-35f4-4d72-b077-329872ddb49d}</v>
+                  <v n="Id">{c820250f-a35e-43d8-8b7c-4c3daa5599e7}</v>
                   <v n="Name">"Owner"</v>
                   <v n="FullName">""</v>
                   <v n="Description">""</v>
@@ -699,24 +706,24 @@
             <o t="GroupList">
               <a n="Groups" cet="Group">
                 <o>
-                  <v n="Id">{44ae3383-fc59-4783-bddb-144d6d94aeba}</v>
+                  <v n="Id">{1116993d-78c6-41b6-b486-3f2069be6867}</v>
                   <v n="Name">"Everyone"</v>
                   <v n="Description">""</v>
                   <v n="IsEveryoneGroup">true</v>
                   <v n="IsOwnerGroup">false</v>
                   <l n="UserMembers" t="ArrayList" cet="Guid">
-                    <v>fdf1a24d-35f4-4d72-b077-329872ddb49d</v>
+                    <v>c820250f-a35e-43d8-8b7c-4c3daa5599e7</v>
                   </l>
                   <l n="GroupMembers" t="ArrayList" />
                 </o>
                 <o>
-                  <v n="Id">{ca1a6eed-d08f-41d5-b6cb-5cee36b72206}</v>
+                  <v n="Id">{fcd5e033-d284-4b0e-ad0e-0489efcb16cd}</v>
                   <v n="Name">"Owner"</v>
                   <v n="Description">""</v>
                   <v n="IsEveryoneGroup">false</v>
                   <v n="IsOwnerGroup">true</v>
                   <l n="UserMembers" t="ArrayList" cet="Guid">
-                    <v>fdf1a24d-35f4-4d72-b077-329872ddb49d</v>
+                    <v>c820250f-a35e-43d8-8b7c-4c3daa5599e7</v>
                   </l>
                   <l n="GroupMembers" t="ArrayList" />
                 </o>
@@ -725,12 +732,10 @@
             <v>UserAuthentication</v>
             <o t="UserAuthentication">
               <d n="UserToPasswordHash" t="Hashtable" ckt="Guid" cvt="String">
-                <v>fdf1a24d-35f4-4d72-b077-329872ddb49d</v>
+                <v>c820250f-a35e-43d8-8b7c-4c3daa5599e7</v>
                 <v>d41d8cd98f00b204e9800998ecf8427e</v>
               </d>
             </o>
-            <v>EnableMaxAuthenticationTrials</v>
-            <v>true</v>
           </d>
         </o>
         <v>{192FAD59-8248-4824-A8DE-9177C94C195A}</v>

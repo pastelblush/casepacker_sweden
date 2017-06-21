@@ -194,7 +194,7 @@ IF Station.AutoRun OR Station.M_Step THEN
 					E_Buf2_Sensor			:= TRUE;
 					Station.SeqFaultString 	:= 'Auto: Stack Detected at Buffer 2 After Push. ';	
 				ELSE
-					Station.RunStep := Station.RunStep + 5;
+					Station.RunStep := Station.RunStep + 10;
 				END_IF	
 			END_IF
 
@@ -209,7 +209,7 @@ IF Station.AutoRun OR Station.M_Step THEN
 			
 			
 			IF ((fcComparePos(CurrPos:= CO_YPush_Srv_Var.Out_CurrPos, TargetPos:= H_CO_YPush_Srv_SafePosition, Tolerance := 0.5)) AND
-			CO_YPush_Srv_Var.Out_InPos) THEN
+			CO_YPush_Srv_Var.Out_InPos) AND  CO_YPush_Strk_Cyl_Var.S_HomePos THEN
 			CO_YPush_Cyl_Var.In_AutoWork 		:= TRUE;
 			CO_YPush_Cyl_Var.In_AutoHome 		:= FALSE;
 				CO_YPush_Srv_Var.In_MoveAbs := FALSE;
@@ -225,14 +225,22 @@ IF Station.AutoRun OR Station.M_Step THEN
 				
 			CO_Brdg_Cyl_Var.In_AutoWork 		:= FALSE;
 			CO_Brdg_Cyl_Var.In_AutoHome			:= TRUE;
-
+			CO_YPush_Strk_Cyl_Var.In_AutoWork 	:= FALSE;
+			CO_YPush_Strk_Cyl_Var.In_AutoHome 	:= TRUE;		
 			
+			(* Temporary to test Push in and Out without lifting up Y-Pusher *)	
+			CO_YPush_Srv_Var.In_PosCmd := H_CO_YPush_Srv_CurrStandbyPos;
+			CO_YPush_Srv_Var.In_VelCmd := A_Srv_YPusherHiSpeed;
+			CO_YPush_Srv_Var.In_MoveAbs := TRUE;
+				
+	(*		
 			IF CO_YPush_Strk_Cyl_Var.S_HomePos THEN
 				CO_YPush_Cyl_Var.In_AutoWork 		:= TRUE;
 				CO_YPush_Cyl_Var.In_AutoHome 		:= FALSE;
 			END_IF
-			
-			IF CO_YPush_Cyl_Var.S_WorkPos THEN
+	*)		
+			IF	 CO_YPush_Cyl_Var.S_WorkPos OR
+				CO_YPush_Srv_Var.Out_CurrPos <= (H_CO_YPush_Srv_CtnFinalPos - 200) THEN
 				CO_YPush_Srv_Var.In_PosCmd := H_CO_YPush_Srv_CurrStandbyPos;
 				CO_YPush_Srv_Var.In_VelCmd := A_Srv_YPusherHiSpeed;
 				CO_YPush_Srv_Var.In_MoveAbs := TRUE;
@@ -247,7 +255,7 @@ IF Station.AutoRun OR Station.M_Step THEN
 				CO_FlapGuide_Cyl_Var.S_HomePos AND
 				(CO_YPush_Srv_Var.Out_CurrPos <= (H_CO_YPush_Srv_CtnFinalPos - 600)) 
 				AND Station.Run_NextStepPls THEN
-				CO_YPush_Srv_Var.In_MoveAbs := FALSE;		
+			(*	CO_YPush_Srv_Var.In_MoveAbs := FALSE;	*)	
 				CO_Brdg_Cyl_Var.In_AutoHome := FALSE;
 				CO_FFlapBrdg_Cyl_Var.In_AutoHome := FALSE;
 				CO_FlapGuide_Cyl_Var.In_AutoHome := FALSE;

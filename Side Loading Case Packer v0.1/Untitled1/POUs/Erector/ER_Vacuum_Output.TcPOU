@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.2">
   <POU Name="ER_Vacuum_Output" Id="{a38a1f68-830d-456b-bb06-2116b1678ac8}" SpecialFunc="None">
     <Declaration><![CDATA[PROGRAM ER_Vacuum_Output
 VAR
@@ -54,7 +54,7 @@ ER_Arm_Vac(
 	In_Reset:= MC.ResetPressed, 
 	In_Vacuum_Switch:= I_ER_Arm_VacSw, 
 	In_Drop_Monitor_Enable:= NOT (SC[3].RunStep  >= 20 AND SC[3].RunStep <= 30) , 
-	In_VacuumTON:= T#2S, 
+	In_VacuumTON:= T#200MS, 
 	In_Release_TON:= T#0MS, 
 	In_PurgeTON:= T#0MS, 
 	in_Timeout:= T#10S		(*debug*), 

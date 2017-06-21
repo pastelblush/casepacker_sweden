@@ -5,6 +5,7 @@
 VAR
 	bEnable:BOOL;
 	Reset:BOOL;
+	ER_TFlapOpnR_Cyl_Work_Tmr : TON;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -20,7 +21,7 @@ ER_FFlapL_Cyl(
 	In_Reset		:= MC.ResetPressed, 	
 	In_WorkRS		:= I_ER_FFlapL_Fwd, 	
 	In_HomeRS		:= I_ER_FFlapL_Bwd, 	
-	In_WorkTON		:= T#100MS, 	
+	In_WorkTON		:= T#10MS, 	
 	In_HomeTON		:= T#10MS, 	
 	in_Timeout		:= TP_Cyl_Timeout, 	
 	Out_WorkSV		=> O_ER_FFlapL_Fwd, 	
@@ -39,8 +40,8 @@ ER_BFlapL_Cyl(
 	In_Reset		:= MC.ResetPressed, 	
 	In_WorkRS		:= I_ER_BFlapL_Fwd, 	
 	In_HomeRS		:= I_ER_BFlapL_Bwd, 	
-	In_WorkTON		:= T#1000MS, 	
-	In_HomeTON		:= T#1000MS, 	
+	In_WorkTON		:= T#10MS, 	
+	In_HomeTON		:= T#10MS, 	
 	in_Timeout		:= TP_Cyl_Timeout, 	
 	Out_WorkSV		=> O_ER_BFlapL_Fwd, 	
 	Out_HomeSV		=> O_ER_BFlapL_Bwd, 	
@@ -73,7 +74,7 @@ ER_FFlapR_Cyl(
 	In_Reset		:= MC.ResetPressed, 	
 	In_WorkRS		:= I_ER_FFlapR_Fwd, 	
 	In_HomeRS		:= I_ER_FFlapR_Bwd, 	
-	In_WorkTON		:= T#100MS, 	
+	In_WorkTON		:= T#10MS, 	
 	In_HomeTON		:= T#10MS, 	
 	in_Timeout		:= TP_Cyl_Timeout, 	
 	Out_WorkSV		=> O_ER_FFlapR_Fwd, 	
@@ -90,7 +91,7 @@ ER_BFlapR_Cyl(
 	In_Reset		:= MC.ResetPressed, 	
 	In_WorkRS		:= I_ER_BFlapR_Fwd, 	
 	In_HomeRS		:= I_ER_BFlapR_Bwd, 	
-	In_WorkTON		:= T#1000MS, 	
+	In_WorkTON		:= T#10MS, 	
 	In_HomeTON		:= T#10MS, 	
 	in_Timeout		:= TP_Cyl_Timeout, 	
 	Out_WorkSV		=> O_ER_BFlapR_Fwd, 	
@@ -255,7 +256,7 @@ ER_TFlapClsL_Cyl(
 	
 ER_TFlapOpnR_Cyl_Var.In_HomeXLock := TRUE;
 ER_TFlapOpnR_Cyl_Var.In_WorkXLock := ER_TFlapClsR_Cyl_Var.S_HomePos;
-
+ER_TFlapOpnR_Cyl_Work_Tmr(IN:= O_ER_TFlapOpnR_Fwd OR ER_TFlapOpnR_Cyl_Work_Tmr.Q AND NOT O_ER_TFlapOpnR_Bwd  ,PT:=T#0.7S);
 ER_TFlapOpnR_Cyl(				
 	IN_CylName		:='TOP FLAP OPN RIGHT', 
 	In_Enable		:= bEnable, 	

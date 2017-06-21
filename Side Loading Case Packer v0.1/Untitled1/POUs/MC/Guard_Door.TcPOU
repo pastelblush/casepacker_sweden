@@ -38,7 +38,7 @@ IF mc.ResetPressed THEN
 	E_Horizontal_RightDoor_Opn	:= FALSE;
 	E_Door_SafetyBroken			:= FALSE;
 END_IF
-
+(*
 IF not I_Erector_Front_Door_Sen THEN
 	E_Erector_FrontDoor_Opn	:= TRUE;
 END_IF
@@ -62,7 +62,7 @@ END_IF
 IF NOT I_HOR_Right_Door THEN
 	E_Horizontal_RightDoor_Opn	:=TRUE;
 END_IF
-]]></ST>
+*)]]></ST>
     </Implementation>
   </POU>
 </TcPlcObject>

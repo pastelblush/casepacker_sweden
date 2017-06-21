@@ -87,6 +87,7 @@ VAR_GLOBAL
 	INPUT_TEST		AT %I* 	:INT;
 	OUTPUT_TEST		AT %Q* 	:INT;
 
+	I_Reset_HMI: BOOL;
 END_VAR
 ]]></Declaration>
   </GVL>

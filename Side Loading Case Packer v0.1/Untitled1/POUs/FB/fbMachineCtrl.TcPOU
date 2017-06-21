@@ -381,13 +381,13 @@ END_FOR
 
 (*Minor Error for Stop after one cycle*)
 MC.StationStopErr := MC.E_LightCurtain;
-(*
+
 FOR Loop := 0 TO Number_of_Station BY 1  DO
 	IF SC[Loop].MinorFault AND NOT SC[Loop].Bypass THEN
 		MC.StationStopErr:= TRUE;
 	END_IF
 END_FOR
-*)
+
 (**************************************************************************************************************)
 (* Auto Msg Alarm Display  *)
 (**************************************************************************************************************)
@@ -463,7 +463,7 @@ ResetPls := pls_Reset.Q;
 	END_IF;
 
 (* Set Warning*)
-(*
+
 MC.Warning := FALSE;
 FOR LoopStation := 0 TO Number_of_Station BY 1 DO
 	FOR Loop := 1 TO 10 DO
@@ -472,7 +472,7 @@ FOR LoopStation := 0 TO Number_of_Station BY 1 DO
 		END_IF;
 	END_FOR
 END_FOR
-*)
+
 HMI.T_AutoMsgAlarm := MC.Trouble OR MC.StationStopErr OR (NOT MC.AutoRunning AND NOT MC.AllOrigin) ;
 
 (*************************************************************************************************************************************)

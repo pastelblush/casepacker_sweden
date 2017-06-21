@@ -29,7 +29,7 @@ Option_90Deg_Conv();
 HOR_Servo_Output();
 HOR_Motor_Output();
 
-MutingStartRtig(CLK:= HOR_BotCv_Mtr_Var.S_Running AND HOR_TopCv_Mtr_Var.S_Running AND I_HOR_Entry_Cv_Present , Q=> );
+MutingStartRtig(CLK:= HOR_Tilt_Out_Mtr_Var.S_Running AND I_HOR_Tilt_In_Cv_Present , Q=> );
 IF MutingStartRtig.Q THEN
 	A_HOR_LC_Muting := TRUE;
 END_IF	

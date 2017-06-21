@@ -31,6 +31,7 @@ Station.Origin 	:=	(
 					HOR_BotCv_Mtr_Var.S_InvRdy AND
 					HOR_TopCv_Mtr_Var.S_InvRdy AND
 					HOR_WA_Origin AND
+					EX_Tilt_Srv_Var.Out_Referenced AND
 					tmr_MtrStopped.Q and
 					Station.OriginRunStep =0)OR
 					Station.Bypass;
@@ -69,8 +70,35 @@ IF (MC.OriginSchRun OR Station.OriginSchRun) AND NOT Station.Bypass  THEN
 				Station.OriginRunStep := Station.OriginRunStep+10;	
 			END_IF
 
-	10 : 	(************* Cek Carton On Conveyor ****************)
-			Station.Status := 'Org10: Cek Carton On Conveyor';
+	10	:	(************* Clear Tilt In and Tilt Out Conveyor ****************)
+			Station.Status := 'Org10: Tilt Conveyor In and Out Run';
+			
+			HOR_Tilt_In_Mtr_Var.In_OrgOn	:= TRUE;
+			HOR_Tilt_Out_Mtr_Var.In_OrgOn	:= TRUE;
+
+			IF NOT I_HOR_Tilt_Out_Cv_Present THEN
+				Station.OriginRunStep := Station.OriginRunStep+10;
+			END_IF
+			
+	20:		(************ Tilt Unit Origin **********************)
+			Station.Status := 'Org20: Tilt Servo Start to Home';
+			
+			EX_Tilt_Srv_Var.In_SetAbsRef	:= TRUE;
+			
+			IF NOT EX_Tilt_Srv_Var.Out_Referenced THEN
+				Station.OriginRunStep	:= Station.OriginRunStep + 10;
+			END_IF
+	
+	30: (***************** Waiting for Tilt Unit Origin Done ************)
+			Station.Status := 'Org30: Tilt Servo Homing';
+		
+			IF  EX_Tilt_Srv_Var.Out_Referenced THEN
+				EX_Tilt_Srv_Var.In_SetAbsRef	:= FALSE;
+				Station.OriginRunStep	:= Station.OriginRunStep + 10;
+			END_IF
+		
+	40 : 	(************* Cek Carton On Conveyor ****************)
+			Station.Status := 'Org40: Cek Carton On Conveyor';
 			HOR_BotCv_Mtr_Var.In_OrgOn	:= TRUE;
 			HOR_TopCv_Mtr_Var.In_OrgOn	:= TRUE;
 			EX_StpCylR_Var.In_OrgHome	:= TRUE;
@@ -82,16 +110,16 @@ IF (MC.OriginSchRun OR Station.OriginSchRun) AND NOT Station.Bypass  THEN
 				Station.OriginRunStep := Station.OriginRunStep+10;
 			END_IF
 	
-	20 : 	(************* Carton Send to Exit Conveyor  ****************)
-			Station.Status 		:= 'Org20: Carton Send to Exit Conveyor';
+	50 : 	(************* Carton Send to Exit Conveyor  ****************)
+			Station.Status 		:= 'Org50: Carton Send to Exit Conveyor';
 			
 			
 			IF NOT I_HOR_Entry_Cv_Present THEN
 				Station.OriginRunStep	:= Station.OriginRunStep + 10;
 			END_IF
 
-	30 : 	(************* Carton Send to Exit Conveyor  ****************)
-			Station.Status 		:= 'Org30: Carton Send to Exit Conveyor';
+	60 : 	(************* Carton Send to Exit Conveyor  ****************)
+			Station.Status 		:= 'Org60: Carton Send to Exit Conveyor';
 			Station.StatusInt	:= 354;
 			
 			H_ER_CtnRdyForGlue	:=FALSE;
@@ -107,12 +135,14 @@ IF (MC.OriginSchRun OR Station.OriginSchRun) AND NOT Station.Bypass  THEN
 				Station.OriginRunStep 		:= 40;
 			END_IF
 
-	40:	(******************** Make sure Conveyor is stopped **********************)
-				HOR_BotCv_Mtr_Var.In_OrgOn 	:= FALSE;
-				HOR_TopCv_Mtr_Var.In_OrgOn	:= FALSE;
-				HOR_BotCv_Mtr_Var.T_ManOn 	:= FALSE;
-				HOR_TopCv_Mtr_Var.T_ManOn	:= FALSE;				
-				
+	70:	(******************** Make sure Conveyor is stopped **********************)
+				HOR_BotCv_Mtr_Var.In_OrgOn 		:= FALSE;
+				HOR_TopCv_Mtr_Var.In_OrgOn		:= FALSE;
+				HOR_BotCv_Mtr_Var.T_ManOn 		:= FALSE;
+				HOR_TopCv_Mtr_Var.T_ManOn		:= FALSE;	
+				HOR_Tilt_In_Mtr_Var.In_OrgOn	:= FALSE;
+				HOR_Tilt_Out_Mtr_Var.In_OrgOn	:= FALSE;				
+			
 		IF  tmr_MtrStopped.Q THEN
 				Station.OriginRunStep 		:= 0;
 			END_IF
