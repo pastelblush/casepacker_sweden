@@ -1,21 +1,21 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4018.5">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.36">
   <RecipeManager Name="RecipeManager" Id="{e4702e24-ce00-42b3-87a7-a5bd6f9bf79d}">
     <XmlArchive>
       <Data>
         <o xml:space="preserve" t="RecipeManObject">
           <o n="LMGuids" t="LanguageModelGuidHelper">
             <d n="NamesAndGuids" t="Hashtable" ckt="String" cvt="Guid">
+              <v>RECIPEFACTORYFB_INIT</v>
+              <v>9566c896-1ed7-4f83-ab5d-b26e69c0208f</v>
               <v>GVL_RECIPEMANAGEMENT_3300</v>
               <v>e2e6d7e1-3fed-4509-bc50-a3611a879cfe</v>
-              <v>RECIPEFACTORY</v>
-              <v>428c81a6-f869-4622-8d69-bf08de20d5da</v>
               <v>RECIPEMANAGEMENTINITFB_INIT</v>
               <v>319acade-07ac-435b-949d-5a60f318856c</v>
               <v>RECIPEFACTORYFREERECIPE</v>
               <v>fc443e17-0555-44a3-a682-b3db0ceee46e</v>
-              <v>RECIPEFACTORYFB_INIT</v>
-              <v>9566c896-1ed7-4f83-ab5d-b26e69c0208f</v>
+              <v>RECIPEFACTORY</v>
+              <v>428c81a6-f869-4622-8d69-bf08de20d5da</v>
               <v>RECIPEMANAGEMENTINITFB_REINIT</v>
               <v>94ab8e55-3629-46e6-9f12-92505f94566b</v>
               <v>RECIPEMANAGEMENTINIT</v>
@@ -34,8 +34,8 @@
             <v n="ColumnList">"0|1"</v>
             <v n="AutoSaveRecipes">true</v>
           </o>
-          <v n="RecipesInPlc">true</v>
-          <v n="RecipesInPlcAssigned">false</v>
+          <v n="RecipesInPlc">false</v>
+          <v n="RecipesInPlcAssigned">true</v>
         </o>
       </Data>
       <TypeList>
