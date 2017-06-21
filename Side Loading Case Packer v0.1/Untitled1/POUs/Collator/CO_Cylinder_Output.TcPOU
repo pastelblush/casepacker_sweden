@@ -17,7 +17,7 @@ END_VAR
 
 CO_Brdg_Cyl_Var.In_HomeXLock := TRUE;
 CO_Brdg_Cyl_Var.In_WorkXLock := (NOT ER_Arm_Srv_Var.Out_Busy OR NOT ER_Arm_Vac_Var.S_Vacuum) AND
-								ER_RFlapL_Cyl_Var.S_HomePos;
+								ER_RFlapR_Cyl_Var.S_HomePos;
 CO_Brdg_Cyl_Home_Tmr(IN:= O_CO_Brdg_Bwd, PT := T#2S);
 CO_Brdg_Cyl_Work_Tmr(IN:= O_CO_Brdg_Fwd, PT := T#2S);
 

@@ -299,12 +299,13 @@ IF Station.AutoRun OR Station.M_Step THEN
 	
 			IF fcComparePos(CurrPos:= EX_Tilt_Srv_Var.Out_CurrPos, TargetPos:= EX_Tilt_Srv_Var.In_PosCmd, Tolerance := 0.5) THEN
 				EX_Tilt_Srv_Var.In_MoveAbs := FALSE; 
-				Station.RunStep	:= Station.RunStep + 10;
+				Station.RunStep	:= 10000;
 			END_IF
+			(*temporarily disable referencing*)
 	
 	70: (************* Tilt Unit Start Seaching for Sensor ****************)
 			Station.Status 		:= '70: Tilt Unit Searching for Home Sensor';
-	
+		
 			EX_Tilt_Srv_Var.In_SetAbsRef	:= TRUE;
 	
 			IF NOT EX_Tilt_Srv_Var.Out_Referenced THEN

@@ -31,7 +31,7 @@ Station.Origin 	:=	(
 					HOR_BotCv_Mtr_Var.S_InvRdy AND
 					HOR_TopCv_Mtr_Var.S_InvRdy AND
 					HOR_WA_Origin AND
-					EX_Tilt_Srv_Var.Out_Referenced AND
+					(*EX_Tilt_Srv_Var.Out_Referenced AND*)
 					tmr_MtrStopped.Q and
 					Station.OriginRunStep =0)OR
 					Station.Bypass;
@@ -77,8 +77,9 @@ IF (MC.OriginSchRun OR Station.OriginSchRun) AND NOT Station.Bypass  THEN
 			HOR_Tilt_Out_Mtr_Var.In_OrgOn	:= TRUE;
 
 			IF NOT I_HOR_Tilt_Out_Cv_Present THEN
-				Station.OriginRunStep := Station.OriginRunStep+10;
+				Station.OriginRunStep := Station.OriginRunStep+30;
 			END_IF
+			(*temporarily disable referencing*)
 			
 	20:		(************ Tilt Unit Origin **********************)
 			Station.Status := 'Org20: Tilt Servo Start to Home';

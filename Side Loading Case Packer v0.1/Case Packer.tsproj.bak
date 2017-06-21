@@ -183,14 +183,6 @@
 					<Vars VarGrpType="1">
 						<Name>PlcTask Inputs</Name>
 						<Var>
-							<Name>GVL_IO_ER.IW_41DI1</Name>
-							<Comment>
-								<![CDATA[************************************************************************
-Erector Main COntrol Panel]]>
-							</Comment>
-							<Type>WORD</Type>
-						</Var>
-						<Var>
 							<Name>GVL_IO_ER.I_Start_PB</Name>
 							<Comment>
 								<![CDATA[ 	START PB	]]>
@@ -200,6 +192,14 @@ Erector Main COntrol Panel]]>
 						<Var>
 							<Name>.InputByte</Name>
 							<Type GUID="{18071995-0000-0000-0000-0003000001F5}">ARRAY [0..500] OF BYTE</Type>
+						</Var>
+						<Var>
+							<Name>GVL_IO_ER.IW_41DI1</Name>
+							<Comment>
+								<![CDATA[************************************************************************
+Erector Main COntrol Panel]]>
+							</Comment>
+							<Type>WORD</Type>
 						</Var>
 						<Var>
 							<Name>GVL_IO_ER.I_Stop_PB</Name>
@@ -488,13 +488,6 @@ Erector Left Assembly - Carton Supply & Flap Close]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_ER.I_ER_StpL_Up</Name>
-							<Comment>
-								<![CDATA[ 	ERECTOR STOPPER CYL UP RS (LEFT)	]]>
-							</Comment>
-							<Type>BIT</Type>
-						</Var>
-						<Var>
 							<Name>GVL_IO_ER.IW_61A1</Name>
 							<Comment>
 								<![CDATA[************************************************************************
@@ -502,6 +495,13 @@ Erector Field IO - 61A1
 Erector Left Assembly - Flap Holder & Stopper]]>
 							</Comment>
 							<Type>WORD</Type>
+						</Var>
+						<Var>
+							<Name>GVL_IO_ER.I_ER_StpL_Up</Name>
+							<Comment>
+								<![CDATA[ 	ERECTOR STOPPER CYL UP RS (LEFT)	]]>
+							</Comment>
+							<Type>BIT</Type>
 						</Var>
 						<Var>
 							<Name>GVL_IO_ER.I_ER_StpL_Dn</Name>
@@ -553,13 +553,6 @@ Erector Left Assembly - Flap Holder & Stopper]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_ER.I_ER_TFlapOpnL_Fwd</Name>
-							<Comment>
-								<![CDATA[ 	ERECTOR TOP FLAP OPENING CYL FWD RS (LEFT)	]]>
-							</Comment>
-							<Type>BIT</Type>
-						</Var>
-						<Var>
 							<Name>GVL_IO_ER.IW_62A1</Name>
 							<Comment>
 								<![CDATA[************************************************************************
@@ -567,6 +560,13 @@ Erector Field IO - 62A1
 Erector Right Assembly - Carton Supply & Flap Close]]>
 							</Comment>
 							<Type>WORD</Type>
+						</Var>
+						<Var>
+							<Name>GVL_IO_ER.I_ER_TFlapOpnL_Fwd</Name>
+							<Comment>
+								<![CDATA[ 	ERECTOR TOP FLAP OPENING CYL FWD RS (LEFT)	]]>
+							</Comment>
+							<Type>BIT</Type>
 						</Var>
 						<Var>
 							<Name>GVL_IO_ER.I_ER_TFlapOpnL_Bwd</Name>
@@ -618,6 +618,13 @@ Erector Right Assembly - Carton Supply & Flap Close]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
+							<Name>GVL_IO_ER.I_ER_BufferR_PE</Name>
+							<Comment>
+								<![CDATA[ 	ERECTOR CARTON BUFFER PRESENT (RIGHT), OFF=CARTON PRESENT	]]>
+							</Comment>
+							<Type>BIT</Type>
+						</Var>
+						<Var>
 							<Name>GVL_IO_ER.IW_63A1</Name>
 							<Comment>
 								<![CDATA[************************************************************************
@@ -625,13 +632,6 @@ Erector Field IO - 63A1
 Erector Right Assembly - Flap Holder & Stopper]]>
 							</Comment>
 							<Type>WORD</Type>
-						</Var>
-						<Var>
-							<Name>GVL_IO_ER.I_ER_BufferR_PE</Name>
-							<Comment>
-								<![CDATA[ 	ERECTOR CARTON BUFFER PRESENT (RIGHT), OFF=CARTON PRESENT	]]>
-							</Comment>
-							<Type>BIT</Type>
 						</Var>
 						<Var>
 							<Name>GVL_IO_ER.I_ER_EmptyR_PE</Name>
@@ -748,6 +748,13 @@ Erector Right Assembly - Flap Holder & Stopper]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
+							<Name>GVL_IO_ER.I_ER_TFlapOpnR_Fwd</Name>
+							<Comment>
+								<![CDATA[ 	ERECTOR TOP FLAP OPENING CYL FWD RS (RIGHT)	]]>
+							</Comment>
+							<Type>BIT</Type>
+						</Var>
+						<Var>
 							<Name>GVL_IO_ER.IW_65A1</Name>
 							<Comment>
 								<![CDATA[************************************************************************
@@ -755,13 +762,6 @@ Erector Field IO - 65A1
 Erector Right Assembly - Flap Holder & Stopper]]>
 							</Comment>
 							<Type>WORD</Type>
-						</Var>
-						<Var>
-							<Name>GVL_IO_ER.I_ER_TFlapOpnR_Fwd</Name>
-							<Comment>
-								<![CDATA[ 	ERECTOR TOP FLAP OPENING CYL FWD RS (RIGHT)	]]>
-							</Comment>
-							<Type>BIT</Type>
 						</Var>
 						<Var>
 							<Name>GVL_IO_ER.I_ER_TFlapOpnR_Bwd</Name>
@@ -813,13 +813,6 @@ Erector Right Assembly - Flap Holder & Stopper]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_ER.I_ER_ArmTilt_Fwd</Name>
-							<Comment>
-								<![CDATA[ 	ERECTOR ARM TILT CYL FWD RS	]]>
-							</Comment>
-							<Type>BIT</Type>
-						</Var>
-						<Var>
 							<Name>GVL_IO_ER.IW_66A1</Name>
 							<Comment>
 								<![CDATA[************************************************************************
@@ -827,6 +820,13 @@ Erector Field IO - 66A1
 Erector Arm Assembly]]>
 							</Comment>
 							<Type>WORD</Type>
+						</Var>
+						<Var>
+							<Name>GVL_IO_ER.I_ER_ArmTilt_Fwd</Name>
+							<Comment>
+								<![CDATA[ 	ERECTOR ARM TILT CYL FWD RS	]]>
+							</Comment>
+							<Type>BIT</Type>
 						</Var>
 						<Var>
 							<Name>GVL_IO_ER.I_ER_ArmTilt_Bwd</Name>
@@ -1005,16 +1005,16 @@ Collator & Exit Main COntrol Panel]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_CO.I_EL_FlapHoldL_Bwd</Name>
+							<Name>GVL_IO_CO.IX1015</Name>
 							<Comment>
-								<![CDATA[ 	ELEVATOR FLAP HOLDING CYLINDER LEFT BWD RS	]]>
+								<![CDATA[ 	SPARE	]]>
 							</Comment>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_CO.IX1015</Name>
+							<Name>GVL_IO_CO.I_EL_FlapHoldL_Bwd</Name>
 							<Comment>
-								<![CDATA[ 	SPARE	]]>
+								<![CDATA[ 	ELEVATOR FLAP HOLDING CYLINDER LEFT BWD RS	]]>
 							</Comment>
 							<Type>BIT</Type>
 						</Var>
@@ -1033,9 +1033,9 @@ Collator & Exit Main COntrol Panel]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_CO.I_CO_FxStp_Up</Name>
+							<Name>GVL_IO_CO.I_CO_YPush_Up</Name>
 							<Comment>
-								<![CDATA[ 	COLLATOR FIXED RAIL CV STOPPER CYL UP RS	]]>
+								<![CDATA[ 	COLLATOR X PUSHER CYL UP RS	]]>
 							</Comment>
 							<Type>BIT</Type>
 						</Var>
@@ -1049,9 +1049,9 @@ Collator Assembly - Valve Reed Switch]]>
 							<Type>WORD</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_CO.I_CO_YPush_Up</Name>
+							<Name>GVL_IO_CO.I_CO_FxStp_Up</Name>
 							<Comment>
-								<![CDATA[ 	COLLATOR X PUSHER CYL UP RS	]]>
+								<![CDATA[ 	COLLATOR FIXED RAIL CV STOPPER CYL UP RS	]]>
 							</Comment>
 							<Type>BIT</Type>
 						</Var>
@@ -1105,13 +1105,6 @@ Collator Assembly - Valve Reed Switch]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_CO.I_CO_FxStkRel_Fwd</Name>
-							<Comment>
-								<![CDATA[		COLLATOR FIXED RAIL STACK RELEASE CYLINDER FWD RS]]>
-							</Comment>
-							<Type>BIT</Type>
-						</Var>
-						<Var>
 							<Name>GVL_IO_CO.I_CO_FFlapGuide_Fwd</Name>
 							<Comment>
 								<![CDATA[ 	COLLATOR PUSHER FRONT GUIDE FLAP CYL FWD RS	]]>
@@ -1119,9 +1112,9 @@ Collator Assembly - Valve Reed Switch]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_CO.I_CO_FFlapGuide_Bwd</Name>
+							<Name>GVL_IO_CO.I_CO_FxStkRel_Fwd</Name>
 							<Comment>
-								<![CDATA[ 	COLLATOR PUSHER FRONT GUIDE FLAP CYL BWD RS	]]>
+								<![CDATA[		COLLATOR FIXED RAIL STACK RELEASE CYLINDER FWD RS]]>
 							</Comment>
 							<Type>BIT</Type>
 						</Var>
@@ -1129,6 +1122,13 @@ Collator Assembly - Valve Reed Switch]]>
 							<Name>GVL_IO_CO.I_CO_FxStkRel_Bwd</Name>
 							<Comment>
 								<![CDATA[		COLLATOR FIXED RAIL STACK RELEASE CYLINDER BWD RS]]>
+							</Comment>
+							<Type>BIT</Type>
+						</Var>
+						<Var>
+							<Name>GVL_IO_CO.I_CO_FFlapGuide_Bwd</Name>
+							<Comment>
+								<![CDATA[ 	COLLATOR PUSHER FRONT GUIDE FLAP CYL BWD RS	]]>
 							</Comment>
 							<Type>BIT</Type>
 						</Var>
@@ -1184,16 +1184,16 @@ Collator Assembly - Valve Reed Switch & Sensors]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_CO.I_CO_YStk_AtBuf1_PE</Name>
+							<Name>GVL_IO_CO.IX1114</Name>
 							<Comment>
-								<![CDATA[ 	STACK PRESENCE AT PUSHER BUFFER AREA 1 SENSOR	]]>
+								<![CDATA[ 	SPARE	]]>
 							</Comment>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_CO.IX1114</Name>
+							<Name>GVL_IO_CO.I_CO_YStk_AtBuf1_PE</Name>
 							<Comment>
-								<![CDATA[ 	SPARE	]]>
+								<![CDATA[ 	STACK PRESENCE AT PUSHER BUFFER AREA 1 SENSOR	]]>
 							</Comment>
 							<Type>BIT</Type>
 						</Var>
@@ -1212,13 +1212,6 @@ Collator Assembly - Valve Reed Switch & Sensors]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_CO.I_CO_Stk_Mtr_HomePos</Name>
-							<Comment>
-								<![CDATA[ 	STACK MOTOR HOME SENSOR	]]>
-							</Comment>
-							<Type>BIT</Type>
-						</Var>
-						<Var>
 							<Name>GVL_IO_CO.I_CO_MvStkRel_Fwd</Name>
 							<Comment>
 								<![CDATA[		COLLATOR MOVING RAIL STACK RELEASE CYLINDER FWD RS]]>
@@ -1226,9 +1219,9 @@ Collator Assembly - Valve Reed Switch & Sensors]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_CO.I_CO_MvStkRel_Bwd</Name>
+							<Name>GVL_IO_CO.I_CO_Stk_Mtr_HomePos</Name>
 							<Comment>
-								<![CDATA[		COLLATOR MOVING RAIL STACK RELEASE CYLINDER BWD RS]]>
+								<![CDATA[ 	STACK MOTOR HOME SENSOR	]]>
 							</Comment>
 							<Type>BIT</Type>
 						</Var>
@@ -1236,6 +1229,13 @@ Collator Assembly - Valve Reed Switch & Sensors]]>
 							<Name>GVL_IO_CO.I_CO_Stk_Mtr_UpPos</Name>
 							<Comment>
 								<![CDATA[ 	STACK MOTOR UP POSITION SENSOR	]]>
+							</Comment>
+							<Type>BIT</Type>
+						</Var>
+						<Var>
+							<Name>GVL_IO_CO.I_CO_MvStkRel_Bwd</Name>
+							<Comment>
+								<![CDATA[		COLLATOR MOVING RAIL STACK RELEASE CYLINDER BWD RS]]>
 							</Comment>
 							<Type>BIT</Type>
 						</Var>
@@ -1600,19 +1600,19 @@ Collator Assembly - Pusher Bridge & Rear Flap Guide]]>
 							<Type>WORD</Type>
 						</Var>
 						<Var>
+							<Name>GVL_IO_HOR.I_HOR_TopCv_InvRdy</Name>
+							<Comment>
+								<![CDATA[ 	HORIZONTAL TOP CONVEYOR INVERTER READY	]]>
+							</Comment>
+							<Type>BIT</Type>
+						</Var>
+						<Var>
 							<Name>GVL_IO_HOR.IW_241DI1</Name>
 							<Comment>
 								<![CDATA[************************************************************************
 Horizontal IO ]]>
 							</Comment>
 							<Type>WORD</Type>
-						</Var>
-						<Var>
-							<Name>GVL_IO_HOR.I_HOR_TopCv_InvRdy</Name>
-							<Comment>
-								<![CDATA[ 	HORIZONTAL TOP CONVEYOR INVERTER READY	]]>
-							</Comment>
-							<Type>BIT</Type>
 						</Var>
 						<Var>
 							<Name>GVL_IO_HOR.I_HOR_BotCv_InvRdy</Name>
@@ -1664,13 +1664,6 @@ Horizontal IO ]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_HOR.IX2012</Name>
-							<Comment>
-								<![CDATA[ 	SPARE	]]>
-							</Comment>
-							<Type>BIT</Type>
-						</Var>
-						<Var>
 							<Name>GVL_IO_HOR.IX2010</Name>
 							<Comment>
 								<![CDATA[ 	SPARE	]]>
@@ -1678,7 +1671,7 @@ Horizontal IO ]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_HOR.IX2011</Name>
+							<Name>GVL_IO_HOR.IX2012</Name>
 							<Comment>
 								<![CDATA[ 	SPARE	]]>
 							</Comment>
@@ -1686,6 +1679,13 @@ Horizontal IO ]]>
 						</Var>
 						<Var>
 							<Name>GVL_IO_HOR.IX2013</Name>
+							<Comment>
+								<![CDATA[ 	SPARE	]]>
+							</Comment>
+							<Type>BIT</Type>
+						</Var>
+						<Var>
+							<Name>GVL_IO_HOR.IX2011</Name>
 							<Comment>
 								<![CDATA[ 	SPARE	]]>
 							</Comment>
@@ -1720,19 +1720,19 @@ Horizontal IO ]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
+							<Name>GVL_IO_HOR.I_HOR_Entry_Cv_Present</Name>
+							<Comment>
+								<![CDATA[ 	HORIZONTAL PRODUCT PRESENCE AT ENTRY CONVEYOR SENSOR	]]>
+							</Comment>
+							<Type>BIT</Type>
+						</Var>
+						<Var>
 							<Name>GVL_IO_HOR.IW_260A1</Name>
 							<Comment>
 								<![CDATA[************************************************************************
 Horizontal Field IO ]]>
 							</Comment>
 							<Type>WORD</Type>
-						</Var>
-						<Var>
-							<Name>GVL_IO_HOR.I_HOR_Entry_Cv_Present</Name>
-							<Comment>
-								<![CDATA[ 	HORIZONTAL PRODUCT PRESENCE AT ENTRY CONVEYOR SENSOR	]]>
-							</Comment>
-							<Type>BIT</Type>
 						</Var>
 						<Var>
 							<Name>GVL_IO_HOR.I_HOR_TapeL_Present_PE</Name>
@@ -1784,6 +1784,13 @@ Horizontal Field IO ]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
+							<Name>GVL_IO_HOR.I_HOR_Tilt_In_Cv_Present</Name>
+							<Comment>
+								<![CDATA[ 	HORIZONTAL TILT CONVEYOR IN SENSOR	]]>
+							</Comment>
+							<Type>BIT</Type>
+						</Var>
+						<Var>
 							<Name>GVL_IO_HOR.IW_261A1</Name>
 							<Comment>
 								<![CDATA[************************************************************************
@@ -1795,13 +1802,6 @@ Horizontal Field IO ]]>
 							<Name>GVL_IO_HOR.I_HOR_90Deg_Tilt_Cly_Up</Name>
 							<Comment>
 								<![CDATA[		HORIZONTAL 90 Deg TILT CYLINDER UP SENSOR ]]>
-							</Comment>
-							<Type>BIT</Type>
-						</Var>
-						<Var>
-							<Name>GVL_IO_HOR.I_HOR_Tilt_In_Cv_Present</Name>
-							<Comment>
-								<![CDATA[ 	HORIZONTAL TILT CONVEYOR IN SENSOR	]]>
 							</Comment>
 							<Type>BIT</Type>
 						</Var>
@@ -1820,16 +1820,16 @@ Horizontal Field IO ]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_HOR.I_HOR_TiltDoor</Name>
+							<Name>GVL_IO_HOR.I_HOR_90Deg_Full_PE</Name>
 							<Comment>
-								<![CDATA[ 	HORIZONTAL TILT UNIT DOOR SENSOR	]]>
+								<![CDATA[		HORIZONTAL 90 Deg TILT FULL SENSOR	]]>
 							</Comment>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_IO_HOR.I_HOR_90Deg_Full_PE</Name>
+							<Name>GVL_IO_HOR.I_HOR_TiltDoor</Name>
 							<Comment>
-								<![CDATA[		HORIZONTAL 90 Deg TILT FULL SENSOR	]]>
+								<![CDATA[ 	HORIZONTAL TILT UNIT DOOR SENSOR	]]>
 							</Comment>
 							<Type>BIT</Type>
 						</Var>
@@ -2148,6 +2148,10 @@ Additional]]>
 					<Vars VarGrpType="2">
 						<Name>PlcTask Outputs</Name>
 						<Var>
+							<Name>GVL_IO_ER.QW_41DO1</Name>
+							<Type>WORD</Type>
+						</Var>
+						<Var>
 							<Name>GVL_IO_ER.O_Start_PL</Name>
 							<Comment>
 								<![CDATA[ 	START PB LIGHT	]]>
@@ -2157,10 +2161,6 @@ Additional]]>
 						<Var>
 							<Name>.OutputByte</Name>
 							<Type GUID="{18071995-0000-0000-0000-0003000001F5}">ARRAY [0..500] OF BYTE</Type>
-						</Var>
-						<Var>
-							<Name>GVL_IO_ER.QW_41DO1</Name>
-							<Type>WORD</Type>
 						</Var>
 						<Var>
 							<Name>GVL_IO_ER.O_Stop_PL</Name>
@@ -2388,19 +2388,19 @@ Additional]]>
 							<Type>BYTE</Type>
 						</Var>
 						<Var>
-							<Name>GVL_Valve_Manifold.O_ER_FFlapL_Fwd</Name>
-							<Comment>
-								<![CDATA[ 	1Y1 - ERECTOR FRONT FLAP CLOSING CYL FWD SV (LEFT)	]]>
-							</Comment>
-							<Type>BIT</Type>
-						</Var>
-						<Var>
 							<Name>GVL_Valve_Manifold.QW_70A1</Name>
 							<Comment>
 								<![CDATA[************************************************************************
 Erector Valve Manifold - 70A1]]>
 							</Comment>
 							<Type>WORD</Type>
+						</Var>
+						<Var>
+							<Name>GVL_Valve_Manifold.O_ER_FFlapL_Fwd</Name>
+							<Comment>
+								<![CDATA[ 	1Y1 - ERECTOR FRONT FLAP CLOSING CYL FWD SV (LEFT)	]]>
+							</Comment>
+							<Type>BIT</Type>
 						</Var>
 						<Var>
 							<Name>GVL_Valve_Manifold.O_ER_FFlapL_Bwd</Name>
@@ -2452,15 +2452,15 @@ Erector Valve Manifold - 70A1]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
+							<Name>GVL_Valve_Manifold.QW_70A1_2</Name>
+							<Type>BYTE</Type>
+						</Var>
+						<Var>
 							<Name>GVL_Valve_Manifold.O_ER_RFlapL_Fwd</Name>
 							<Comment>
 								<![CDATA[ 	1Y5 - ERECTOR REAR FLAP CLOSING CYL FWD SV (LEFT)	]]>
 							</Comment>
 							<Type>BIT</Type>
-						</Var>
-						<Var>
-							<Name>GVL_Valve_Manifold.QW_70A1_2</Name>
-							<Type>BYTE</Type>
 						</Var>
 						<Var>
 							<Name>GVL_Valve_Manifold.O_ER_RFlapL_Bwd</Name>
@@ -2519,12 +2519,12 @@ Erector Valve Manifold - 70A1]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_Valve_Manifold.QW_70A1_0</Name>
-							<Type>WORD</Type>
-						</Var>
-						<Var>
 							<Name>GVL_Valve_Manifold.QW_70A1_3</Name>
 							<Type>BYTE</Type>
+						</Var>
+						<Var>
+							<Name>GVL_Valve_Manifold.QW_70A1_0</Name>
+							<Type>WORD</Type>
 						</Var>
 						<Var>
 							<Name>GVL_Valve_Manifold.O_ER_ArmTilt_Bwd</Name>
@@ -2580,15 +2580,15 @@ Erector Valve Manifold - 70A1]]>
 							<Type>BYTE</Type>
 						</Var>
 						<Var>
+							<Name>GVL_Valve_Manifold.QW_71A1_1</Name>
+							<Type>BYTE</Type>
+						</Var>
+						<Var>
 							<Name>GVL_Valve_Manifold.O_ER_FFlapR_Fwd</Name>
 							<Comment>
 								<![CDATA[ 	2Y1 - ERECTOR FRONT FLAP CLOSING CYL FWD SV (RIGHT)	]]>
 							</Comment>
 							<Type>BIT</Type>
-						</Var>
-						<Var>
-							<Name>GVL_Valve_Manifold.QW_71A1_1</Name>
-							<Type>BYTE</Type>
 						</Var>
 						<Var>
 							<Name>GVL_Valve_Manifold.QW_71A1</Name>
@@ -2708,15 +2708,15 @@ Erector Valve Manifold - 71A1]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_Valve_Manifold.QW_71A1_3</Name>
-							<Type>BYTE</Type>
-						</Var>
-						<Var>
 							<Name>GVL_Valve_Manifold.O_EX_SquarenessCylR_Fwd</Name>
 							<Comment>
 								<![CDATA[ 	2Y9 - SQUARENESS CYLINDER FORWARD (RIGHT)	]]>
 							</Comment>
 							<Type>BIT</Type>
+						</Var>
+						<Var>
+							<Name>GVL_Valve_Manifold.QW_71A1_3</Name>
+							<Type>BYTE</Type>
 						</Var>
 						<Var>
 							<Name>GVL_Valve_Manifold.O_EX_SquarenessCylR_Bwd</Name>
@@ -2897,6 +2897,14 @@ Exit Assembly - ELEVATOR MODULE]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
+							<Name>GVL_Valve_Manifold.QW_170A1</Name>
+							<Comment>
+								<![CDATA[************************************************************************
+Collator Valve Manifold - 170A1]]>
+							</Comment>
+							<Type>WORD</Type>
+						</Var>
+						<Var>
 							<Name>GVL_Valve_Manifold.O_CO_YPush_Dn</Name>
 							<Comment>
 								<![CDATA[ 	3Y1 - COLLATOR X-PUSHER DOWN	]]>
@@ -2908,14 +2916,6 @@ Exit Assembly - ELEVATOR MODULE]]>
 							<Type>BYTE</Type>
 						</Var>
 						<Var>
-							<Name>GVL_Valve_Manifold.QW_170A1</Name>
-							<Comment>
-								<![CDATA[************************************************************************
-Collator Valve Manifold - 170A1]]>
-							</Comment>
-							<Type>WORD</Type>
-						</Var>
-						<Var>
 							<Name>GVL_Valve_Manifold.O_CO_YPush_Up</Name>
 							<Comment>
 								<![CDATA[ 	3Y1 - COLLATOR X-PUSHER UP	]]>
@@ -2923,16 +2923,16 @@ Collator Valve Manifold - 170A1]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_Valve_Manifold.O_CO_YPush_Strk_Fwd</Name>
+							<Name>GVL_Valve_Manifold.O_CO_StkRel_Fwd</Name>
 							<Comment>
-								<![CDATA[ 	3Y2 - COLLATOR Y PUSHER STROKE CYL FWD SV	]]>
+								<![CDATA[ 	2Y2 - COLLATOR STACK RELEASE CYLINDER FWD SV	]]>
 							</Comment>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_Valve_Manifold.O_CO_StkRel_Fwd</Name>
+							<Name>GVL_Valve_Manifold.O_CO_YPush_Strk_Fwd</Name>
 							<Comment>
-								<![CDATA[ 	2Y2 - COLLATOR STACK RELEASE CYLINDER FWD SV	]]>
+								<![CDATA[ 	3Y2 - COLLATOR Y PUSHER STROKE CYL FWD SV	]]>
 							</Comment>
 							<Type>BIT</Type>
 						</Var>
@@ -3021,15 +3021,15 @@ Collator Valve Manifold - 170A1]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
+							<Name>GVL_IO_HOR.QW_241DO1</Name>
+							<Type>WORD</Type>
+						</Var>
+						<Var>
 							<Name>GVL_IO_HOR.QX2000</Name>
 							<Comment>
 								<![CDATA[ 	SPARE	]]>
 							</Comment>
 							<Type>BIT</Type>
-						</Var>
-						<Var>
-							<Name>GVL_IO_HOR.QW_241DO1</Name>
-							<Type>WORD</Type>
 						</Var>
 						<Var>
 							<Name>GVL_IO_HOR.O_HOR_LC_Mute1</Name>
@@ -3151,16 +3151,16 @@ Collator Valve Manifold - 170A1]]>
 							<Type>BIT</Type>
 						</Var>
 						<Var>
+							<Name>GVL_Valve_Manifold.QB350A1_1</Name>
+							<Type>BYTE</Type>
+						</Var>
+						<Var>
 							<Name>GVL_Valve_Manifold.QW_350A1</Name>
 							<Comment>
 								<![CDATA[************************************************************************
 Exit Valve Manifold - 350A1]]>
 							</Comment>
 							<Type>WORD</Type>
-						</Var>
-						<Var>
-							<Name>GVL_Valve_Manifold.QB350A1_1</Name>
-							<Type>BYTE</Type>
 						</Var>
 						<Var>
 							<Name>GVL_Valve_Manifold.O_EL_TapeOpening_Fwd</Name>

@@ -47,8 +47,9 @@ ELSE
 								ER_RFlapL_Cyl_Var.S_WorkPos AND
 								ER_FFlapR_Cyl_Var.S_HomePos AND 
 								ER_RFlapR_Cyl_Var.S_HomePos AND
+								(*
 								ER_BFlapL_Vac_Var.S_Vacuum AND 
-								(*ER_BFlapR_Vac_Var.S_Vacuum AND*)
+								ER_BFlapR_Vac_Var.S_Vacuum AND*)
 								ER_BFlapCloseL_Cyl_Var.S_HomePos AND 
 								ER_BFlapCloseR_Cyl_Var.S_HomePos AND
 								I_ER_StpL_Ctn_PE AND I_ER_StpR_Ctn_PE)
