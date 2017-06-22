@@ -173,13 +173,18 @@ IF Station.AutoRun OR Station.M_Step THEN
 			HOR_TopCv_Mtr_Var.In_AutoON := TRUE;
 			TimeoutTrigger 		:= TRUE;
 			TimeoutSetting		:= T#10S;
-			
+			(*
 			IF NOT I_HOR_Entry_Cv_Present AND T_GlueEnable THEN
 				EX_StpCylL_Var.In_AutoHome	:=FALSE;
 				EX_StpCylL_Var.In_Autowork	:=TRUE;
 				EX_StpCylR_Var.In_AutoHome	:=FALSE;
 				EX_StpCylR_Var.In_Autowork	:=TRUE;
 			END_IF
+			*)
+				EX_StpCylL_Var.In_AutoHome	:=FALSE;
+				EX_StpCylL_Var.In_Autowork	:=TRUE;
+				EX_StpCylR_Var.In_AutoHome	:=FALSE;
+				EX_StpCylR_Var.In_Autowork	:=TRUE;
 			
 			IF Timeout.Q THEN
 				E_Hor_Entry_Sensor := TRUE;	

@@ -212,8 +212,10 @@ IF Station.AutoRun OR Station.M_Step THEN
 			CO_YPush_Srv_Var.Out_InPos) AND  CO_YPush_Strk_Cyl_Var.S_HomePos THEN
 			CO_YPush_Cyl_Var.In_AutoWork 		:= TRUE;
 			CO_YPush_Cyl_Var.In_AutoHome 		:= FALSE;
-				CO_YPush_Srv_Var.In_MoveAbs := FALSE;
-			Station.RunStep := Station.RunStep+5;	
+			CO_YPush_Srv_Var.In_MoveAbs := FALSE;
+				IF CO_YPush_Cyl_Var.S_WorkPos THEN
+					Station.RunStep := Station.RunStep+5;	
+				END_IF
 			END_IF
 
 

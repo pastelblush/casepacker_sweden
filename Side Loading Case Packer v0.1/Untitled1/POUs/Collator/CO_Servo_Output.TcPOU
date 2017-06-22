@@ -26,11 +26,18 @@ bEnable_YPush := NOT (CO_YPush.MajorFault OR CO_YPush.MinorFault OR CO_YPush.Dev
 
 
 (*CO_M5 Collator Y Pusher Motor - 111M1*)
+
+IF Cfg_CollDircLtoR THEN
 CO_YPush_Srv_Var.In_MoveXLock := 	((CO_FlapGuide_Cyl_Var.S_WorkPos AND
 										ER_FFlapL_Cyl_Var.S_HomePos AND
 										ER_RFlapL_Cyl_Var.S_HomePos) OR
 									(CO_YPush_Srv_Var.Out_CurrPos <= H_CO_YPush_Srv_CtnFinalPos+200)) ;
-
+ELSE
+CO_YPush_Srv_Var.In_MoveXLock := 	((CO_FlapGuide_Cyl_Var.S_WorkPos AND
+										ER_FFlapR_Cyl_Var.S_HomePos AND
+										ER_RFlapR_Cyl_Var.S_HomePos) OR
+									(CO_YPush_Srv_Var.Out_CurrPos <= H_CO_YPush_Srv_CtnFinalPos+200));
+END_IF
 CO_YPush_Srv_Drive(
 	In_Enable:= bEnable_YPush, 
 	In_Reset := MC.ResetPressed,

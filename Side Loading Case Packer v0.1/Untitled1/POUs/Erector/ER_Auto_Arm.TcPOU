@@ -491,12 +491,22 @@ IF Station.AutoRun OR Station.M_Step THEN
 			
 			
 			IF NOT End_Production THEN
+				
+			IF Cfg_CollDircLtoR THEN
 				ER_TFlapOpnR_Cyl_Var.In_AutoWork	:= FALSE;
-			ER_TFlapOpnR_Cyl_Var.In_AutoHome	:= TRUE;
+				ER_TFlapOpnR_Cyl_Var.In_AutoHome	:= TRUE;
 			(*
 				ER_TFlapClsR_Cyl_Var.In_AutoWork	:= TRUE;
 				ER_TFlapClsR_Cyl_Var.In_AutoHome	:= FALSE;
 			*)
+			ELSE
+				ER_TFlapOpnL_Cyl_Var.In_AutoWork	:= FALSE;
+				ER_TFlapOpnL_Cyl_Var.In_AutoHome	:= TRUE;
+			(*
+				ER_TFlapClsL_Cyl_Var.In_AutoWork	:= TRUE;
+				ER_TFlapClsL_Cyl_Var.In_AutoHome	:= FALSE;
+			*)
+			END_IF
 			END_IF
 			
 			IF ER_Arm_Cyl_Var.S_WorkPos

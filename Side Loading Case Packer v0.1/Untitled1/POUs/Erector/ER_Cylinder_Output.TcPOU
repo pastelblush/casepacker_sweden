@@ -150,8 +150,15 @@ ER_ArmTilt_Cyl(
 	CylVar			:= ER_ArmTilt_Cyl_Var,
 	Station			:= SC[3]);
 
+	
+IF Cfg_CollDircLtoR THEN
+ER_RFlapL_Cyl_Var.In_HomeXLock := TRUE;
+ER_RFlapL_Cyl_Var.In_WorkXLock :=  NOT CO_Brdg_Cyl_Var.S_WorkPos (*AND
+									(CO_YPush_Srv_Var.Out_CurrPos >= H_CO_YPush_Srv_CtnFinalPos+200)*);
+ELSE
 ER_RFlapL_Cyl_Var.In_HomeXLock := TRUE;
 ER_RFlapL_Cyl_Var.In_WorkXLock := TRUE;
+END_IF
 				
 ER_RFlapL_Cyl(				
 	IN_CylName		:='REAR FLAP CLOSE LEFT', 	
@@ -167,10 +174,14 @@ ER_RFlapL_Cyl(
 	CylVar			:= ER_RFlapL_Cyl_Var,
 	Station			:= SC[3]);
 
-ER_RFlapR_Cyl_Var.In_HomeXLock := TRUE;
-ER_RFlapR_Cyl_Var.In_WorkXLock := NOT CO_Brdg_Cyl_Var.S_WorkPos (*AND
+IF Cfg_CollDircLtoR THEN
+	ER_RFlapR_Cyl_Var.In_HomeXLock := TRUE;
+	ER_RFlapR_Cyl_Var.In_WorkXLock := TRUE;
+ELSE
+	ER_RFlapR_Cyl_Var.In_HomeXLock := TRUE;
+	ER_RFlapR_Cyl_Var.In_WorkXLock := NOT CO_Brdg_Cyl_Var.S_WorkPos (*AND
 									(CO_YPush_Srv_Var.Out_CurrPos >= H_CO_YPush_Srv_CtnFinalPos+200)*);
-
+END_IF
 ER_RFlapR_Cyl(				
 	IN_CylName		:='REAR FLAP CLOSE RIGHT', 
 	In_Enable		:= bEnable, 	

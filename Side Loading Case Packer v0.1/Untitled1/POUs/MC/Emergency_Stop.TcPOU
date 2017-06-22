@@ -29,7 +29,7 @@ IF mc.ResetPressed THEN
 	E_EStop_SafetyBroken	:= FALSE;
 END_IF
 
-(*
+
 IF NOT I_EStop_Panel THEN
 	E_Estop_Panel		:= TRUE;
 END_IF
@@ -45,12 +45,12 @@ END_IF
 IF NOT I_EStop_HorR THEN
 	E_Estop_HorRight	:= TRUE;
 END_IF
-
+(*
 IF NOT I_EStop_HorExit THEN
 	E_Estop_HorExit		:= TRUE;
 END_IF
-*)
-]]></ST>
+
+*)]]></ST>
     </Implementation>
   </POU>
 </TcPlcObject>

@@ -118,19 +118,39 @@ IF Station.AutoRun OR Station.M_Step THEN
 			Station.Status 		:= '40: Top Flap Close';
 			Station.StatusInt	:= 272;
 			
-				ER_TFlapClsL_Cyl_var.In_AutoWork 	:=TRUE;
-				ER_TFlapClsL_Cyl_var.In_Autohome 	:=FALSE;
-				ER_TFlapOpnL_Cyl_var.In_AutoWork 	:=FALSE;
-				ER_TFlapOpnL_Cyl_var.In_Autohome 	:=TRUE;
-				ER_TFlapClsR_Cyl_Var.In_AutoWork	:= TRUE;
-				ER_TFlapClsR_Cyl_Var.In_AutoHome	:= FALSE;
+			IF Cfg_CollDircLtoR THEN
+					ER_TFlapClsL_Cyl_var.In_AutoWork 	:=TRUE;
+					ER_TFlapClsL_Cyl_var.In_Autohome 	:=FALSE;
+					ER_TFlapOpnL_Cyl_var.In_AutoWork 	:=FALSE;
+					ER_TFlapOpnL_Cyl_var.In_Autohome 	:=TRUE;
+					ER_TFlapClsR_Cyl_Var.In_AutoWork	:= TRUE;
+					ER_TFlapClsR_Cyl_Var.In_AutoHome	:= FALSE;
+					
+				IF 	ER_TFlapClsL_Cyl_var.S_WorkPos  AND 
+					ER_TFlapOpnL_Cyl_var.S_HomePos AND 
+					Station.Run_NextStepPls THEN
+					ER_TFlapClsL_Cyl_var.In_AutoWork 	:=FALSE;
+					ER_TFlapOpnL_Cyl_var.In_Autohome 	:=FALSE;
+					ER_FixedFlap.RunStep := ER_FixedFlap.RunStep + 10;
+				END_IF
 				
-			IF 	ER_TFlapClsL_Cyl_var.S_WorkPos  AND 
-				ER_TFlapOpnL_Cyl_var.S_HomePos AND 
-				Station.Run_NextStepPls THEN
-				ER_TFlapClsL_Cyl_var.In_AutoWork 	:=FALSE;
-				ER_TFlapOpnL_Cyl_var.In_Autohome 	:=FALSE;
-				ER_FixedFlap.RunStep := ER_FixedFlap.RunStep + 10;
+			ELSE
+					ER_TFlapClsR_Cyl_var.In_AutoWork 	:=TRUE;
+					ER_TFlapClsR_Cyl_var.In_Autohome 	:=FALSE;
+					ER_TFlapOpnR_Cyl_var.In_AutoWork 	:=FALSE;
+					ER_TFlapOpnR_Cyl_var.In_Autohome 	:=TRUE;
+					ER_TFlapClsL_Cyl_Var.In_AutoWork	:= TRUE;
+					ER_TFlapClsL_Cyl_Var.In_AutoHome	:= FALSE;
+					
+				IF 	ER_TFlapClsR_Cyl_var.S_WorkPos  AND 
+					ER_TFlapOpnR_Cyl_var.S_HomePos AND 
+					Station.Run_NextStepPls THEN
+					ER_TFlapClsR_Cyl_var.In_AutoWork 	:=FALSE;
+					ER_TFlapOpnR_Cyl_var.In_Autohome 	:=FALSE;
+					ER_FixedFlap.RunStep := ER_FixedFlap.RunStep + 10;
+				END_IF
+				
+			
 			END_IF
 
 

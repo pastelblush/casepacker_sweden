@@ -46,15 +46,15 @@ IF NOT CO.Bypass THEN
 END_IF
 
 
-(*
+
 IF NOT HOR.Bypass THEN
-	S_ECat_NOK := S_ECat_NOK 
+	S_ECat_NOK := S_ECat_NOK (*
 					OR (I_ECat_241BC1<>8)
 					OR (I_ECat_241DI1<>8)
-					OR (I_ECat_241DO1<>8)
+					OR (I_ECat_241DO1<>8)*)
 					OR (I_ECat_260A1<>8);
 END_IF
-*)]]></ST>
+]]></ST>
     </Implementation>
   </POU>
 </TcPlcObject>

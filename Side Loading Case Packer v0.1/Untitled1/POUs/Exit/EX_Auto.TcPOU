@@ -69,9 +69,10 @@ IF Station.AutoRun OR Station.M_Step THEN
 	10 : 	(************* Run Conveyor Till Sensor Detects  ****************)
 			Station.Status 		:= '10: Run Conveyor Till Sensor Detects Carton';
 			Station.StatusInt	:= 301;
+			(*
 			Ex_SquarenessCylL_Var.In_AutoWork	:= FALSE;
-			Ex_SquarenessCylL_Var.In_AutoHome 	:= TRUE;			
-		
+			Ex_SquarenessCylL_Var.In_AutoHome 	:= TRUE; *)			
+		(*
 			IF T_GlueEnable THEN
 				EX_StpCylL_Var.In_AutoHome	:=FALSE;
 				EX_StpCylL_Var.In_Autowork	:=TRUE;
@@ -82,7 +83,12 @@ IF Station.AutoRun OR Station.M_Step THEN
 				EX_StpCylL_Var.In_Autowork	:=FALSE;
 				EX_StpCylR_Var.In_AutoHome	:=TRUE;
 				EX_StpCylR_Var.In_Autowork	:=false;	
-			END_IF	
+			END_IF	*)
+			
+			EX_StpCylL_Var.In_AutoHome	:=FALSE;
+			EX_StpCylL_Var.In_Autowork	:=TRUE;
+			EX_StpCylR_Var.In_AutoHome	:=FALSE;
+			EX_StpCylR_Var.In_Autowork	:=TRUE;
 			
 			WT_Mtr_Var.In_AutoON := TRUE;
 			TimeoutTrigger := TRUE;
@@ -94,7 +100,6 @@ IF Station.AutoRun OR Station.M_Step THEN
 			
 			IF WT_Cv_CtnPE_TON.Q  OR WT_Cv_DryRun.Q THEN
 				TimeoutTrigger := FALSE;
-				
 				Station.RunStep := Station.RunStep + 10;
 			ELSIF Timeout.Q THEN
 				Station.SeqFaultWord 		:= 200;
@@ -106,8 +111,8 @@ IF Station.AutoRun OR Station.M_Step THEN
 	20 : 	(************* Flap Hold Cylinders Fwd  ****************)
 			Station.Status 		:= '20: Flap Hold Cylinders Fwd';
 			Station.StatusInt	:= 302;
-			
-			IF NOT T_GlueEnable THEN
+(*						
+IF NOT T_GlueEnable THEN
 				EX_StpCylL_Var.In_AutoHome	:=TRUE;
 				EX_StpCylL_Var.In_Autowork	:=FALSE;
 				EX_StpCylR_Var.In_AutoHome	:=TRUE;
@@ -148,6 +153,37 @@ IF Station.AutoRun OR Station.M_Step THEN
 					Station.RunStep := Station.RunStep + 10;
 				END_IF
 			END_IF
+*)		
+				
+					Ex_SquarenessCylL_Var.In_AutoWork	:= TRUE;
+					Ex_SquarenessCylL_Var.In_AutoHome 	:= FALSE;	
+					Ex_SquarenessCylR_Var.In_AutoWork	:= TRUE;
+					Ex_SquarenessCylR_Var.In_AutoHome 	:= FALSE;	
+	
+					IF 	Ex_SquarenessCylL_Var.S_WorkPos AND 
+						Ex_SquarenessCylL_Var.S_WorkPos  THEN
+						EX_FlapHoldL_Cyl_Var.In_AutoWork 	:= TRUE;
+						EX_FlapHoldL_Cyl_Var.In_AutoHome 	:= FALSE;
+						EX_FlapHoldR_Cyl_Var.In_AutoWork 	:= TRUE;
+						EX_FlapHoldR_Cyl_Var.In_AutoHome 	:= FALSE;
+						WT_Mtr_Var.In_AutoON 				:= FALSE;
+					END_IF
+				
+				
+				IF ((WT_Cyl_Hold.Q AND
+					EX_FlapHoldL_Cyl_Var.S_WorkPos AND
+					EX_FlapHoldR_Cyl_Var.S_WorkPos AND
+					Ex_SquarenessCylL_Var.S_WorkPos AND
+					Ex_SquarenessCylR_Var.S_WorkPos ))AND
+					Station.Run_NextStepPls THEN
+					EX_FlapHoldL_Cyl_Var.In_AutoWork := FALSE;
+					EX_FlapHoldR_Cyl_Var.In_AutoWork := FALSE;
+					EX_StpCylL_Var.In_AutoHome	:=TRUE;
+					EX_StpCylL_Var.In_Autowork	:=FALSE;
+					EX_StpCylR_Var.In_AutoHome	:=TRUE;
+					EX_StpCylR_Var.In_Autowork	:=FALSE;	
+					Station.RunStep := Station.RunStep + 10;
+				END_IF
 	30 : 	(************* Flap Hold Cylinders Bwd ****************)
 			Station.Status 		:= '30: Flap Hold Cylinders Bwd';
 			Station.StatusInt	:= 303;
@@ -169,8 +205,8 @@ IF Station.AutoRun OR Station.M_Step THEN
 			EX_StpCylL_Var.In_Autowork			:=FALSE;
 			EX_StpCylR_Var.In_AutoHome			:=TRUE;
 			EX_StpCylR_Var.In_Autowork			:=FALSE;
-			WT_Mtr_Var.In_AutoON 				:= FALSE;
-			H_ER_CtnGlueDone					:= true;
+			WT_Mtr_Var.In_AutoON 				:= FALSE;(*
+			H_ER_CtnGlueDone					:= true;*)
 			
 			IF 	EX_FlapHoldL_Cyl_Var.S_HomePos	AND
 				EX_FlapHoldr_Cyl_Var.S_HomePos	AND
